@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, ClipboardList, ShieldAlert } from 'lucide-react
 const navItems = [
   { name: '儀表板', path: '/', icon: LayoutDashboard },
   { name: '領料單管理', path: '/requisitions', icon: ClipboardList },
-  { name: '物料管理', path: '/controls', icon: ShieldAlert },
+  { name: '物料管制', path: '/controls', icon: ShieldAlert },
   { name: '物料庫存', path: '/materials', icon: ClipboardList },
   { name: '人員管理', path: '/staff', icon: Users },
 ];

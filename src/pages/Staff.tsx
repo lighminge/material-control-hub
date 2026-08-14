@@ -22,6 +22,9 @@ export default function StaffPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
   const [formData, setFormData] = useState<Staff>({
     name: '',
     gender: '男',
@@ -80,6 +83,10 @@ export default function StaffPage() {
     setIsOpen(true);
   };
 
+  const totalItems = staffList.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedData = staffList.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -136,38 +143,65 @@ export default function StaffPage() {
         </Dialog>
       </div>
 
+      <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
+        <div className="font-medium">總計: {totalItems} 筆資料</div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label>每頁顯示:</Label>
+            <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 筆</SelectItem>
+                <SelectItem value="10">10 筆</SelectItem>
+                <SelectItem value="15">15 筆</SelectItem>
+                <SelectItem value="20">20 筆</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
+            <span className="text-sm">第 {page} / {totalPages} 頁</span>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</Button>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-24">操作</TableHead>
+                <TableHead className="w-16">序號</TableHead>
                 <TableHead>姓名</TableHead>
                 <TableHead>性別</TableHead>
                 <TableHead>職稱</TableHead>
                 <TableHead>備註</TableHead>
-                <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
-              ) : staffList.length === 0 ? (
+              ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">尚無人員資料</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">尚無人員資料</TableCell>
                 </TableRow>
               ) : (
-                staffList.map((staff) => (
+                paginatedData.map((staff, index) => (
                   <TableRow key={staff.id}>
+                    <TableCell className="space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(staff)}>編輯</Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(staff.id!)}>刪除</Button>
+                    </TableCell>
+                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-medium">{staff.name}</TableCell>
                     <TableCell>{staff.gender}</TableCell>
                     <TableCell>{staff.title}</TableCell>
                     <TableCell>{staff.notes}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(staff)}>編輯</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(staff.id!)}>刪除</Button>
-                    </TableCell>
                   </TableRow>
                 ))
               )}
