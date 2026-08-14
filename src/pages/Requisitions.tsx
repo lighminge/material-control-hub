@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, addDocument, updateDocument, deleteDocument, getDocument } from '@/lib/firebase/api';
+import { getCollection, addDocument, updateDocument, deleteDocument } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -225,7 +225,7 @@ export default function RequisitionsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {materials.map(mat => (
-                            <SelectItem key={mat.id} value={mat.id}>{mat.name} (庫存: {mat.stock})</SelectItem>
+                            <SelectItem key={mat.id} value={mat.id!}>{mat.name} (庫存: {mat.stock})</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
