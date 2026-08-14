@@ -14,7 +14,7 @@ import Dashboard from '@/pages/Dashboard';
 function App() {
   useEffect(() => {
     // Attempt anonymous login on app startup
-    loginAnonymously().catch(err => {
+    loginAnonymously().catch(() => {
       console.error("Firebase is not fully configured yet. Please update config.ts");
     });
   }, []);

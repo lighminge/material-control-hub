@@ -9,7 +9,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp
 } from "firebase/firestore";
 
