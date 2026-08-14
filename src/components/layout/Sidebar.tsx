@@ -11,9 +11,9 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="w-64 border-r bg-card flex flex-col h-full">
-      <div className="h-14 flex items-center px-4 border-b font-semibold text-lg text-primary">
-        Material Control Hub
+    <aside className="w-64 bg-background flex flex-col h-full shadow-[6px_0_12px_#e0dcd1]">
+      <div className="h-16 flex items-center justify-center px-4 font-bold text-xl text-primary">
+        Material Hub
       </div>
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
@@ -23,10 +23,10 @@ export function Sidebar() {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                `flex items-center gap-3 px-4 py-3 mb-2 transition-all ${
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    ? 'clay-btn-primary font-bold'
+                    : 'text-muted-foreground hover:clay-btn hover:text-foreground'
                 }`
               }
             >

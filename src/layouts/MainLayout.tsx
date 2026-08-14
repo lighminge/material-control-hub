@@ -8,9 +8,9 @@ export default function MainLayout() {
       <div className="hidden lg:block">
         <Sidebar />
       </div>
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-background">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-6 bg-muted/20">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
