@@ -68,15 +68,16 @@ export default function MaterialsPage() {
     setIsOpen(true);
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   const handleDelete = async (id: string) => {
-    if (confirm('確定要刪除此物料嗎？')) {
-      await deleteDocument('materials', id);
-      loadMaterials();
-    }
+    await deleteDocument('materials', id);
+    setDeleteConfirmId(null);
+    loadMaterials();
   };
 
   const openNewForm = () => {
-    setFormData({ name: '', stock: 0, unit: '個' });
+    setFormData({ name: '', stock: 0, unit: 'PCS' });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -87,6 +88,19 @@ export default function MaterialsPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">您確定要刪除此物料嗎？此動作無法復原。</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmId) handleDelete(deleteConfirmId); }}>確認刪除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-primary">物料庫存</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -99,11 +113,11 @@ export default function MaterialsPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>物料名稱</Label>
+                <Label>物料品號</Label>
                 <Input 
                   value={formData.name} 
                   onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="輸入名稱"
+                  placeholder="輸入物料品號"
                 />
               </div>
               <div className="space-y-2">
@@ -116,11 +130,15 @@ export default function MaterialsPage() {
               </div>
               <div className="space-y-2">
                 <Label>單位</Label>
-                <Input 
-                  value={formData.unit} 
-                  onChange={(e) => setFormData({...formData, unit: e.target.value})} 
-                  placeholder="如: 個, 件, 箱"
-                />
+                <Select value={formData.unit} onValueChange={(val) => setFormData({...formData, unit: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇單位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PCS">PCS</SelectItem>
+                    <SelectItem value="KG">KG</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Button className="w-full" onClick={handleSave}>儲存</Button>
             </div>
@@ -158,9 +176,9 @@ export default function MaterialsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">操作</TableHead>
+                <TableHead className="w-[140px]">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
-                <TableHead>物料名稱</TableHead>
+                <TableHead>物料品號</TableHead>
                 <TableHead>庫存數量</TableHead>
                 <TableHead>單位</TableHead>
               </TableRow>
@@ -177,9 +195,11 @@ export default function MaterialsPage() {
               ) : (
                 paginatedData.map((mat, index) => (
                   <TableRow key={mat.id}>
-                    <TableCell className="space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(mat)}>編輯</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(mat.id!)}>刪除</Button>
+                    <TableCell>
+                      <div className="flex flex-row gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(mat)}>編輯</Button>
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(mat.id!)}>刪除</Button>
+                      </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-medium">{mat.name}</TableCell>

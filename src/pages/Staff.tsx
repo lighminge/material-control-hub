@@ -70,11 +70,12 @@ export default function StaffPage() {
     setIsOpen(true);
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   const handleDelete = async (id: string) => {
-    if (confirm('確定要刪除此人員嗎？')) {
-      await deleteDocument('staff', id);
-      loadStaff();
-    }
+    await deleteDocument('staff', id);
+    setDeleteConfirmId(null);
+    loadStaff();
   };
 
   const openNewForm = () => {
@@ -89,6 +90,19 @@ export default function StaffPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">您確定要刪除此人員嗎？此動作無法復原。</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmId) handleDelete(deleteConfirmId); }}>確認刪除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-primary">人員管理</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -173,7 +187,7 @@ export default function StaffPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">操作</TableHead>
+                <TableHead className="w-[140px]">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
                 <TableHead>姓名</TableHead>
                 <TableHead>性別</TableHead>
@@ -193,9 +207,11 @@ export default function StaffPage() {
               ) : (
                 paginatedData.map((staff, index) => (
                   <TableRow key={staff.id}>
-                    <TableCell className="space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(staff)}>編輯</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(staff.id!)}>刪除</Button>
+                    <TableCell>
+                      <div className="flex flex-row gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(staff)}>編輯</Button>
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(staff.id!)}>刪除</Button>
+                      </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-medium">{staff.name}</TableCell>

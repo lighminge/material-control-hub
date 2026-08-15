@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, addDocument, updateDocument, deleteDocument } from '@/lib/firebase/api';
+import { getCollection, updateDocument, deleteDocument, setDocumentWithId, generateCustomId, getControlsByRequisitionId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,11 +22,14 @@ export type RequisitionItem = {
 
 export type Requisition = {
   id?: string;
+  displayId?: string;
+  controlDisplayId?: string | null;
   staffId: string;
   staffName: string;
   itemCount: number;
   items: RequisitionItem[];
   status: '已完成' | '缺料管制中';
+  completionDate?: string | null;
   createdAt?: any;
 };
 
@@ -37,6 +40,10 @@ export default function RequisitionsPage() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [formData, setFormData] = useState<Requisition>({
     staffId: '',
@@ -54,7 +61,9 @@ export default function RequisitionsPage() {
         getCollection('staff'),
         getCollection('materials')
       ]);
-      setRequisitions(reqs as Requisition[]);
+      // Sort requisitions by ID descending usually works for YYYYMMDD ids
+      const sortedReqs = (reqs as Requisition[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
+      setRequisitions(sortedReqs);
       setStaffList(staffs);
       setMaterials(mats as Material[]);
     } catch (error) {
@@ -86,7 +95,14 @@ export default function RequisitionsPage() {
   const handleRemoveItem = (index: number) => {
     const newItems = [...formData.items];
     newItems.splice(index, 1);
-    setFormData({ ...formData, items: newItems });
+    
+    const hasMissing = newItems.some(i => i.missingQuantity > 0);
+    setFormData({ 
+      ...formData, 
+      items: newItems,
+      itemCount: newItems.length,
+      status: hasMissing ? '缺料管制中' : '已完成'
+    });
   };
 
   const handleItemChange = (index: number, field: keyof RequisitionItem, value: any) => {
@@ -105,7 +121,6 @@ export default function RequisitionsPage() {
     item.missingQuantity = Math.max(0, item.requiredQuantity - item.currentStock);
     newItems[index] = item;
 
-    // Check overall status
     const hasMissing = newItems.some(i => i.missingQuantity > 0);
     
     setFormData({ 
@@ -123,34 +138,97 @@ export default function RequisitionsPage() {
     }
     
     try {
-      let reqId = editingId;
-      if (editingId) {
-        await updateDocument('requisitions', editingId, formData);
+      let finalReqId = editingId;
+      let finalDisplayId = formData.displayId;
+      let finalControlDisplayId = formData.controlDisplayId;
+      let isNewControlNeeded = false;
+
+      const completionDate = formData.status === '已完成' ? format(new Date(), 'yyyy-MM-dd') : null;
+
+      if (!editingId) {
+        // Create new requisition
+        finalDisplayId = await generateCustomId('requisitions', '領');
+        finalReqId = finalDisplayId; // Use displayId as actual firestore doc ID
+        
+        if (formData.status === '缺料管制中') {
+          finalControlDisplayId = await generateCustomId('controls', '管');
+          isNewControlNeeded = true;
+        }
+
+        const dataToSave = {
+          ...formData,
+          displayId: finalDisplayId,
+          controlDisplayId: finalControlDisplayId || null,
+          completionDate
+        };
+        await setDocumentWithId('requisitions', finalReqId, dataToSave);
       } else {
-        reqId = await addDocument('requisitions', formData);
+        // Update existing requisition
+        const existingControls = await getControlsByRequisitionId(editingId);
+        
+        if (formData.status === '缺料管制中') {
+          if (existingControls.length === 0) {
+            finalControlDisplayId = await generateCustomId('controls', '管');
+            isNewControlNeeded = true;
+          } else {
+            // Sync missing items to the existing control
+            const existingControl = existingControls[0];
+            finalControlDisplayId = existingControl.id; // Or existingControl.displayId
+            
+            const newControlItems = formData.items
+              .filter(i => i.missingQuantity > 0)
+              .map(i => {
+                // Preserve restockDate and notes if they already exist in control
+                const existingItem = existingControl.items?.find((ei: any) => ei.materialId === i.materialId);
+                return {
+                  materialId: i.materialId,
+                  materialName: i.materialName,
+                  requiredQuantity: i.requiredQuantity,
+                  missingQuantity: i.missingQuantity,
+                  restockDate: existingItem?.restockDate || '',
+                  notes: existingItem?.notes || ''
+                };
+              });
+
+            await updateDocument('controls', existingControl.id, {
+              items: newControlItems,
+              status: '處理中',
+              completionDate: null,
+              endDate: null
+            });
+          }
+        }
+
+        const dataToSave = {
+          ...formData,
+          controlDisplayId: finalControlDisplayId || null,
+          completionDate
+        };
+        await updateDocument('requisitions', editingId, dataToSave);
       }
       
-      // If status is missing, we need to create a control document if not editing,
-      // but to keep it simple, we can have a button to "轉入物料管制" or create it automatically.
-      // We will handle automatic creation of control if '缺料管制中' and it's new.
-      if (!editingId && formData.status === '缺料管制中') {
+      // Create control if needed
+      if (isNewControlNeeded && finalControlDisplayId && finalReqId) {
         const controlItems = formData.items
           .filter(i => i.missingQuantity > 0)
           .map(i => ({
             materialId: i.materialId,
             materialName: i.materialName,
+            requiredQuantity: i.requiredQuantity,
             missingQuantity: i.missingQuantity,
             restockDate: '',
             notes: ''
           }));
         
-        await addDocument('controls', {
-          requisitionId: reqId,
+        await setDocumentWithId('controls', finalControlDisplayId, {
+          displayId: finalControlDisplayId,
+          requisitionId: finalReqId,
           startDate: format(new Date(), 'yyyy-MM-dd'),
           endDate: null,
           items: controlItems,
           status: '處理中',
-          notes: '由領料單自動產生'
+          notes: '由領料單自動產生',
+          completionDate: null
         });
       }
 
@@ -162,10 +240,9 @@ export default function RequisitionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('確定要刪除此領料單嗎？')) {
-      await deleteDocument('requisitions', id);
-      loadData();
-    }
+    await deleteDocument('requisitions', id);
+    setDeleteConfirmId(null);
+    loadData();
   };
 
   const openNewForm = () => {
@@ -174,31 +251,58 @@ export default function RequisitionsPage() {
     setIsOpen(true);
   };
 
+  const totalItems = requisitions.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedData = requisitions.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div className="space-y-6">
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">您確定要刪除此領料單嗎？此動作無法復原。</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmId) handleDelete(deleteConfirmId); }}>確認刪除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-primary">領料單管理</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button onClick={openNewForm}>新增領料單</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>{editingId ? '編輯領料單' : '新增領料單'}</DialogTitle>
+              <DialogTitle>{editingId ? `編輯領料單 (${formData.displayId})` : '新增領料單'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label>備料人員</Label>
-                <Select value={formData.staffId} onValueChange={handleStaffChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="選擇備料人員" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffList.map(staff => (
-                      <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>備料人員</Label>
+                  <Select value={formData.staffId} onValueChange={handleStaffChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇備料人員" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffList.map(staff => (
+                        <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editingId && (
+                  <div className="space-y-2">
+                    <Label>關聯管制單號</Label>
+                    <div className="flex h-10 w-full items-center px-3 rounded-md border border-input bg-muted/50">
+                      {formData.controlDisplayId || '無'}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -218,7 +322,7 @@ export default function RequisitionsPage() {
                 {formData.items.map((item, index) => (
                   <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50">
                     <div className="flex-1 space-y-2">
-                      <Label>選擇物料</Label>
+                      <Label>選擇物料品號</Label>
                       <Select value={item.materialId} onValueChange={(val) => handleItemChange(index, 'materialId', val)}>
                         <SelectTrigger>
                           <SelectValue placeholder="選擇物料" />
@@ -240,7 +344,7 @@ export default function RequisitionsPage() {
                       />
                     </div>
                     <div className="w-24 space-y-2">
-                      <Label>庫存量</Label>
+                      <Label>目前庫存</Label>
                       <div className="h-10 flex items-center px-3 border rounded-md bg-background text-muted-foreground">
                         {item.currentStock}
                       </div>
@@ -271,46 +375,77 @@ export default function RequisitionsPage() {
         </Dialog>
       </div>
 
+      <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
+        <div className="font-medium">總計: {totalItems} 筆領料單</div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label>每頁顯示:</Label>
+            <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 筆</SelectItem>
+                <SelectItem value="20">20 筆</SelectItem>
+                <SelectItem value="30">30 筆</SelectItem>
+                <SelectItem value="50">50 筆</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
+            <span className="text-sm">第 {page} / {totalPages} 頁</span>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</Button>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>單號 ID</TableHead>
+                <TableHead className="w-[140px]">操作</TableHead>
+                <TableHead className="w-16">序號</TableHead>
+                <TableHead>領料單號</TableHead>
+                <TableHead>關聯管制單號</TableHead>
                 <TableHead>備料人員</TableHead>
-                <TableHead>項目數</TableHead>
                 <TableHead>狀態</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead>完成日期</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={7} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
-              ) : requisitions.length === 0 ? (
+              ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">尚無領料單資料</TableCell>
+                  <TableCell colSpan={7} className="text-center h-24">尚無領料單資料</TableCell>
                 </TableRow>
               ) : (
-                requisitions.map((req) => (
+                paginatedData.map((req, index) => (
                   <TableRow key={req.id}>
-                    <TableCell className="font-medium">{req.id?.slice(0, 8)}...</TableCell>
+                    <TableCell>
+                      <div className="flex flex-row gap-2">
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setFormData(req);
+                          setEditingId(req.id || null);
+                          setIsOpen(true);
+                        }}>編輯</Button>
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(req.id!)}>刪除</Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
+                    <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
                     <TableCell>{req.staffName}</TableCell>
-                    <TableCell>{req.itemCount}</TableCell>
                     <TableCell>
                       <Badge variant={req.status === '已完成' ? 'default' : 'destructive'}>
                         {req.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => {
-                        setFormData(req);
-                        setEditingId(req.id || null);
-                        setIsOpen(true);
-                      }}>編輯</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(req.id!)}>刪除</Button>
-                    </TableCell>
+                    <TableCell>{req.completionDate || '-'}</TableCell>
                   </TableRow>
                 ))
               )}
