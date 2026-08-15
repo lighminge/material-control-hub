@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, updateDocument } from '@/lib/firebase/api';
+import { getCollection, updateDocument, deleteDocument } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
