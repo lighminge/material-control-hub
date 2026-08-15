@@ -260,6 +260,15 @@ export default function RequisitionsPage() {
     }
   };
 
+  const handleDeleteClick = (req: Requisition) => {
+    const hasMissing = req.items.some(i => i.missingQuantity > 0);
+    if (hasMissing) {
+      setSystemAlert("此領料單尚有未補完的缺料項目，禁止刪除！");
+      return;
+    }
+    setDeleteConfirmId(req.id!);
+  };
+
   const handleDelete = async (id: string) => {
     await deleteDocument('requisitions', id);
     setDeleteConfirmId(null);
@@ -512,13 +521,12 @@ export default function RequisitionsPage() {
                 paginatedData.map((req, index) => (
                   <TableRow key={req.id}>
                     <TableCell>
-                      <div className="flex flex-row gap-2">
+                      <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => {
                           setFormData(req);
-                          setEditingId(req.id || null);
                           setIsOpen(true);
                         }}>編輯</Button>
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(req.id!)}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCollection } from '@/lib/firebase/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from 'recharts';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList } from 'recharts';
 import { differenceInDays, parseISO, format, subDays } from 'date-fns';
 import { ClipboardList, ShieldAlert, Package, TrendingUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,63 +14,64 @@ export default function Dashboard() {
     avgControlDays: 0
   });
 
+  const [controls, setControls] = useState<any[]>([]);
   const [controlTrendData, setControlTrendData] = useState<any[]>([]);
   const [controlDaysData, setControlDaysData] = useState<any[]>([]);
   const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
   const [trendChartType, setTrendChartType] = useState<'bar' | 'line' | 'both'>('line');
 
+  const totalControlItems = useMemo(() => {
+    return controls.reduce((sum, c) => sum + (c.items?.length || 0), 0);
+  }, [controls]);
+
+  const totalRestockedItems = useMemo(() => {
+    return controls.reduce((sum, c) => sum + (c.items?.filter((i: any) => i.missingQuantity === 0).length || 0), 0);
+  }, [controls]);
+
+  const calculateDays = (start: string, end: string | null) => {
+    return Math.max(1, differenceInDays(end ? parseISO(end) : new Date(), parseISO(start)));
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [reqs, controls] = await Promise.all([
+        const [reqs, controlsData] = await Promise.all([
           getCollection('requisitions'),
           getCollection('controls')
         ]);
 
-        const activeControls = controls.filter((c: any) => c.status === '處理中');
+        setControls(controlsData);
+        const activeControls = controlsData.filter((c: any) => c.status === '處理中');
         
         let totalDays = 0;
-        let totalControlMaterials = 0;
-        const daysDistribution = { '1-3天': 0, '4-7天': 0, '8-14天': 0, '15天以上': 0 };
-        
-        controls.forEach((c: any) => {
-          // Calculate average days
-          const days = Math.max(0, differenceInDays(c.endDate ? parseISO(c.endDate) : new Date(), parseISO(c.startDate)));
-          totalDays += days;
-          
-          if (days <= 3) daysDistribution['1-3天']++;
-          else if (days <= 7) daysDistribution['4-7天']++;
-          else if (days <= 14) daysDistribution['8-14天']++;
-          else daysDistribution['15天以上']++;
-        });
-
-        activeControls.forEach((c: any) => {
-          totalControlMaterials += (c.items?.length || 0);
+        controlsData.forEach((c: any) => {
+          totalDays += calculateDays(c.startDate, c.completionDate || null);
         });
 
         setStats({
           totalRequisitions: reqs.length,
           activeControls: activeControls.length,
-          totalControlMaterials: totalControlMaterials,
-          avgControlDays: controls.length > 0 ? Math.round(totalDays / controls.length) : 0
+          avgControlDays: controlsData.length > 0 ? Math.round(totalDays / controlsData.length) : 0
         });
 
-        setControlDaysData([
-          { name: '1-3天', count: daysDistribution['1-3天'] },
-          { name: '4-7天', count: daysDistribution['4-7天'] },
-          { name: '8-14天', count: daysDistribution['8-14天'] },
-          { name: '15天以上', count: daysDistribution['15天以上'] }
-        ]);
-
-        // Real trend data for last 7 days
-        const trend = Array.from({ length: 7 }).map((_, i) => {
-          const date = subDays(new Date(), 6 - i);
-          const dateStr = format(date, 'yyyy-MM-dd');
-          const displayStr = format(date, 'MM/dd');
-          const count = controls.filter((c: any) => c.startDate === dateStr).length;
-          return { name: displayStr, count };
+        const last7Days = Array.from({ length: 7 }).map((_, i) => format(subDays(new Date(), 6 - i), 'yyyy-MM-dd'));
+        const trendData = last7Days.map(date => {
+          const count = controlsData.filter((c: any) => c.startDate === date).length;
+          return { name: format(parseISO(date), 'MM/dd'), "數量": count };
         });
-        setControlTrendData(trend);
+        setControlTrendData(trendData);
+
+        const counts = Array(7).fill(0);
+        controlsData.forEach((c: any) => {
+          const d = calculateDays(c.startDate, c.completionDate || null);
+          if (d <= 7) counts[d - 1]++;
+        });
+        
+        const daysData = counts.map((count, index) => ({
+          name: `${index + 1}天`,
+          "數量": count
+        }));
+        setControlDaysData(daysData);
 
       } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -111,7 +112,10 @@ export default function Dashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalControlMaterials}</div>
+            <div className="text-2xl font-bold">{totalControlItems}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              已補完: <span className="font-bold text-green-600">{totalRestockedItems}</span> 項
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -152,10 +156,14 @@ export default function Dashboard() {
                   <YAxis axisLine={false} tickLine={false} tickMargin={10} allowDecimals={false} />
                   <Tooltip />
                   {(trendChartType === 'bar' || trendChartType === 'both') && (
-                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                    <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Bar>
                   )}
                   {(trendChartType === 'line' || trendChartType === 'both') && (
-                    <Line type="monotone" dataKey="count" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Line>
                   )}
                 </ComposedChart>
               </ResponsiveContainer>
@@ -189,10 +197,14 @@ export default function Dashboard() {
                   <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
                   {(chartType === 'bar' || chartType === 'both') && (
-                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                    <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} maxBarSize={30}>
+                      <LabelList dataKey="數量" position="right" />
+                    </Bar>
                   )}
                   {(chartType === 'line' || chartType === 'both') && (
-                    <Line type="monotone" dataKey="count" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Line>
                   )}
                 </ComposedChart>
               </ResponsiveContainer>

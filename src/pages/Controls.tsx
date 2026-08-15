@@ -144,14 +144,16 @@ export default function ControlsPage() {
       if (toSave.requisitionId) {
         try {
           const allReqs = await getCollection('requisitions') as any[];
+          const allMats = await getCollection('materials') as any[];
           const reqToUpdate = allReqs.find(r => r.id === toSave.requisitionId || r.displayId === toSave.requisitionId);
           
           if (reqToUpdate) {
             const updatedReqItems = reqToUpdate.items.map((reqItem: any) => {
               const ctrlItem = toSave.items.find(ci => ci.materialId === reqItem.materialId);
-              // If this item was restocked in the control form, update missingQuantity in requisition
+              // If this item was restocked in the control form, update missingQuantity and latest stock in requisition
               if (ctrlItem && ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
-                return { ...reqItem, missingQuantity: 0 };
+                const mat = allMats.find(m => m.id === reqItem.materialId);
+                return { ...reqItem, missingQuantity: 0, currentStock: mat ? mat.stock : reqItem.currentStock };
               }
               return reqItem;
             });
