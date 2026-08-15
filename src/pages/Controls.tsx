@@ -141,8 +141,8 @@ export default function ControlsPage() {
       
       if (toSave.requisitionId) {
         try {
-          const allReqs = await getCollection('requisitions');
-          const reqToUpdate = allReqs.find((r: any) => r.id === toSave.requisitionId || r.displayId === toSave.requisitionId);
+          const allReqs = await getCollection('requisitions') as any[];
+          const reqToUpdate = allReqs.find(r => r.id === toSave.requisitionId || r.displayId === toSave.requisitionId);
           
           if (reqToUpdate) {
             const updatedReqItems = reqToUpdate.items.map((reqItem: any) => {
