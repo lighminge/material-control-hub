@@ -549,7 +549,12 @@ export default function RequisitionsPage() {
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => {
-                          setFormData(req);
+                          const updatedItems = req.items.map(item => {
+                            const mat = materials.find(m => m.id === item.materialId);
+                            return { ...item, currentStock: mat ? mat.stock : item.currentStock };
+                          });
+                          setFormData({ ...req, items: updatedItems });
+                          setEditingId(req.id || null);
                           setIsOpen(true);
                         }}>編輯</Button>
                         <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)}>刪除</Button>
