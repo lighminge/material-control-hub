@@ -4,7 +4,6 @@
 
 @layer base {
   :root {
-    /* Soft cream background */
     --background: 40 33% 96%; 
     --foreground: 20 20% 20%;
 
@@ -14,7 +13,6 @@
     --popover: 40 33% 96%;
     --popover-foreground: 20 20% 20%;
 
-    /* Vibrant Coral Primary */
     --primary: 12 85% 60%;
     --primary-foreground: 0 0% 100%;
 
@@ -44,81 +42,89 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Zen Maru Gothic', 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 }
 
-/* Base custom utilities for claymorphism */
+/* Hand-molded claymorphism utilities */
 @layer utilities {
   .clay-card {
-    border-radius: var(--radius);
+    border-radius: 24px 28px 22px 26px / 26px 22px 28px 24px;
     background: hsl(var(--background));
     box-shadow: 12px 12px 24px #e0dcd1, -12px -12px 24px #ffffff;
     border: none;
+    transition: all 0.3s ease;
   }
 
   .clay-btn {
-    border-radius: 9999px;
+    border-radius: 20px 25px 18px 22px / 22px 18px 25px 20px;
     background: hsl(var(--background));
     box-shadow: 6px 6px 12px #e0dcd1, -6px -6px 12px #ffffff, inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.05);
-    transition: all 0.2s ease-in-out;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   
   .clay-btn:hover {
+    border-radius: 22px 18px 25px 20px / 20px 25px 18px 22px;
     box-shadow: 4px 4px 8px #e0dcd1, -4px -4px 8px #ffffff, inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.05);
-    transform: translateY(1px);
+    transform: translateY(1px) scale(0.98);
   }
 
   .clay-btn:active {
     box-shadow: inset 4px 4px 8px #e0dcd1, inset -4px -4px 8px #ffffff;
-    transform: translateY(2px);
+    transform: translateY(2px) scale(0.95);
   }
 
   .clay-btn-primary {
-    border-radius: 9999px;
+    border-radius: 25px 18px 22px 20px / 20px 22px 18px 25px;
     background: hsl(var(--primary));
     box-shadow: 6px 6px 12px #e0dcd1, -6px -6px 12px #ffffff, inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.1);
     color: hsl(var(--primary-foreground));
-    transition: all 0.2s ease-in-out;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   
   .clay-btn-primary:hover {
+    border-radius: 20px 25px 18px 22px / 22px 18px 25px 20px;
     box-shadow: 4px 4px 8px #e0dcd1, -4px -4px 8px #ffffff, inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.1);
-    transform: translateY(1px);
+    transform: translateY(1px) scale(0.98);
     background: hsl(12 85% 57%);
   }
   
   .clay-btn-primary:active {
     box-shadow: inset 4px 4px 8px rgba(0,0,0,0.15), inset -4px -4px 8px rgba(255,255,255,0.2);
-    transform: translateY(2px);
+    transform: translateY(2px) scale(0.95);
   }
 
   .clay-btn-destructive {
-    border-radius: 9999px;
+    border-radius: 18px 22px 25px 20px / 25px 20px 22px 18px;
     background: hsl(var(--destructive));
     box-shadow: 6px 6px 12px #e0dcd1, -6px -6px 12px #ffffff, inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.1);
     color: hsl(var(--destructive-foreground));
-    transition: all 0.2s ease-in-out;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .clay-btn-destructive:hover {
-    transform: translateY(1px);
+    border-radius: 22px 18px 20px 25px / 18px 22px 25px 20px;
+    transform: translateY(1px) scale(0.98);
     background: hsl(0 84% 57%);
   }
 
   .clay-btn-destructive:active {
     box-shadow: inset 4px 4px 8px rgba(0,0,0,0.15), inset -4px -4px 8px rgba(255,255,255,0.2);
-    transform: translateY(2px);
+    transform: translateY(2px) scale(0.95);
   }
 
   .clay-input {
-    border-radius: calc(var(--radius) - 4px);
+    border-radius: 15px 12px 18px 14px / 14px 16px 12px 15px;
     background: hsl(var(--background));
     box-shadow: inset 4px 4px 8px #e0dcd1, inset -4px -4px 8px #ffffff;
     border: none;
+    transition: all 0.2s ease;
   }
   
   .clay-input:focus {
-    box-shadow: inset 6px 6px 12px #e0dcd1, inset -6px -6px 12px #ffffff, 0 0 0 2px hsl(var(--ring) / 0.5);
-    outline: none;
+    border-radius: 12px 18px 14px 16px / 16px 14px 18px 12px;
+    box-shadow: inset 6px 6px 12px #e0dcd1, inset -6px -6px 12px #ffffff;
+    outline: 2px solid hsl(var(--primary) / 0.3);
+    outline-offset: 2px;
   }
 }
