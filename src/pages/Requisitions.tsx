@@ -351,7 +351,10 @@ export default function RequisitionsPage() {
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label className="text-lg">物料項目</Label>
+                  <div>
+                    <Label className="text-lg mr-4">物料項目</Label>
+                    <span className="text-sm font-bold text-muted-foreground">總計: {formData.items.length} 筆</span>
+                  </div>
                   <Button variant="outline" size="sm" onClick={handleAddItem}>
                     <Plus className="w-4 h-4 mr-2" /> 新增項目
                   </Button>
@@ -445,7 +448,12 @@ export default function RequisitionsPage() {
                 <div className="font-medium">
                   單據狀態: <Badge variant={formData.status === '已完成' ? 'default' : 'destructive'} className="ml-2">{formData.status}</Badge>
                 </div>
-                <Button onClick={handleSave}>儲存單據</Button>
+                <div className="flex gap-2">
+                  {editingId && (
+                    <Button variant="outline" onClick={() => setIsOpen(false)}>取消修改</Button>
+                  )}
+                  <Button onClick={handleSave}>儲存單據</Button>
+                </div>
               </div>
             </div>
           </DialogContent>

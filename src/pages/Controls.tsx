@@ -139,11 +139,39 @@ export default function ControlsPage() {
 
       await updateDocument('controls', formData.id, toSave);
       
-      if (allRestocked && toSave.requisitionId) {
-        await updateDocument('requisitions', toSave.requisitionId, {
-          status: '已完成',
-          completionDate: toSave.completionDate
-        });
+      if (toSave.requisitionId) {
+        try {
+          const allReqs = await getCollection('requisitions');
+          const reqToUpdate = allReqs.find((r: any) => r.id === toSave.requisitionId || r.displayId === toSave.requisitionId);
+          
+          if (reqToUpdate) {
+            const updatedReqItems = reqToUpdate.items.map((reqItem: any) => {
+              const ctrlItem = toSave.items.find(ci => ci.materialId === reqItem.materialId);
+              // If this item was restocked in the control form, update missingQuantity in requisition
+              if (ctrlItem && ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
+                return { ...reqItem, missingQuantity: 0 };
+              }
+              return reqItem;
+            });
+
+            const stillMissing = updatedReqItems.some((i: any) => i.missingQuantity > 0);
+            
+            const reqUpdates: any = {
+              items: updatedReqItems,
+              status: stillMissing ? '缺料管制中' : '已完成'
+            };
+
+            if (allRestocked && !stillMissing) {
+              reqUpdates.completionDate = toSave.completionDate;
+            } else if (!stillMissing && !reqToUpdate.completionDate) {
+              reqUpdates.completionDate = format(new Date(), 'yyyy-MM-dd');
+            }
+
+            await updateDocument('requisitions', reqToUpdate.id, reqUpdates);
+          }
+        } catch (syncError) {
+          console.error("Error syncing to requisition:", syncError);
+        }
       }
 
       setIsOpen(false);
@@ -236,7 +264,7 @@ export default function ControlsPage() {
       </Dialog>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-3xl" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>編輯物料管制單 ({formData?.displayId || formData?.id?.slice(0,8)})</DialogTitle>
           </DialogHeader>
