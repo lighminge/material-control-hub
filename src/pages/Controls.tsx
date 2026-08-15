@@ -77,6 +77,15 @@ export default function ControlsPage() {
     setFormData({ ...formData, items: newItems });
   };
 
+  const handleDeleteClick = (control: Control) => {
+    const hasMissing = control.items.some(i => i.missingQuantity > 0);
+    if (hasMissing) {
+      setSystemAlert("此管制單尚有未補完的缺料項目，禁止刪除！");
+      return;
+    }
+    setDeleteConfirmId(control.id!);
+  };
+
   const handleDelete = async (id: string) => {
     await deleteDocument('controls', id);
     setDeleteConfirmId(null);
@@ -324,16 +333,18 @@ export default function ControlsPage() {
                         )}
                       </div>
                       <div className="col-span-3 space-y-1">
-                        <Label className="text-xs">補完日期</Label>
+                        <Label className="text-xs">補完日期與庫存</Label>
                         {item.restockDate ? (
-                          <Input 
-                            type="date"
-                            value={item.restockDate}
-                            onChange={(e) => handleItemDateChange(index, e.target.value)}
-                            className="text-green-600 font-bold bg-green-50"
-                          />
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-8 px-2 flex items-center bg-green-50 text-green-600 font-bold border rounded-md text-xs">
+                              {item.restockDate}
+                            </div>
+                            <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={() => handleRestockClick(index)}>
+                              修改
+                            </Button>
+                          </div>
                         ) : (
-                          <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleRestockClick(index)}>
+                          <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => handleRestockClick(index)}>
                             設定補完日期
                           </Button>
                         )}
@@ -351,7 +362,8 @@ export default function ControlsPage() {
                 ))}
               </div>
 
-              <div className="pt-4 flex justify-end border-t">
+              <div className="pt-4 flex justify-end gap-2 border-t">
+                <Button variant="outline" onClick={() => setIsOpen(false)}>取消修改</Button>
                 <Button onClick={handleSave}>儲存更新</Button>
               </div>
             </div>
@@ -393,6 +405,8 @@ export default function ControlsPage() {
                 <TableHead className="w-16">序號</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
+                <TableHead>缺料項目總數</TableHead>
+                <TableHead>已補完數</TableHead>
                 <TableHead>管制天數</TableHead>
                 <TableHead>狀態</TableHead>
                 <TableHead>完成日期</TableHead>
@@ -416,12 +430,14 @@ export default function ControlsPage() {
                           setFormData(control);
                           setIsOpen(true);
                         }}>處理檢視</Button>
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(control.id!)}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(control)}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
                     <TableCell className="text-muted-foreground">{control.requisitionId.startsWith('領') ? control.requisitionId : control.requisitionId.slice(0, 8)}</TableCell>
+                    <TableCell>{control.items.length}</TableCell>
+                    <TableCell className="text-green-600 font-bold">{control.items.filter(i => i.missingQuantity === 0).length}</TableCell>
                     <TableCell>
                       <div className={`font-bold ${calculateDays(control.startDate, control.completionDate || null) > 7 ? 'text-destructive' : ''}`}>
                         {calculateDays(control.startDate, control.completionDate || null)} 天
