@@ -311,7 +311,7 @@ export default function RequisitionsPage() {
             <Button onClick={openNewForm}>新增領料單</Button>
           </DialogTrigger>
           {/* Prevent closing by interacting outside */}
-          <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{editingId ? `編輯領料單` : '新增領料單'}</DialogTitle>
             </DialogHeader>

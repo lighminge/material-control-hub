@@ -26,7 +26,9 @@ export default function MaterialsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<Material | null>(null);
   
-  const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'none'>('none');
+  const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'cat_asc' | 'cat_desc' | 'none'>('none');
+  const [searchName, setSearchName] = useState('');
+  const [searchCategory, setSearchCategory] = useState('all');
 
   const [formData, setFormData] = useState<Material>({
     name: '',
@@ -85,12 +87,23 @@ export default function MaterialsPage() {
     setIsOpen(true);
   };
 
+  // Filter logic
+  const filteredMaterials = materials.filter(mat => {
+    const matchName = searchName === '' || mat.name.toLowerCase().includes(searchName.toLowerCase());
+    const matchCategory = searchCategory === 'all' || (mat.category || '未分類') === searchCategory;
+    return matchName && matchCategory;
+  });
+
   // Sort logic
-  const sortedMaterials = [...materials];
+  const sortedMaterials = [...filteredMaterials];
   if (sortBy === 'asc') {
     sortedMaterials.sort((a, b) => a.name.localeCompare(b.name));
   } else if (sortBy === 'desc') {
     sortedMaterials.sort((a, b) => b.name.localeCompare(a.name));
+  } else if (sortBy === 'cat_asc') {
+    sortedMaterials.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+  } else if (sortBy === 'cat_desc') {
+    sortedMaterials.sort((a, b) => (b.category || '').localeCompare(a.category || ''));
   }
 
   const totalItems = sortedMaterials.length;
@@ -178,8 +191,31 @@ export default function MaterialsPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4">
-        <div className="flex items-center gap-4">
-          <div className="font-medium">總計: {totalItems} 筆資料</div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Label>查詢品號:</Label>
+            <Input 
+              placeholder="輸入關鍵字..." 
+              value={searchName} 
+              onChange={(e) => { setSearchName(e.target.value); setPage(1); }}
+              className="w-32 h-8 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label>查詢分類:</Label>
+            <Select value={searchCategory} onValueChange={(val) => { setSearchCategory(val); setPage(1); }}>
+              <SelectTrigger className="w-[100px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部分類</SelectItem>
+                <SelectItem value="未分類">未分類</SelectItem>
+                <SelectItem value="TKW">TKW</SelectItem>
+                <SelectItem value="夾鉗">夾鉗</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
             <Label>排序:</Label>
             <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
@@ -190,9 +226,13 @@ export default function MaterialsPage() {
                 <SelectItem value="none">預設排序</SelectItem>
                 <SelectItem value="asc">依物料品號 由小到大</SelectItem>
                 <SelectItem value="desc">依物料品號 由大到小</SelectItem>
+                <SelectItem value="cat_asc">依物料分類 由小到大</SelectItem>
+                <SelectItem value="cat_desc">依物料分類 由大到小</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          
+          <div className="font-medium border-l pl-4 border-muted-foreground/20">總計: {totalItems} 筆資料</div>
         </div>
         
         <div className="flex items-center gap-4">

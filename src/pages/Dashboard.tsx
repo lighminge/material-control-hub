@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [controlTrendData, setControlTrendData] = useState<any[]>([]);
   const [controlDaysData, setControlDaysData] = useState<any[]>([]);
   const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
+  const [trendChartType, setTrendChartType] = useState<'bar' | 'line' | 'both'>('line');
 
   useEffect(() => {
     const loadData = async () => {
@@ -125,21 +126,38 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>近七日管制單數量趨勢</CardTitle>
-            <CardDescription>每日新增的物料管制單數量</CardDescription>
+        <Card className="col-span-4 flex flex-col">
+          <CardHeader className="flex flex-row items-start justify-between pb-2">
+            <div>
+              <CardTitle>近七日管制單數量趨勢</CardTitle>
+              <CardDescription>每日新增的物料管制單數量</CardDescription>
+            </div>
+            <Select value={trendChartType} onValueChange={(val: 'bar'|'line'|'both') => setTrendChartType(val)}>
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue placeholder="切換圖表" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">長條圖</SelectItem>
+                <SelectItem value="line">折線圖</SelectItem>
+                <SelectItem value="both">二者並存</SelectItem>
+              </SelectContent>
+            </Select>
           </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[300px]">
+          <CardContent className="flex-1 pb-4 pl-2">
+            <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={controlTrendData}>
+                <ComposedChart data={controlTrendData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} />
                   <YAxis axisLine={false} tickLine={false} tickMargin={10} allowDecimals={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
+                  {(trendChartType === 'bar' || trendChartType === 'both') && (
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  )}
+                  {(trendChartType === 'line' || trendChartType === 'both') && (
+                    <Line type="monotone" dataKey="count" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
