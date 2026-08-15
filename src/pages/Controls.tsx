@@ -70,13 +70,6 @@ export default function ControlsPage() {
     setFormData({ ...formData, items: newItems });
   };
 
-  const handleItemDateChange = (index: number, value: string) => {
-    if (!formData) return;
-    const newItems = [...formData.items];
-    newItems[index].restockDate = value;
-    setFormData({ ...formData, items: newItems });
-  };
-
   const handleDeleteClick = (control: Control) => {
     const hasMissing = control.items.some(i => i.missingQuantity > 0);
     if (hasMissing) {
