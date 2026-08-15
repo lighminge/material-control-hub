@@ -172,7 +172,7 @@ export default function RequisitionsPage() {
             isNewControlNeeded = true;
           } else {
             // Sync missing items to the existing control
-            const existingControl = existingControls[0];
+            const existingControl = existingControls[0] as any;
             finalControlDisplayId = existingControl.id; // Or existingControl.displayId
             
             const newControlItems = formData.items
