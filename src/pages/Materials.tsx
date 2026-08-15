@@ -13,6 +13,7 @@ export type Material = {
   name: string;
   stock: number;
   unit: string;
+  category?: string;
 };
 
 export default function MaterialsPage() {
@@ -23,11 +24,15 @@ export default function MaterialsPage() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<Material | null>(null);
+  
+  const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'none'>('none');
 
   const [formData, setFormData] = useState<Material>({
     name: '',
     stock: 0,
-    unit: '個'
+    unit: 'PCS',
+    category: '未分類'
   });
 
   const loadMaterials = async () => {
@@ -55,7 +60,7 @@ export default function MaterialsPage() {
       }
       setIsOpen(false);
       loadMaterials();
-      setFormData({ name: '', stock: 0, unit: '個' });
+      setFormData({ name: '', stock: 0, unit: 'PCS', category: '未分類' });
       setEditingId(null);
     } catch (error) {
       console.error("Error saving material:", error);
@@ -63,40 +68,53 @@ export default function MaterialsPage() {
   };
 
   const handleEdit = (mat: Material) => {
-    setFormData(mat);
+    setFormData({ ...mat, category: mat.category || '未分類' });
     setEditingId(mat.id || null);
     setIsOpen(true);
   };
 
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
   const handleDelete = async (id: string) => {
     await deleteDocument('materials', id);
-    setDeleteConfirmId(null);
+    setDeleteConfirmItem(null);
     loadMaterials();
   };
 
   const openNewForm = () => {
-    setFormData({ name: '', stock: 0, unit: 'PCS' });
+    setFormData({ name: '', stock: 0, unit: 'PCS', category: '未分類' });
     setEditingId(null);
     setIsOpen(true);
   };
 
-  const totalItems = materials.length;
+  // Sort logic
+  const sortedMaterials = [...materials];
+  if (sortBy === 'asc') {
+    sortedMaterials.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortBy === 'desc') {
+    sortedMaterials.sort((a, b) => b.name.localeCompare(a.name));
+  }
+
+  const totalItems = sortedMaterials.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedData = materials.slice((page - 1) * pageSize, page * pageSize);
+  const paginatedData = sortedMaterials.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
-      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+      <Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>確認刪除</DialogTitle>
+            <DialogTitle>確認刪除物料</DialogTitle>
           </DialogHeader>
-          <div className="py-4">您確定要刪除此物料嗎？此動作無法復原。</div>
+          <div className="py-4 space-y-4">
+            <p>您確定要刪除物料品號 <strong>{deleteConfirmItem?.name}</strong> 嗎？此動作無法復原。</p>
+            {(deleteConfirmItem?.stock || 0) > 0 && (
+              <div className="p-3 bg-destructive/10 text-destructive rounded-md border border-destructive/20 font-bold">
+                ⚠️ 警告：該物料目前尚有庫存 {deleteConfirmItem?.stock} {deleteConfirmItem?.unit}！刪除後將遺失此庫存資料。
+              </div>
+            )}
+          </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>取消</Button>
-            <Button variant="destructive" onClick={() => { if(deleteConfirmId) handleDelete(deleteConfirmId); }}>確認刪除</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirmItem(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmItem?.id) handleDelete(deleteConfirmItem.id); }}>確認刪除</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -119,6 +137,19 @@ export default function MaterialsPage() {
                   onChange={(e) => setFormData({...formData, name: e.target.value})} 
                   placeholder="輸入物料品號"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>物料分類</Label>
+                <Select value={formData.category || '未分類'} onValueChange={(val) => setFormData({...formData, category: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇分類" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="未分類">未分類</SelectItem>
+                    <SelectItem value="TKW">TKW</SelectItem>
+                    <SelectItem value="夾鉗">夾鉗</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>庫存數量</Label>
@@ -146,13 +177,29 @@ export default function MaterialsPage() {
         </Dialog>
       </div>
 
-      <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
-        <div className="font-medium">總計: {totalItems} 筆資料</div>
+      <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4">
+        <div className="flex items-center gap-4">
+          <div className="font-medium">總計: {totalItems} 筆資料</div>
+          <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
+            <Label>排序:</Label>
+            <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue placeholder="選擇排序方式" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">預設排序</SelectItem>
+                <SelectItem value="asc">依物料品號 由小到大</SelectItem>
+                <SelectItem value="desc">依物料品號 由大到小</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Label>每頁顯示:</Label>
             <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[80px] h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -178,6 +225,7 @@ export default function MaterialsPage() {
               <TableRow>
                 <TableHead className="w-[140px]">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
+                <TableHead>物料分類</TableHead>
                 <TableHead>物料品號</TableHead>
                 <TableHead>庫存數量</TableHead>
                 <TableHead>單位</TableHead>
@@ -186,11 +234,11 @@ export default function MaterialsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">尚無物料資料</TableCell>
+                  <TableCell colSpan={6} className="text-center h-24">尚無物料資料</TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((mat, index) => (
@@ -198,10 +246,11 @@ export default function MaterialsPage() {
                     <TableCell>
                       <div className="flex flex-row gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(mat)}>編輯</Button>
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(mat.id!)}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmItem(mat)}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell className="text-muted-foreground">{mat.category || '未分類'}</TableCell>
                     <TableCell className="font-medium">{mat.name}</TableCell>
                     <TableCell>{mat.stock}</TableCell>
                     <TableCell>{mat.unit}</TableCell>

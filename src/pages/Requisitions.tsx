@@ -7,9 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, ChevronsUpDown, Check } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import type { Material } from './Materials';
 
 export type RequisitionItem = {
@@ -38,14 +41,20 @@ export default function RequisitionsPage() {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Combobox popover open states
+  const [openComboboxIndex, setOpenComboboxIndex] = useState<number | null>(null);
+
   const [formData, setFormData] = useState<Requisition>({
+    displayId: '',
     staffId: '',
     staffName: '',
     itemCount: 0,
@@ -61,7 +70,6 @@ export default function RequisitionsPage() {
         getCollection('staff'),
         getCollection('materials')
       ]);
-      // Sort requisitions by ID descending usually works for YYYYMMDD ids
       const sortedReqs = (reqs as Requisition[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
       setRequisitions(sortedReqs);
       setStaffList(staffs);
@@ -110,6 +118,12 @@ export default function RequisitionsPage() {
     const item = { ...newItems[index] };
     
     if (field === 'materialId') {
+      // Check for duplicate
+      if (newItems.some((i, idx) => idx !== index && i.materialId === value)) {
+        setSystemAlert("此物料已經在清單中！同一張領料單不可選取重複的物料。");
+        return;
+      }
+      
       const mat = materials.find(m => m.id === value);
       item.materialId = value;
       item.materialName = mat?.name || '';
@@ -132,23 +146,33 @@ export default function RequisitionsPage() {
   };
 
   const handleSave = async () => {
+    if (!formData.displayId || formData.displayId.trim() === '') {
+      setSystemAlert("請輸入領料單號！");
+      return;
+    }
+
     if (!formData.staffId) {
-      alert("請選擇備料人員");
+      setSystemAlert("請選擇備料人員！");
       return;
     }
     
+    // Check for duplicate displayId
+    const isDuplicateId = requisitions.some(r => r.displayId === formData.displayId && r.id !== editingId);
+    if (isDuplicateId) {
+      setSystemAlert(`領料單號 [${formData.displayId}] 已經存在，請輸入其他的單號！`);
+      return;
+    }
+
     try {
       let finalReqId = editingId;
-      let finalDisplayId = formData.displayId;
       let finalControlDisplayId = formData.controlDisplayId;
       let isNewControlNeeded = false;
 
       const completionDate = formData.status === '已完成' ? format(new Date(), 'yyyy-MM-dd') : null;
 
       if (!editingId) {
-        // Create new requisition
-        finalDisplayId = await generateCustomId('requisitions', '領');
-        finalReqId = finalDisplayId; // Use displayId as actual firestore doc ID
+        // We use the manually entered displayId as the Firestore document ID to keep it simple and unified.
+        finalReqId = formData.displayId; 
         
         if (formData.status === '缺料管制中') {
           finalControlDisplayId = await generateCustomId('controls', '管');
@@ -157,7 +181,6 @@ export default function RequisitionsPage() {
 
         const dataToSave = {
           ...formData,
-          displayId: finalDisplayId,
           controlDisplayId: finalControlDisplayId || null,
           completionDate
         };
@@ -171,14 +194,12 @@ export default function RequisitionsPage() {
             finalControlDisplayId = await generateCustomId('controls', '管');
             isNewControlNeeded = true;
           } else {
-            // Sync missing items to the existing control
             const existingControl = existingControls[0] as any;
-            finalControlDisplayId = existingControl.id; // Or existingControl.displayId
+            finalControlDisplayId = existingControl.id;
             
             const newControlItems = formData.items
               .filter(i => i.missingQuantity > 0)
               .map(i => {
-                // Preserve restockDate and notes if they already exist in control
                 const existingItem = existingControl.items?.find((ei: any) => ei.materialId === i.materialId);
                 return {
                   materialId: i.materialId,
@@ -246,7 +267,7 @@ export default function RequisitionsPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ staffId: '', staffName: '', itemCount: 0, items: [], status: '已完成' });
+    setFormData({ displayId: '', staffId: '', staffName: '', itemCount: 0, items: [], status: '已完成' });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -257,6 +278,19 @@ export default function RequisitionsPage() {
 
   return (
     <div className="space-y-6">
+      {/* System Warning Alert Dialog */}
+      <Dialog open={!!systemAlert} onOpenChange={(open) => !open && setSystemAlert(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">系統提示</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center font-bold text-lg">{systemAlert}</div>
+          <div className="flex justify-center">
+            <Button onClick={() => setSystemAlert(null)}>確認</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <DialogContent>
           <DialogHeader>
@@ -276,12 +310,22 @@ export default function RequisitionsPage() {
           <DialogTrigger asChild>
             <Button onClick={openNewForm}>新增領料單</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl">
+          {/* Prevent closing by interacting outside */}
+          <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
-              <DialogTitle>{editingId ? `編輯領料單 (${formData.displayId})` : '新增領料單'}</DialogTitle>
+              <DialogTitle>{editingId ? `編輯領料單` : '新增領料單'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>領料單號</Label>
+                  <Input 
+                    value={formData.displayId || ''} 
+                    onChange={(e) => setFormData({...formData, displayId: e.target.value})} 
+                    placeholder="輸入領料單號"
+                    disabled={!!editingId} // Cannot edit ID after creation
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>備料人員</Label>
                   <Select value={formData.staffId} onValueChange={handleStaffChange}>
@@ -296,7 +340,7 @@ export default function RequisitionsPage() {
                   </Select>
                 </div>
                 {editingId && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2">
                     <Label>關聯管制單號</Label>
                     <div className="flex h-10 w-full items-center px-3 rounded-md border border-input bg-muted/50">
                       {formData.controlDisplayId || '無'}
@@ -323,16 +367,49 @@ export default function RequisitionsPage() {
                   <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50">
                     <div className="flex-1 space-y-2">
                       <Label>選擇物料品號</Label>
-                      <Select value={item.materialId} onValueChange={(val) => handleItemChange(index, 'materialId', val)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="選擇物料" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {materials.map(mat => (
-                            <SelectItem key={mat.id} value={mat.id!}>{mat.name} (庫存: {mat.stock})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={openComboboxIndex === index} onOpenChange={(open) => setOpenComboboxIndex(open ? index : null)}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openComboboxIndex === index}
+                            className="w-full justify-between bg-background"
+                          >
+                            {item.materialId
+                              ? materials.find((m) => m.id === item.materialId)?.name
+                              : "搜尋並選擇物料品號..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="輸入關鍵字搜尋..." />
+                            <CommandList>
+                              <CommandEmpty>找不到對應的物料。</CommandEmpty>
+                              <CommandGroup>
+                                {materials.map((mat) => (
+                                  <CommandItem
+                                    key={mat.id}
+                                    value={mat.name} // By default, CommandItem filters based on text content / value
+                                    onSelect={() => {
+                                      handleItemChange(index, 'materialId', mat.id);
+                                      setOpenComboboxIndex(null);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        item.materialId === mat.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {mat.name} <span className="ml-auto text-muted-foreground">(庫存: {mat.stock})</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="w-32 space-y-2">
                       <Label>需領數量</Label>

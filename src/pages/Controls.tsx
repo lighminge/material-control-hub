@@ -40,6 +40,7 @@ export default function ControlsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
   const [restockItemIndex, setRestockItemIndex] = useState<number | null>(null);
   const [enteredStock, setEnteredStock] = useState<string>('');
@@ -77,7 +78,6 @@ export default function ControlsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    // Optionally delete from firebase
     await deleteDocument('controls', id);
     setDeleteConfirmId(null);
     loadData();
@@ -95,19 +95,16 @@ export default function ControlsPage() {
     const item = formData.items[restockItemIndex];
     const stockInput = parseInt(enteredStock);
     if (isNaN(stockInput) || stockInput < 0) {
-      alert("請輸入有效的庫存數量");
+      setSystemAlert("請輸入有效的進貨當下總庫存數量！");
       return;
     }
 
     try {
-      // "自動扣除領料數：是 用管理者輸入的庫存數 - 該筆物料的領用數"
       const requiredQty = item.requiredQuantity || 0;
       const finalStock = stockInput - requiredQty;
       
-      // Update inventory directly
       await updateDocument('materials', item.materialId, { stock: finalStock });
 
-      // Update control item
       const newItems = [...formData.items];
       newItems[restockItemIndex] = {
         ...item,
@@ -117,10 +114,10 @@ export default function ControlsPage() {
 
       setFormData({ ...formData, items: newItems });
       setRestockItemIndex(null);
-      alert(`已成功更新庫存，目前物料剩餘庫存: ${finalStock}`);
+      setSystemAlert(`已成功設定補件！目前該物料扣除領用後，剩餘庫存為: ${finalStock}`);
     } catch (error) {
       console.error("Error restocking:", error);
-      alert("更新庫存失敗");
+      setSystemAlert("更新庫存時發生錯誤！");
     }
   };
 
@@ -130,12 +127,10 @@ export default function ControlsPage() {
     try {
       let toSave = { ...formData };
       
-      // Check if all items are restocked
       const allRestocked = toSave.items.every(i => i.missingQuantity === 0 && i.restockDate !== '');
       
       if (allRestocked) {
         toSave.status = '已結案';
-        // find max restock date
         const dates = toSave.items.map(i => new Date(i.restockDate).getTime());
         const maxDate = new Date(Math.max(...dates));
         toSave.completionDate = format(maxDate, 'yyyy-MM-dd');
@@ -171,6 +166,19 @@ export default function ControlsPage() {
 
   return (
     <div className="space-y-6">
+      {/* System Warning Alert Dialog */}
+      <Dialog open={!!systemAlert} onOpenChange={(open) => !open && setSystemAlert(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-primary">系統提示</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center font-bold text-lg">{systemAlert}</div>
+          <div className="flex justify-center">
+            <Button onClick={() => setSystemAlert(null)}>確認</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <DialogContent>
           <DialogHeader>
@@ -189,7 +197,7 @@ export default function ControlsPage() {
       </div>
 
       <Dialog open={restockItemIndex !== null} onOpenChange={(open) => !open && setRestockItemIndex(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>設定補完日期與進貨庫存</DialogTitle>
           </DialogHeader>
@@ -228,7 +236,7 @@ export default function ControlsPage() {
       </Dialog>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>編輯物料管制單 ({formData?.displayId || formData?.id?.slice(0,8)})</DialogTitle>
           </DialogHeader>
@@ -264,10 +272,16 @@ export default function ControlsPage() {
               </div>
 
               <div className="space-y-4">
-                <Label className="text-lg">缺料項目清單</Label>
+                <div className="flex justify-between items-center">
+                  <Label className="text-lg">缺料項目清單</Label>
+                  <span className="text-sm font-bold text-muted-foreground">總計: {formData.items.length} 筆</span>
+                </div>
                 {formData.items.map((item, index) => (
-                  <Card key={index} className="bg-muted/30">
-                    <CardContent className="p-4 grid grid-cols-12 gap-4 items-center">
+                  <Card key={index} className="bg-muted/30 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 bg-primary/20 px-2 py-1 rounded-br-lg text-xs font-bold text-primary">
+                      #{index + 1}
+                    </div>
+                    <CardContent className="p-4 pt-6 grid grid-cols-12 gap-4 items-center">
                       <div className="col-span-3 space-y-1">
                         <Label className="text-xs text-muted-foreground">物料品號</Label>
                         <div className="font-medium">{item.materialName}</div>
