@@ -367,7 +367,7 @@ export default function RequisitionsPage() {
                   <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50">
                     <div className="flex-1 space-y-2">
                       <Label>選擇物料品號</Label>
-                      <Popover open={openComboboxIndex === index} onOpenChange={(open) => setOpenComboboxIndex(open ? index : null)}>
+                      <Popover open={openComboboxIndex === index} onOpenChange={(open: boolean) => setOpenComboboxIndex(open ? index : null)}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
