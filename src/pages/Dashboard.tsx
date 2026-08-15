@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getCollection } from '@/lib/firebase/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList } from 'recharts';
@@ -10,7 +10,6 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     activeControls: 0,
-    totalControlMaterials: 0,
     avgControlDays: 0
   });
 
