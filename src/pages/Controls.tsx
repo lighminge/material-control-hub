@@ -39,6 +39,7 @@ export default function ControlsPage() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [restockItemIndex, setRestockItemIndex] = useState<number | null>(null);
   const [enteredStock, setEnteredStock] = useState<string>('');
@@ -66,6 +67,20 @@ export default function ControlsPage() {
     const newItems = [...formData.items];
     newItems[index].notes = value;
     setFormData({ ...formData, items: newItems });
+  };
+
+  const handleItemDateChange = (index: number, value: string) => {
+    if (!formData) return;
+    const newItems = [...formData.items];
+    newItems[index].restockDate = value;
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const handleDelete = async (id: string) => {
+    // Optionally delete from firebase
+    await deleteDocument('controls', id);
+    setDeleteConfirmId(null);
+    loadData();
   };
 
   const handleRestockClick = (index: number) => {
@@ -156,6 +171,19 @@ export default function ControlsPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">您確定要刪除此管制單嗎？此動作無法復原。</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmId) handleDelete(deleteConfirmId); }}>確認刪除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-primary">物料管制</h1>
       </div>
@@ -256,7 +284,12 @@ export default function ControlsPage() {
                       <div className="col-span-3 space-y-1">
                         <Label className="text-xs">補完日期</Label>
                         {item.restockDate ? (
-                          <div className="font-bold text-green-600 px-2 py-1 bg-green-50 rounded-md text-center">{item.restockDate}</div>
+                          <Input 
+                            type="date"
+                            value={item.restockDate}
+                            onChange={(e) => handleItemDateChange(index, e.target.value)}
+                            className="text-green-600 font-bold bg-green-50"
+                          />
                         ) : (
                           <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleRestockClick(index)}>
                             設定補完日期
@@ -336,10 +369,13 @@ export default function ControlsPage() {
                 paginatedData.map((control, index) => (
                   <TableRow key={control.id}>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => {
-                        setFormData(control);
-                        setIsOpen(true);
-                      }}>處理檢視</Button>
+                      <div className="flex flex-row gap-2">
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setFormData(control);
+                          setIsOpen(true);
+                        }}>處理檢視</Button>
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(control.id!)}>刪除</Button>
+                      </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
