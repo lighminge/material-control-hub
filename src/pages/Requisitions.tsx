@@ -6,11 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, ChevronsUpDown, Check } from 'lucide-react';
+import { Trash2, Plus, ChevronsUpDown, Check, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { Material } from './Materials';
@@ -45,6 +45,8 @@ export default function RequisitionsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [itemToDeleteIndex, setItemToDeleteIndex] = useState<number | null>(null);
+  
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
@@ -101,16 +103,22 @@ export default function RequisitionsPage() {
   };
 
   const handleRemoveItem = (index: number) => {
-    const newItems = [...formData.items];
-    newItems.splice(index, 1);
-    
-    const hasMissing = newItems.some(i => i.missingQuantity > 0);
-    setFormData({ 
-      ...formData, 
-      items: newItems,
-      itemCount: newItems.length,
-      status: hasMissing ? '缺料管制中' : '已完成'
-    });
+    setItemToDeleteIndex(index);
+  };
+
+  const confirmRemoveItem = () => {
+    if (itemToDeleteIndex !== null && formData) {
+      const newItems = formData.items.filter((_, i) => i !== itemToDeleteIndex);
+      
+      const hasMissing = newItems.some(i => i.missingQuantity > 0);
+      setFormData({ 
+        ...formData, 
+        items: newItems,
+        itemCount: newItems.length,
+        status: hasMissing ? '缺料管制中' : '已完成'
+      });
+      setItemToDeleteIndex(null);
+    }
   };
 
   const handleItemChange = (index: number, field: keyof RequisitionItem, value: any) => {
@@ -376,7 +384,8 @@ export default function RequisitionsPage() {
                 )}
 
                 {formData.items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50">
+                  <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50 relative pt-8">
+                    <div className="absolute top-0 left-0 bg-primary/20 px-2 py-1 rounded-br-lg text-xs font-bold text-primary">#{index + 1}</div>
                     <div className="flex-1 space-y-2">
                       <Label>選擇物料品號</Label>
                       <Popover open={openComboboxIndex === index} onOpenChange={(open: boolean) => setOpenComboboxIndex(open ? index : null)}>
@@ -467,7 +476,24 @@ export default function RequisitionsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+        <Dialog open={itemToDeleteIndex !== null} onOpenChange={(open) => !open && setItemToDeleteIndex(null)}>
+        <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5" />
+              確認刪除項目
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            您確定要刪除第 {itemToDeleteIndex !== null ? itemToDeleteIndex + 1 : ''} 項物料嗎？
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setItemToDeleteIndex(null)}>取消</Button>
+            <Button variant="destructive" onClick={confirmRemoveItem}>確定刪除</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
 
       <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
         <div className="font-medium">總計: {totalItems} 筆領料單</div>
