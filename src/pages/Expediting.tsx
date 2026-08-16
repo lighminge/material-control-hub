@@ -8,17 +8,24 @@ import { AlarmClock, ShieldAlert, TrendingUp } from 'lucide-react';
 
 export default function ExpeditingPage() {
   const [controls, setControls] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterDay, setFilterDay] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const ctrls = await getCollection('controls');
+        const [ctrls, mats] = await Promise.all([
+          getCollection('controls'),
+          getCollection('materials')
+        ]);
         // Only active/incomplete controls
         const activeCtrls = ctrls.filter((c: any) => c.status === '處理中' || c.status === '缺料管制中');
         setControls(activeCtrls);
+        setMaterials(mats);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -87,6 +94,10 @@ export default function ExpeditingPage() {
     }
     return result.sort((a, b) => calculateDays(b.startDate) - calculateDays(a.startDate));
   }, [controls, filterDay]);
+
+  const totalItems = filteredControls.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedControls = filteredControls.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -167,6 +178,7 @@ export default function ExpeditingPage() {
                 <TableHead className="w-16">序號</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
+                <TableHead>涵蓋物料分類</TableHead>
                 <TableHead>管制天數</TableHead>
                 <TableHead>缺料項目總數</TableHead>
                 <TableHead>已補完數</TableHead>
@@ -176,21 +188,23 @@ export default function ExpeditingPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
-              ) : filteredControls.length === 0 ? (
+              ) : paginatedControls.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">目前無符合天數的管制單</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">目前無符合天數的管制單</TableCell>
                 </TableRow>
               ) : (
-                filteredControls.map((control, index) => {
+                paginatedControls.map((control, index) => {
                   const days = calculateDays(control.startDate);
                   const rowClass = getRowColorClass(days >= 7 ? 7 : days);
+                  const cats = Array.from(new Set(control.items.map((i: any) => materials.find(m => m.id === i.materialId)?.category || '未分類')));
                   return (
                     <TableRow key={control.id} className={rowClass}>
-                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                       <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
                       <TableCell className="text-muted-foreground">{control.requisitionId.startsWith('領') ? control.requisitionId : control.requisitionId.slice(0, 8)}</TableCell>
+                      <TableCell>{cats.join(', ')}</TableCell>
                       <TableCell>
                         <span className="font-bold">{days} 天</span>
                       </TableCell>
@@ -209,6 +223,32 @@ export default function ExpeditingPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      {!loading && paginatedControls.length > 0 && (
+        <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md mt-4">
+          <div className="font-medium">總計: {totalItems} 筆管制單</div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">每頁顯示:</span>
+              <select 
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                value={pageSize} 
+                onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1); }}
+              >
+                <option value={10}>10 筆</option>
+                <option value={20}>20 筆</option>
+                <option value={30}>30 筆</option>
+                <option value={50}>50 筆</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="px-2 py-1 border rounded hover:bg-muted disabled:opacity-50 text-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</button>
+              <span className="text-sm">第 {page} / {totalPages} 頁</span>
+              <button className="px-2 py-1 border rounded hover:bg-muted disabled:opacity-50 text-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ export type RequisitionItem = {
   requiredQuantity: number;
   currentStock: number;
   missingQuantity: number;
+  restockDate?: string;
 };
 
 export type Requisition = {
@@ -214,15 +215,17 @@ export default function RequisitionsPage() {
             finalControlDisplayId = existingControl.id;
             
             const newControlItems = formData.items
-              .filter(i => i.missingQuantity > 0)
+              .filter(i => i.missingQuantity > 0 || (i.missingQuantity === 0 && i.restockDate))
               .map(i => {
                 const existingItem = existingControl.items?.find((ei: any) => ei.materialId === i.materialId);
+                // Maintain existing restockDate if it exists and quantity is 0
+                const restockDate = (i.missingQuantity === 0 && i.restockDate) ? i.restockDate : (existingItem?.restockDate || '');
                 return {
                   materialId: i.materialId,
                   materialName: i.materialName,
                   requiredQuantity: i.requiredQuantity,
                   missingQuantity: i.missingQuantity,
-                  restockDate: existingItem?.restockDate || '',
+                  restockDate,
                   notes: existingItem?.notes || ''
                 };
               });
@@ -478,9 +481,20 @@ export default function RequisitionsPage() {
                     </div>
                     <div className="w-24 space-y-2">
                       <Label>缺料數量</Label>
-                      <div className={`h-10 flex items-center px-3 border rounded-md font-bold ${item.missingQuantity > 0 ? 'text-destructive bg-destructive/10' : 'text-green-600 bg-green-50'}`}>
-                        {item.missingQuantity}
-                      </div>
+                      {item.missingQuantity === 0 && item.restockDate ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="h-10 flex items-center justify-center border rounded-md font-bold text-white bg-green-600 text-xs">
+                            已補完
+                          </div>
+                          <div className="text-[10px] text-center text-muted-foreground font-bold">
+                            {item.restockDate}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`h-10 flex items-center px-3 border rounded-md font-bold ${item.missingQuantity > 0 ? 'text-destructive bg-destructive/10' : 'text-green-600 bg-green-50'}`}>
+                          {item.missingQuantity}
+                        </div>
+                      )}
                     </div>
                     <div className="pt-6">
                       <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
@@ -619,10 +633,18 @@ export default function RequisitionsPage() {
                   <TableRow key={req.id}>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => {
+                        <Button variant="outline" size="sm" onClick={async () => {
+                          const existingControls = await getControlsByRequisitionId(req.id || '');
+                          const existingControl = existingControls[0] as any;
+
                           const updatedItems = req.items.map(item => {
                             const mat = materials.find(m => m.id === item.materialId);
-                            return { ...item, currentStock: mat ? mat.stock : item.currentStock };
+                            const ctrlItem = existingControl?.items?.find((ei: any) => ei.materialId === item.materialId);
+                            return { 
+                              ...item, 
+                              currentStock: mat ? mat.stock : item.currentStock,
+                              restockDate: ctrlItem?.restockDate || item.restockDate
+                            };
                           });
                           setFormData({ ...req, items: updatedItems });
                           setEditingId(req.id || null);

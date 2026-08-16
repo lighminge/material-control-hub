@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { differenceInDays, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList } from 'recharts';
 
 export default function StatisticsPage() {
   const [controls, setControls] = useState<any[]>([]);
@@ -15,6 +16,7 @@ export default function StatisticsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [category, setCategory] = useState('all');
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,14 +84,25 @@ export default function StatisticsPage() {
     });
 
     let totalDays = 0;
+    const counts = Array(7).fill(0);
+    
     filteredControls.forEach(c => {
-      totalDays += calculateDays(c.startDate, c.completionDate || null);
+      const d = calculateDays(c.startDate, c.completionDate || null);
+      totalDays += d;
+      if (d <= 7) counts[d - 1]++;
+      else counts[6]++;
     });
+
+    const daysData = counts.map((count, index) => ({
+      name: index === 6 ? '7天以上' : `${index + 1}天`,
+      "數量": count
+    }));
 
     return {
       reqCount: filteredReqs.length,
       ctrlCount: filteredControls.length,
-      avgDays: filteredControls.length > 0 ? (totalDays / filteredControls.length).toFixed(2) : '0.00'
+      avgDays: filteredControls.length > 0 ? (totalDays / filteredControls.length).toFixed(2) : '0.00',
+      daysData
     };
   }, [controls, requisitions, materials, startDate, endDate, category]);
 
@@ -161,6 +174,47 @@ export default function StatisticsPage() {
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="flex flex-col">
+        <CardHeader className="flex flex-row items-start justify-between pb-2">
+          <div>
+            <CardTitle>管制天數分佈圖</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">符合查詢條件之管制單處理時長</p>
+          </div>
+          <Select value={chartType} onValueChange={(val: 'bar'|'line'|'both') => setChartType(val)}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue placeholder="切換圖表" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bar">長條圖</SelectItem>
+              <SelectItem value="line">折線圖</SelectItem>
+              <SelectItem value="both">二者並存</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent className="flex-1 pb-4">
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={stats.daysData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} />
+                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
+                {(chartType === 'bar' || chartType === 'both') && (
+                  <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} maxBarSize={40}>
+                    <LabelList dataKey="數量" position="top" />
+                  </Bar>
+                )}
+                {(chartType === 'line' || chartType === 'both') && (
+                  <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                    <LabelList dataKey="數量" position="top" />
+                  </Line>
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

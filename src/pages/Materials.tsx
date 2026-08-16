@@ -37,20 +37,53 @@ export default function MaterialsPage() {
     category: '未分類'
   });
 
-  const loadMaterials = async () => {
+  // History Tab State
+  const [activeTab, setActiveTab] = useState<'list' | 'history'>('list');
+  const [historyLogs, setHistoryLogs] = useState<any[]>([]);
+  
+  const [histSearchName, setHistSearchName] = useState('');
+  const [histSearchCat, setHistSearchCat] = useState('all');
+  const [histStartDate, setHistStartDate] = useState('');
+  const [histEndDate, setHistEndDate] = useState('');
+  const [histSort, setHistSort] = useState<'desc' | 'asc'>('desc');
+  const [histPage, setHistPage] = useState(1);
+  const [histPageSize, setHistPageSize] = useState(10);
+
+  const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getCollection('materials') as Material[];
-      setMaterials(data);
+      const [matsData, ctrlsData] = await Promise.all([
+        getCollection('materials'),
+        getCollection('controls')
+      ]);
+      setMaterials(matsData as Material[]);
+      
+      const logs: any[] = [];
+      (ctrlsData as any[]).forEach(c => {
+        (c.items || []).forEach((item: any) => {
+          if (item.missingQuantity === 0 && item.restockDate) {
+            logs.push({
+              id: `${c.id}_${item.materialId}`,
+              controlId: c.displayId || c.id?.slice(0, 8),
+              materialId: item.materialId,
+              materialName: item.materialName,
+              restockDate: item.restockDate,
+              requiredQuantity: item.requiredQuantity,
+              notes: item.notes
+            });
+          }
+        });
+      });
+      setHistoryLogs(logs);
     } catch (error) {
-      console.error("Error loading materials:", error);
+      console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadMaterials();
+    loadData();
   }, []);
 
   const handleSave = async () => {
@@ -61,7 +94,7 @@ export default function MaterialsPage() {
         await addDocument('materials', formData);
       }
       setIsOpen(false);
-      loadMaterials();
+      loadData();
       setFormData({ name: '', stock: 0, unit: 'PCS', category: '未分類' });
       setEditingId(null);
     } catch (error) {
@@ -78,7 +111,7 @@ export default function MaterialsPage() {
   const handleDelete = async (id: string) => {
     await deleteDocument('materials', id);
     setDeleteConfirmItem(null);
-    loadMaterials();
+    loadData();
   };
 
   const openNewForm = () => {
@@ -110,6 +143,25 @@ export default function MaterialsPage() {
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const paginatedData = sortedMaterials.slice((page - 1) * pageSize, page * pageSize);
 
+  // History Filter logic
+  const filteredHist = historyLogs.filter(log => {
+    const mat = materials.find(m => m.id === log.materialId);
+    if (histSearchName && !log.materialName.toLowerCase().includes(histSearchName.toLowerCase())) return false;
+    if (histSearchCat !== 'all' && (mat?.category || '未分類') !== histSearchCat) return false;
+    if (histStartDate && log.restockDate < histStartDate) return false;
+    if (histEndDate && log.restockDate > histEndDate) return false;
+    return true;
+  });
+
+  filteredHist.sort((a, b) => {
+    if (histSort === 'desc') return b.restockDate.localeCompare(a.restockDate);
+    return a.restockDate.localeCompare(b.restockDate);
+  });
+
+  const histTotalItems = filteredHist.length;
+  const histTotalPages = Math.ceil(histTotalItems / histPageSize) || 1;
+  const histPaginatedData = filteredHist.slice((histPage - 1) * histPageSize, histPage * histPageSize);
+
   return (
     <div className="space-y-6">
       <Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>
@@ -134,63 +186,82 @@ export default function MaterialsPage() {
 
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-primary">物料庫存</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewForm}>新增物料</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingId ? '編輯物料' : '新增物料'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>物料品號</Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="輸入物料品號"
-                />
+        {activeTab === 'list' && (
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openNewForm}>新增物料</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingId ? '編輯物料' : '新增物料'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>物料品號</Label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    placeholder="輸入物料品號"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>物料分類</Label>
+                  <Select value={formData.category || '未分類'} onValueChange={(val) => setFormData({...formData, category: val})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇分類" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="未分類">未分類</SelectItem>
+                      <SelectItem value="TKW">TKW</SelectItem>
+                      <SelectItem value="夾鉗">夾鉗</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>庫存數量</Label>
+                  <Input 
+                    type="number"
+                    value={formData.stock} 
+                    onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value) || 0})} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>單位</Label>
+                  <Select value={formData.unit} onValueChange={(val) => setFormData({...formData, unit: val})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇單位" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PCS">PCS</SelectItem>
+                      <SelectItem value="KG">KG</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button className="w-full" onClick={handleSave}>儲存</Button>
               </div>
-              <div className="space-y-2">
-                <Label>物料分類</Label>
-                <Select value={formData.category || '未分類'} onValueChange={(val) => setFormData({...formData, category: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="選擇分類" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="未分類">未分類</SelectItem>
-                    <SelectItem value="TKW">TKW</SelectItem>
-                    <SelectItem value="夾鉗">夾鉗</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>庫存數量</Label>
-                <Input 
-                  type="number"
-                  value={formData.stock} 
-                  onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value) || 0})} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>單位</Label>
-                <Select value={formData.unit} onValueChange={(val) => setFormData({...formData, unit: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="選擇單位" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PCS">PCS</SelectItem>
-                    <SelectItem value="KG">KG</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button className="w-full" onClick={handleSave}>儲存</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4">
+      <div className="flex gap-4 border-b">
+        <button 
+          className={`px-4 py-2 font-bold transition-all border-b-2 ${activeTab === 'list' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setActiveTab('list')}
+        >
+          物料清單
+        </button>
+        <button 
+          className={`px-4 py-2 font-bold transition-all border-b-2 ${activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setActiveTab('history')}
+        >
+          庫存變更歷程
+        </button>
+      </div>
+
+      {activeTab === 'list' && (
+        <>
+          <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Label>查詢品號:</Label>
@@ -301,6 +372,137 @@ export default function MaterialsPage() {
           </Table>
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {activeTab === 'history' && (
+        <>
+          <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label>查詢品號:</Label>
+                <Input 
+                  placeholder="輸入關鍵字..." 
+                  value={histSearchName} 
+                  onChange={(e) => { setHistSearchName(e.target.value); setHistPage(1); }}
+                  className="w-32 h-8 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>查詢分類:</Label>
+                <Select value={histSearchCat} onValueChange={(val) => { setHistSearchCat(val); setHistPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部分類</SelectItem>
+                    <SelectItem value="未分類">未分類</SelectItem>
+                    <SelectItem value="TKW">TKW</SelectItem>
+                    <SelectItem value="夾鉗">夾鉗</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>日期(起):</Label>
+                <Input 
+                  type="date"
+                  value={histStartDate} 
+                  onChange={(e) => { setHistStartDate(e.target.value); setHistPage(1); }}
+                  className="w-32 h-8 text-xs"
+                  style={{ colorScheme: 'light dark' }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>日期(迄):</Label>
+                <Input 
+                  type="date"
+                  value={histEndDate} 
+                  onChange={(e) => { setHistEndDate(e.target.value); setHistPage(1); }}
+                  className="w-32 h-8 text-xs"
+                  style={{ colorScheme: 'light dark' }}
+                />
+              </div>
+              <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
+                <Label>日期排序:</Label>
+                <Select value={histSort} onValueChange={(val: 'asc'|'desc') => { setHistSort(val); setHistPage(1); }}>
+                  <SelectTrigger className="w-[120px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">由大到小 (新到舊)</SelectItem>
+                    <SelectItem value="asc">由小到大 (舊到新)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="font-medium">總計: {histTotalItems} 筆資料</div>
+              <div className="flex items-center gap-2">
+                <Label>每頁顯示:</Label>
+                <Select value={histPageSize.toString()} onValueChange={(val) => { setHistPageSize(parseInt(val)); setHistPage(1); }}>
+                  <SelectTrigger className="w-[80px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 筆</SelectItem>
+                    <SelectItem value="20">20 筆</SelectItem>
+                    <SelectItem value="30">30 筆</SelectItem>
+                    <SelectItem value="50">50 筆</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setHistPage(p => Math.max(1, p - 1))} disabled={histPage === 1}>上一頁</Button>
+                <span className="text-sm">第 {histPage} / {histTotalPages} 頁</span>
+                <Button variant="outline" size="sm" onClick={() => setHistPage(p => Math.min(histTotalPages, p + 1))} disabled={histPage === histTotalPages}>下一頁</Button>
+              </div>
+            </div>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">序號</TableHead>
+                    <TableHead>補完日期</TableHead>
+                    <TableHead>物料分類</TableHead>
+                    <TableHead>物料品號</TableHead>
+                    <TableHead>來源管制單號</TableHead>
+                    <TableHead>補完/進貨備註</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-24">載入中...</TableCell>
+                    </TableRow>
+                  ) : histPaginatedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-24">無符合條件的歷程記錄</TableCell>
+                    </TableRow>
+                  ) : (
+                    histPaginatedData.map((log, index) => {
+                      const mat = materials.find(m => m.id === log.materialId);
+                      return (
+                        <TableRow key={log.id}>
+                          <TableCell>{(histPage - 1) * histPageSize + index + 1}</TableCell>
+                          <TableCell className="font-bold text-green-700">{log.restockDate}</TableCell>
+                          <TableCell className="text-muted-foreground">{mat?.category || '未分類'}</TableCell>
+                          <TableCell className="font-medium">{log.materialName}</TableCell>
+                          <TableCell>{log.controlId}</TableCell>
+                          <TableCell>{log.notes || '-'}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
