@@ -10,6 +10,8 @@ import Materials from '@/pages/Materials';
 import Requisitions from '@/pages/Requisitions';
 import Controls from '@/pages/Controls';
 import Dashboard from '@/pages/Dashboard';
+import Statistics from '@/pages/Statistics';
+import Expediting from '@/pages/Expediting';
 
 function App() {
   useEffect(() => {
@@ -26,8 +28,10 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="staff" element={<Staff />} />
           <Route path="materials" element={<Materials />} />
+          <Route path="statistics" element={<Statistics />} />
           <Route path="requisitions" element={<Requisitions />} />
           <Route path="controls" element={<Controls />} />
+          <Route path="expediting" element={<Expediting />} />
         </Route>
       </Routes>
     </BrowserRouter>

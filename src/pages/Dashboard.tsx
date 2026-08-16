@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     activeControls: 0,
-    avgControlDays: 0
+    avgControlDays: '0.00'
   });
 
   const [controls, setControls] = useState<any[]>([]);
@@ -18,6 +18,8 @@ export default function Dashboard() {
   const [controlDaysData, setControlDaysData] = useState<any[]>([]);
   const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
   const [trendChartType, setTrendChartType] = useState<'bar' | 'line' | 'both'>('line');
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   const totalControlItems = useMemo(() => {
     return controls.reduce((sum, c) => sum + (c.items?.length || 0), 0);
@@ -39,29 +41,57 @@ export default function Dashboard() {
           getCollection('controls')
         ]);
 
-        setControls(controlsData);
-        const activeControls = controlsData.filter((c: any) => c.status === '處理中');
+        const yearsSet = new Set<string>();
+        reqs.forEach((r: any) => {
+          if (r.createdAt || r.completionDate) {
+            const y = (r.createdAt || r.completionDate).substring(0, 4);
+            if (y && !isNaN(parseInt(y))) yearsSet.add(y);
+          }
+        });
+        controlsData.forEach((c: any) => {
+          if (c.startDate) yearsSet.add(c.startDate.substring(0, 4));
+        });
+        
+        const currentYear = new Date().getFullYear().toString();
+        yearsSet.add(currentYear);
+        const sortedYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+        setAvailableYears(sortedYears);
+
+        // Filter data by year
+        const filteredReqs = reqs.filter((r: any) => {
+          const y = (r.createdAt || r.completionDate || currentYear).substring(0, 4);
+          return y === selectedYear;
+        });
+
+        const filteredControls = controlsData.filter((c: any) => {
+          return c.startDate.substring(0, 4) === selectedYear;
+        });
+
+        setControls(filteredControls);
+        const activeControls = filteredControls.filter((c: any) => c.status === '處理中');
         
         let totalDays = 0;
-        controlsData.forEach((c: any) => {
+        filteredControls.forEach((c: any) => {
           totalDays += calculateDays(c.startDate, c.completionDate || null);
         });
 
         setStats({
-          totalRequisitions: reqs.length,
+          totalRequisitions: filteredReqs.length,
           activeControls: activeControls.length,
-          avgControlDays: controlsData.length > 0 ? Math.round(totalDays / controlsData.length) : 0
+          avgControlDays: filteredControls.length > 0 ? (totalDays / filteredControls.length).toFixed(2) : '0.00'
         });
 
+        // The trend is 7 days, which is fine to keep as the last 7 days of the selected year? 
+        // Or last 7 days from now. Let's keep the last 7 days from now as it's a 'Recent 7 days' trend.
         const last7Days = Array.from({ length: 7 }).map((_, i) => format(subDays(new Date(), 6 - i), 'yyyy-MM-dd'));
         const trendData = last7Days.map(date => {
-          const count = controlsData.filter((c: any) => c.startDate === date).length;
+          const count = filteredControls.filter((c: any) => c.startDate === date).length;
           return { name: format(parseISO(date), 'MM/dd'), "數量": count };
         });
         setControlTrendData(trendData);
 
         const counts = Array(7).fill(0);
-        controlsData.forEach((c: any) => {
+        filteredControls.forEach((c: any) => {
           const d = calculateDays(c.startDate, c.completionDate || null);
           if (d <= 7) counts[d - 1]++;
         });
@@ -78,12 +108,25 @@ export default function Dashboard() {
     };
 
     loadData();
-  }, []);
+  }, [selectedYear]);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-muted/30 p-4 rounded-xl border border-border/50">
         <h1 className="text-3xl font-bold tracking-tight text-primary">儀表板總覽</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-muted-foreground">西元年度</span>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[120px] bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map(year => (
+                <SelectItem key={year} value={year}>{year} 年</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -197,7 +240,7 @@ export default function Dashboard() {
                   <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
                   {(chartType === 'bar' || chartType === 'both') && (
                     <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} maxBarSize={30}>
-                      <LabelList dataKey="數量" position="right" />
+                      <LabelList dataKey="數量" position="top" />
                     </Bar>
                   )}
                   {(chartType === 'line' || chartType === 'both') && (

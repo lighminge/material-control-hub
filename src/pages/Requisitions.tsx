@@ -27,6 +27,7 @@ export type Requisition = {
   id?: string;
   displayId?: string;
   controlDisplayId?: string | null;
+  category?: string;
   staffId: string;
   staffName: string;
   itemCount: number;
@@ -51,12 +52,19 @@ export default function RequisitionsPage() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  
+  // Filters
+  const [searchReqId, setSearchReqId] = useState('');
+  const [searchCtrlId, setSearchCtrlId] = useState('');
+  const [searchStaff, setSearchStaff] = useState('all');
+  const [searchCategory, setSearchCategory] = useState('all');
 
   // Combobox popover open states
   const [openComboboxIndex, setOpenComboboxIndex] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<Requisition>({
     displayId: '',
+    category: '未分類',
     staffId: '',
     staffName: '',
     itemCount: 0,
@@ -284,14 +292,22 @@ export default function RequisitionsPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ displayId: '', staffId: '', staffName: '', itemCount: 0, items: [], status: '已完成' });
+    setFormData({ displayId: '', category: '未分類', staffId: '', staffName: '', itemCount: 0, items: [], status: '已完成' });
     setEditingId(null);
     setIsOpen(true);
   };
 
-  const totalItems = requisitions.length;
+  const filteredRequisitions = requisitions.filter(req => {
+    if (searchReqId && !(req.displayId || '').includes(searchReqId)) return false;
+    if (searchCtrlId && !(req.controlDisplayId || '').includes(searchCtrlId)) return false;
+    if (searchStaff !== 'all' && req.staffId !== searchStaff) return false;
+    if (searchCategory !== 'all' && (req.category || '未分類') !== searchCategory) return false;
+    return true;
+  });
+
+  const totalItems = filteredRequisitions.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedData = requisitions.slice((page - 1) * pageSize, page * pageSize);
+  const paginatedData = filteredRequisitions.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -321,7 +337,7 @@ export default function RequisitionsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-primary">領料單管理</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
@@ -356,8 +372,21 @@ export default function RequisitionsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>領料單分類</Label>
+                  <Select value={formData.category || '未分類'} onValueChange={(val) => setFormData({ ...formData, category: val })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇分類" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="未分類">未分類</SelectItem>
+                      <SelectItem value="TKW">TKW</SelectItem>
+                      <SelectItem value="夾鉗">夾鉗</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {editingId && (
-                  <div className="space-y-2 col-span-2">
+                  <div className="space-y-2 col-span-2 sm:col-span-1">
                     <Label>關聯管制單號</Label>
                     <div className="flex h-10 w-full items-center px-3 rounded-md border border-input bg-muted/50">
                       {formData.controlDisplayId || '無'}
@@ -418,12 +447,12 @@ export default function RequisitionsPage() {
                                     }}
                                   >
                                     <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        item.materialId === mat.id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {mat.name} <span className="ml-auto text-muted-foreground">(庫存: {mat.stock})</span>
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          item.materialId === mat.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <span className="text-primary/70 mr-1 text-xs">[{mat.category || '未分類'}]</span> {mat.name} <span className="ml-auto text-muted-foreground">(庫存: {mat.stock})</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -495,6 +524,47 @@ export default function RequisitionsPage() {
       </Dialog>
     </div>
 
+      <Card className="mb-6 p-4 bg-muted/30">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label>查詢領料單號</Label>
+            <Input placeholder="輸入單號" value={searchReqId} onChange={(e) => setSearchReqId(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>查詢關聯管制單號</Label>
+            <Input placeholder="輸入管制單號" value={searchCtrlId} onChange={(e) => setSearchCtrlId(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>備料人員</Label>
+            <Select value={searchStaff} onValueChange={setSearchStaff}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部人員" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部人員</SelectItem>
+                {staffList.map(staff => (
+                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>領料單分類</Label>
+            <Select value={searchCategory} onValueChange={setSearchCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部分類" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部分類</SelectItem>
+                <SelectItem value="未分類">未分類</SelectItem>
+                <SelectItem value="TKW">TKW</SelectItem>
+                <SelectItem value="夾鉗">夾鉗</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
+
       <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
         <div className="font-medium">總計: {totalItems} 筆領料單</div>
         <div className="flex items-center gap-4">
@@ -528,6 +598,7 @@ export default function RequisitionsPage() {
                 <TableHead className="w-[140px]">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
                 <TableHead>領料單號</TableHead>
+                <TableHead>領料單分類</TableHead>
                 <TableHead>關聯管制單號</TableHead>
                 <TableHead>備料人員</TableHead>
                 <TableHead>狀態</TableHead>
@@ -537,11 +608,11 @@ export default function RequisitionsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">尚無領料單資料</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">尚無領料單資料</TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((req, index) => (
@@ -562,6 +633,7 @@ export default function RequisitionsPage() {
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
+                    <TableCell>{req.category || '未分類'}</TableCell>
                     <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
                     <TableCell>{req.staffName}</TableCell>
                     <TableCell>

@@ -33,6 +33,7 @@ export type Control = {
 
 export default function ControlsPage() {
   const [controls, setControls] = useState<Control[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState<Control | null>(null);
@@ -49,9 +50,13 @@ export default function ControlsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getCollection('controls') as Control[];
-      const sortedData = data.sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
+      const [data, mats] = await Promise.all([
+        getCollection('controls'),
+        getCollection('materials')
+      ]);
+      const sortedData = (data as Control[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
       setControls(sortedData);
+      setMaterials(mats);
     } catch (error) {
       console.error("Error loading controls:", error);
     } finally {
@@ -245,6 +250,8 @@ export default function ControlsPage() {
                 <Label>補完日期</Label>
                 <Input 
                   type="date" 
+                  className="w-full sm:w-[200px]"
+                  style={{ colorScheme: 'light dark' }}
                   value={restockDateStr} 
                   onChange={(e) => setRestockDateStr(e.target.value)} 
                 />
@@ -316,7 +323,10 @@ export default function ControlsPage() {
                     <CardContent className="p-4 pt-6 grid grid-cols-12 gap-4 items-center">
                       <div className="col-span-3 space-y-1">
                         <Label className="text-xs text-muted-foreground">物料品號</Label>
-                        <div className="font-medium">{item.materialName}</div>
+                        <div className="font-medium">
+                          <span className="text-primary/70 mr-1 text-sm">[{materials.find(m => m.id === item.materialId)?.category || '未分類'}]</span>
+                          {item.materialName}
+                        </div>
                         <div className="text-xs text-muted-foreground">需領: {item.requiredQuantity || 0}</div>
                       </div>
                       <div className="col-span-2">
