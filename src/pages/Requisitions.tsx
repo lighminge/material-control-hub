@@ -215,37 +215,41 @@ export default function RequisitionsPage() {
         // Update existing requisition
         const existingControls = await getControlsByRequisitionId(editingId);
         
-        if (formData.status === '缺料管制中') {
-          if (existingControls.length === 0) {
-            finalControlDisplayId = await generateCustomId('controls', '管');
-            isNewControlNeeded = true;
-          } else {
-            const existingControl = existingControls[0] as any;
-            finalControlDisplayId = existingControl.id;
-            
-            const newControlItems = formData.items
-              .filter(i => i.missingQuantity > 0 || (i.missingQuantity === 0 && i.restockDate))
-              .map(i => {
-                const existingItem = existingControl.items?.find((ei: any) => ei.materialId === i.materialId);
-                // Maintain existing restockDate if it exists and quantity is 0
-                const restockDate = (i.missingQuantity === 0 && i.restockDate) ? i.restockDate : (existingItem?.restockDate || '');
-                return {
-                  materialId: i.materialId,
-                  materialName: i.materialName,
-                  requiredQuantity: i.requiredQuantity,
-                  missingQuantity: i.missingQuantity,
-                  restockDate,
-                  notes: existingItem?.notes || ''
-                };
-              });
-
-            await updateDocument('controls', existingControl.id, {
-              items: newControlItems,
-              status: '處理中',
-              completionDate: null,
-              endDate: null
+        if (existingControls.length > 0) {
+          const existingControl = existingControls[0] as any;
+          finalControlDisplayId = existingControl.id;
+          
+          const newControlItems = formData.items
+            .filter(i => i.missingQuantity > 0 || (i.missingQuantity === 0 && i.restockDate))
+            .map(i => {
+              const existingItem = existingControl.items?.find((ei: any) => ei.materialId === i.materialId);
+              // Maintain existing restockDate if it exists and quantity is 0
+              const restockDate = (i.missingQuantity === 0 && i.restockDate) ? i.restockDate : (existingItem?.restockDate || '');
+              return {
+                materialId: i.materialId,
+                materialName: i.materialName,
+                requiredQuantity: i.requiredQuantity,
+                missingQuantity: i.missingQuantity,
+                restockDate,
+                notes: existingItem?.notes || ''
+              };
             });
-          }
+
+          const allRestocked = newControlItems.length > 0 && newControlItems.every(i => i.missingQuantity === 0 && i.restockDate);
+          const noItemsLeft = newControlItems.length === 0;
+          
+          const controlStatus = (allRestocked || noItemsLeft) ? '已結案' : '處理中';
+          const controlCompletionDate = (allRestocked || noItemsLeft) ? format(new Date(), 'yyyy-MM-dd') : null;
+
+          await updateDocument('controls', existingControl.id, {
+            items: newControlItems,
+            status: controlStatus,
+            completionDate: controlCompletionDate,
+            endDate: controlCompletionDate
+          });
+        } else if (formData.status === '缺料管制中') {
+          finalControlDisplayId = await generateCustomId('controls', '管');
+          isNewControlNeeded = true;
         }
 
         const sanitizedItems = formData.items.map(i => {
