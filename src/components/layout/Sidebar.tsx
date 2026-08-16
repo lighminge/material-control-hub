@@ -5,8 +5,8 @@ const navItems = [
   { name: '儀表板', path: '/', icon: LayoutDashboard },
   { name: '領料單管理', path: '/requisitions', icon: ClipboardList },
   { name: '物料管制', path: '/controls', icon: ShieldAlert },
-  { name: '稽催作業', path: '/expediting', icon: AlarmClock },
   { name: '物料庫存', path: '/materials', icon: ClipboardList },
+  { name: '稽催作業', path: '/expediting', icon: AlarmClock },
   { name: '統計作業', path: '/statistics', icon: PieChart },
   { name: '人員管理', path: '/staff', icon: Users },
 ];

@@ -43,6 +43,7 @@ export default function StatisticsPage() {
     const isWithinRange = (dateStr: string) => {
       if (!dateStr) return false;
       const d = parseISO(dateStr);
+      if (isNaN(d.getTime())) return false;
       if (startDate && isBefore(d, startOfDay(parseISO(startDate)))) return false;
       if (endDate && isAfter(d, endOfDay(parseISO(endDate)))) return false;
       return true;
@@ -66,7 +67,7 @@ export default function StatisticsPage() {
       
       if (category !== 'all') {
         // Check if any item in the control matches the category
-        const hasCategory = ctrl.items.some((item: any) => {
+        const hasCategory = (ctrl.items || []).some((item: any) => {
           const mat = materials.find(m => m.id === item.materialId);
           return (mat?.category || '未分類') === category;
         });
