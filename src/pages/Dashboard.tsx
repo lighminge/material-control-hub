@@ -41,12 +41,18 @@ export default function Dashboard() {
           getCollection('controls')
         ]);
 
+        const getYearFromDate = (dateVal: any, defaultYear: string) => {
+          if (!dateVal) return defaultYear;
+          if (typeof dateVal === 'string') return dateVal.substring(0, 4);
+          if (dateVal.seconds) return new Date(dateVal.seconds * 1000).getFullYear().toString();
+          if (dateVal.toDate) return dateVal.toDate().getFullYear().toString();
+          return defaultYear;
+        };
+
         const yearsSet = new Set<string>();
         reqs.forEach((r: any) => {
-          if (r.createdAt || r.completionDate) {
-            const y = (r.createdAt || r.completionDate).substring(0, 4);
-            if (y && !isNaN(parseInt(y))) yearsSet.add(y);
-          }
+          const y = getYearFromDate(r.createdAt || r.completionDate, '');
+          if (y && !isNaN(parseInt(y))) yearsSet.add(y);
         });
         controlsData.forEach((c: any) => {
           if (c.startDate) yearsSet.add(c.startDate.substring(0, 4));
@@ -59,7 +65,7 @@ export default function Dashboard() {
 
         // Filter data by year
         const filteredReqs = reqs.filter((r: any) => {
-          const y = (r.createdAt || r.completionDate || currentYear).substring(0, 4);
+          const y = getYearFromDate(r.createdAt || r.completionDate, currentYear);
           return y === selectedYear;
         });
 

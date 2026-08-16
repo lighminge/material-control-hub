@@ -52,7 +52,11 @@ export default function StatisticsPage() {
     // Filter Requisitions
     const filteredReqs = requisitions.filter(req => {
       // For reqs, we check if they have a date.
-      const dateToUse = req.createdAt || req.completionDate;
+      let dateToUse = req.createdAt || req.completionDate;
+      if (dateToUse && typeof dateToUse !== 'string') {
+        if (dateToUse.seconds) dateToUse = new Date(dateToUse.seconds * 1000).toISOString();
+        else dateToUse = null;
+      }
       if (dateToUse && !isWithinRange(dateToUse)) return false;
       
       // category filter

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { differenceInDays, parseISO } from 'date-fns';
-import { AlarmClock } from 'lucide-react';
+import { AlarmClock, ShieldAlert, TrendingUp } from 'lucide-react';
 
 export default function ExpeditingPage() {
   const [controls, setControls] = useState<any[]>([]);
@@ -118,6 +118,43 @@ export default function ExpeditingPage() {
           })}
         </div>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">顯示中的管制單數</CardTitle>
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{filteredControls.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">顯示中的缺料項目總數</CardTitle>
+            <AlarmClock className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {filteredControls.reduce((sum, c) => sum + c.items.length, 0)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">平均管制天數</CardTitle>
+            <TrendingUp className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-500">
+              {filteredControls.length > 0 
+                ? (filteredControls.reduce((sum, c) => sum + calculateDays(c.startDate), 0) / filteredControls.length).toFixed(2) 
+                : '0.00'} 
+              <span className="text-sm font-normal text-muted-foreground"> 天</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader className="py-4">
