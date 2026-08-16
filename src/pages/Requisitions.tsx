@@ -196,8 +196,17 @@ export default function RequisitionsPage() {
           isNewControlNeeded = true;
         }
 
+        const sanitizedItems = formData.items.map(i => {
+          const itemCopy = { ...i };
+          if (itemCopy.restockDate === undefined) {
+            delete itemCopy.restockDate;
+          }
+          return itemCopy;
+        });
+
         const dataToSave = {
           ...formData,
+          items: sanitizedItems,
           controlDisplayId: finalControlDisplayId || null,
           completionDate
         };
@@ -239,8 +248,17 @@ export default function RequisitionsPage() {
           }
         }
 
+        const sanitizedItems = formData.items.map(i => {
+          const itemCopy = { ...i };
+          if (itemCopy.restockDate === undefined) {
+            delete itemCopy.restockDate;
+          }
+          return itemCopy;
+        });
+
         const dataToSave = {
           ...formData,
+          items: sanitizedItems,
           controlDisplayId: finalControlDisplayId || null,
           completionDate
         };
@@ -274,8 +292,10 @@ export default function RequisitionsPage() {
 
       setIsOpen(false);
       loadData();
-    } catch (error) {
+      setSystemAlert("單據已成功儲存！");
+    } catch (error: any) {
       console.error("Error saving requisition:", error);
+      setSystemAlert("儲存時發生錯誤: " + (error.message || String(error)));
     }
   };
 
@@ -314,11 +334,13 @@ export default function RequisitionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* System Warning Alert Dialog */}
+      {/* System Alert Dialog */}
       <Dialog open={!!systemAlert} onOpenChange={(open) => !open && setSystemAlert(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">系統提示</DialogTitle>
+            <DialogTitle className={systemAlert?.includes('成功') ? 'text-primary' : 'text-destructive'}>
+              系統提示
+            </DialogTitle>
           </DialogHeader>
           <div className="py-4 text-center font-bold text-lg">{systemAlert}</div>
           <div className="flex justify-center">
