@@ -43,6 +43,12 @@ export default function ControlsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
+  // Filters
+  const [searchStatus, setSearchStatus] = useState('all');
+  const [searchControlId, setSearchControlId] = useState('');
+  const [searchStartDate, setSearchStartDate] = useState('');
+  const [searchEndDate, setSearchEndDate] = useState('');
+
   const [restockItemIndex, setRestockItemIndex] = useState<number | null>(null);
   const [enteredStock, setEnteredStock] = useState<string>('');
   const [restockDateStr, setRestockDateStr] = useState<string>('');
@@ -197,9 +203,19 @@ export default function ControlsPage() {
     return Math.max(0, differenceInDays(end, start));
   };
 
-  const totalItems = controls.length;
+  const filteredControls = controls.filter(control => {
+    if (searchStatus !== 'all' && control.status !== searchStatus) return false;
+    if (searchControlId && !(control.displayId || control.id || '').includes(searchControlId)) return false;
+    if (searchStartDate && control.completionDate && control.completionDate < searchStartDate) return false;
+    if (searchEndDate && control.completionDate && control.completionDate > searchEndDate) return false;
+    // If date range is specified but control has no completion date, it shouldn't match completed range
+    if ((searchStartDate || searchEndDate) && !control.completionDate) return false;
+    return true;
+  });
+
+  const totalItems = filteredControls.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedData = controls.slice((page - 1) * pageSize, page * pageSize);
+  const paginatedData = filteredControls.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -376,6 +392,46 @@ export default function ControlsPage() {
         </DialogContent>
       </Dialog>
 
+      <Card className="mb-6 p-4 bg-muted/30">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label>查詢狀態</Label>
+            <Select value={searchStatus} onValueChange={setSearchStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部狀態" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="處理中">處理中</SelectItem>
+                <SelectItem value="已結案">已結案</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>查詢管制單號</Label>
+            <Input placeholder="輸入管制單號" value={searchControlId} onChange={(e) => setSearchControlId(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>完成日期 (起)</Label>
+            <Input 
+              type="date"
+              value={searchStartDate} 
+              onChange={(e) => setSearchStartDate(e.target.value)}
+              style={{ colorScheme: 'light dark' }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>完成日期 (迄)</Label>
+            <Input 
+              type="date"
+              value={searchEndDate} 
+              onChange={(e) => setSearchEndDate(e.target.value)}
+              style={{ colorScheme: 'light dark' }}
+            />
+          </div>
+        </div>
+      </Card>
+
       <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
         <div className="font-medium">總計: {totalItems} 筆管制單</div>
         <div className="flex items-center gap-4">
@@ -408,12 +464,12 @@ export default function ControlsPage() {
               <TableRow>
                 <TableHead className="w-[120px]">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
+                <TableHead>狀態</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
                 <TableHead>缺料項目總數</TableHead>
                 <TableHead>已補完數</TableHead>
                 <TableHead>管制天數</TableHead>
-                <TableHead>狀態</TableHead>
                 <TableHead>完成日期</TableHead>
               </TableRow>
             </TableHeader>
@@ -435,10 +491,15 @@ export default function ControlsPage() {
                           setFormData(control);
                           setIsOpen(true);
                         }}>處理檢視</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(control)}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(control)} disabled={control.status === '已結案'}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell>
+                      <Badge variant={control.status === '已結案' ? 'default' : 'secondary'} className={control.status === '處理中' ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
+                        {control.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
                     <TableCell className="text-muted-foreground">{control.requisitionId.startsWith('領') ? control.requisitionId : control.requisitionId.slice(0, 8)}</TableCell>
                     <TableCell>{control.items.length}</TableCell>
@@ -447,11 +508,6 @@ export default function ControlsPage() {
                       <div className={`font-bold ${calculateDays(control.startDate, control.completionDate || null) > 7 ? 'text-destructive' : ''}`}>
                         {calculateDays(control.startDate, control.completionDate || null)} 天
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={control.status === '已結案' ? 'default' : 'secondary'} className={control.status === '處理中' ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
-                        {control.status}
-                      </Badge>
                     </TableCell>
                     <TableCell>{control.completionDate || '-'}</TableCell>
                   </TableRow>

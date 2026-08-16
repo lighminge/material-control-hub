@@ -677,7 +677,7 @@ export default function RequisitionsPage() {
                           setEditingId(req.id || null);
                           setIsOpen(true);
                         }}>編輯</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)} disabled={req.status === '已完成'}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
