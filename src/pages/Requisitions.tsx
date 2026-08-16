@@ -437,7 +437,9 @@ export default function RequisitionsPage() {
                   </div>
                 )}
 
-                {formData.items.map((item, index) => (
+                {formData.items.map((item, index) => {
+                  const isCompleted = !!(item.missingQuantity === 0 && item.restockDate);
+                  return (
                   <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50 relative pt-8">
                     <div className="absolute top-0 left-0 bg-primary/20 px-2 py-1 rounded-br-lg text-xs font-bold text-primary">#{index + 1}</div>
                     <div className="flex-1 space-y-2">
@@ -449,6 +451,7 @@ export default function RequisitionsPage() {
                             role="combobox"
                             aria-expanded={openComboboxIndex === index}
                             className="w-full justify-between bg-background"
+                            disabled={isCompleted}
                           >
                             {item.materialId
                               ? materials.find((m) => m.id === item.materialId)?.name
@@ -493,6 +496,7 @@ export default function RequisitionsPage() {
                         value={item.requiredQuantity} 
                         onChange={(e) => handleItemChange(index, 'requiredQuantity', e.target.value)} 
                         min="1"
+                        disabled={isCompleted}
                       />
                     </div>
                     <div className="w-24 space-y-2">
@@ -503,12 +507,12 @@ export default function RequisitionsPage() {
                     </div>
                     <div className="w-24 space-y-2">
                       <Label>缺料數量</Label>
-                      {item.missingQuantity === 0 && item.restockDate ? (
+                      {isCompleted ? (
                         <div className="flex flex-col gap-1">
                           <div className="h-10 flex items-center justify-center border rounded-md font-bold text-white bg-green-600 text-xs">
                             已補完
                           </div>
-                          <div className="text-[10px] text-center text-muted-foreground font-bold">
+                          <div className="text-sm text-center text-primary font-black mt-1">
                             {item.restockDate}
                           </div>
                         </div>
@@ -519,12 +523,13 @@ export default function RequisitionsPage() {
                       )}
                     </div>
                     <div className="pt-6">
-                      <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={isCompleted}>
                         <Trash2 className="w-5 h-5 text-destructive" />
                       </Button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="pt-4 flex justify-between items-center border-t">
