@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, updateDocument, deleteDocument } from '@/lib/firebase/api';
+import { getCollection, updateDocument, deleteDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { differenceInDays, parseISO, format } from 'date-fns';
+import { Trash2 } from 'lucide-react';
 
 export type ControlItem = {
   materialId: string;
@@ -44,6 +45,13 @@ export default function ControlsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
+  const [quickPhrases, setQuickPhrases] = useState<string[]>([
+    "廠商延遲交貨", "已聯絡廠商催促", "等待進口報關中", "預計下週到貨", "物料測試檢驗中"
+  ]);
+  const [managePhrasesOpen, setManagePhrasesOpen] = useState(false);
+  const [newPhrase, setNewPhrase] = useState('');
+  const [sortBy, setSortBy] = useState('none');
+
   // Filters
   const [searchStatus, setSearchStatus] = useState('all');
   const [searchControlId, setSearchControlId] = useState('');
@@ -57,14 +65,6 @@ export default function ControlsPage() {
   const searchStartDate = sYear && sMonth && sDay ? `${sYear}-${sMonth.padStart(2, '0')}-${sDay.padStart(2, '0')}` : '';
   const searchEndDate = eYear && eMonth && eDay ? `${eYear}-${eMonth.padStart(2, '0')}-${eDay.padStart(2, '0')}` : '';
 
-  const QUICK_PHRASES = [
-    "廠商延遲交貨",
-    "已聯絡廠商催促",
-    "等待進口報關中",
-    "預計下週到貨",
-    "物料測試檢驗中"
-  ];
-
   const [restockItemIndex, setRestockItemIndex] = useState<number | null>(null);
   const [enteredStock, setEnteredStock] = useState<string>('');
   const [restockDateStr, setRestockDateStr] = useState<string>('');
@@ -72,15 +72,21 @@ export default function ControlsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [data, mats, reqs] = await Promise.all([
+      const [data, mats, reqs, settingsData] = await Promise.all([
         getCollection('controls'),
         getCollection('materials'),
-        getCollection('requisitions')
+        getCollection('requisitions'),
+        getCollection('settings')
       ]);
       const sortedData = (data as Control[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
       setControls(sortedData);
       setMaterials(mats);
       setRequisitions(reqs);
+      
+      const phrasesDoc = (settingsData as any[]).find(s => s.id === 'quickPhrases');
+      if (phrasesDoc && phrasesDoc.phrases) {
+        setQuickPhrases(phrasesDoc.phrases);
+      }
     } catch (error) {
       console.error("Error loading controls:", error);
     } finally {
@@ -97,6 +103,24 @@ export default function ControlsPage() {
     const newItems = [...formData.items];
     newItems[index].notes = value;
     setFormData({ ...formData, items: newItems });
+  };
+
+  const handleAddPhrase = async () => {
+    if (!newPhrase.trim()) return;
+    if (quickPhrases.includes(newPhrase.trim())) {
+      setSystemAlert("此辭庫已經存在！");
+      return;
+    }
+    const updated = [...quickPhrases, newPhrase.trim()];
+    setQuickPhrases(updated);
+    setNewPhrase('');
+    await setDocumentWithId('settings', 'quickPhrases', { phrases: updated });
+  };
+
+  const handleDeletePhrase = async (phraseToDelete: string) => {
+    const updated = quickPhrases.filter(p => p !== phraseToDelete);
+    setQuickPhrases(updated);
+    await setDocumentWithId('settings', 'quickPhrases', { phrases: updated });
   };
 
   const handleDeleteClick = (control: Control) => {
@@ -233,9 +257,15 @@ export default function ControlsPage() {
     return true;
   });
 
-  const totalItems = filteredControls.length;
+  const sortedControls = [...filteredControls];
+  if (sortBy === 'id_asc') sortedControls.sort((a, b) => (a.displayId || '').localeCompare(b.displayId || ''));
+  else if (sortBy === 'id_desc') sortedControls.sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
+  else if (sortBy === 'date_asc') sortedControls.sort((a, b) => a.startDate.localeCompare(b.startDate));
+  else if (sortBy === 'date_desc') sortedControls.sort((a, b) => b.startDate.localeCompare(a.startDate));
+
+  const totalItems = sortedControls.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedData = filteredControls.slice((page - 1) * pageSize, page * pageSize);
+  const paginatedData = sortedControls.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -265,6 +295,43 @@ export default function ControlsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Manage Phrases Dialog */}
+      <Dialog open={managePhrasesOpen} onOpenChange={setManagePhrasesOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>管理常用辭庫</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex gap-2">
+              <Input 
+                value={newPhrase} 
+                onChange={e => setNewPhrase(e.target.value)} 
+                placeholder="新增辭庫內容..." 
+                onKeyDown={e => { if(e.key === 'Enter') handleAddPhrase(); }}
+              />
+              <Button onClick={handleAddPhrase}>新增</Button>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto space-y-2 border rounded-md p-2">
+              {quickPhrases.length === 0 ? (
+                <div className="text-center text-muted-foreground py-4">尚無辭庫</div>
+              ) : (
+                quickPhrases.map(phrase => (
+                  <div key={phrase} className="flex justify-between items-center p-2 bg-muted/50 rounded hover:bg-muted">
+                    <span className="text-sm">{phrase}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeletePhrase(phrase)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setManagePhrasesOpen(false)}>完成</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-primary">物料管制</h1>
       </div>
@@ -289,7 +356,11 @@ export default function ControlsPage() {
                   className="w-full h-12 text-lg font-bold shadow-sm"
                   style={{ colorScheme: 'light dark' }}
                   value={restockDateStr} 
-                  onChange={(e) => setRestockDateStr(e.target.value)} 
+                  onChange={(e) => setRestockDateStr(e.target.value)}
+                  onClick={(e) => {
+                    const target = e.target as HTMLInputElement;
+                    if (target.showPicker) target.showPicker();
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -400,13 +471,21 @@ export default function ControlsPage() {
                             className="flex-1"
                           />
                           <Select onValueChange={(val) => handleItemNoteChange(index, item.notes ? `${item.notes}, ${val}` : val)}>
-                            <SelectTrigger className="w-10 px-2 flex-shrink-0">
-                              <SelectValue placeholder="+" />
+                            <SelectTrigger className="w-auto px-3 flex-shrink-0 font-medium">
+                              <SelectValue placeholder="常用辭庫" />
                             </SelectTrigger>
                             <SelectContent>
-                              {QUICK_PHRASES.map(phrase => (
+                              {quickPhrases.map(phrase => (
                                 <SelectItem key={phrase} value={phrase}>{phrase}</SelectItem>
                               ))}
+                              <div className="p-2 border-t mt-1">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full" 
+                                  onClick={(e) => { e.stopPropagation(); setManagePhrasesOpen(true); }}
+                                >管理辭庫</Button>
+                              </div>
                             </SelectContent>
                           </Select>
                         </div>
@@ -426,26 +505,48 @@ export default function ControlsPage() {
       </Dialog>
 
       <Card className="mb-6 p-4 bg-muted/30">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <Label>查詢狀態</Label>
-            <Select value={searchStatus} onValueChange={setSearchStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="全部狀態" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部狀態</SelectItem>
-                <SelectItem value="處理中">處理中</SelectItem>
-                <SelectItem value="已結案">已結案</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>查詢狀態</Label>
+              <Select value={searchStatus} onValueChange={setSearchStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部狀態" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部狀態</SelectItem>
+                  <SelectItem value="處理中">處理中</SelectItem>
+                  <SelectItem value="已結案">已結案</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>查詢管制單號</Label>
+              <Input placeholder="輸入管制單號" value={searchControlId} onChange={(e) => setSearchControlId(e.target.value)} />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>查詢管制單號</Label>
-            <Input placeholder="輸入管制單號" value={searchControlId} onChange={(e) => setSearchControlId(e.target.value)} />
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>排序方式</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="預設排序" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">預設排序</SelectItem>
+                  <SelectItem value="id_asc">管制單號 (由小到大)</SelectItem>
+                  <SelectItem value="id_desc">管制單號 (由大到小)</SelectItem>
+                  <SelectItem value="date_asc">管制開始日期 (舊到新)</SelectItem>
+                  <SelectItem value="date_desc">管制開始日期 (新到舊)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2 col-span-2">
-            <Label>完成日期 (起)</Label>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>完成日期 (起)</Label>
             <div className="flex gap-2">
               <Select value={sYear} onValueChange={setSYear}>
                 <SelectTrigger><SelectValue placeholder="年" /></SelectTrigger>
@@ -471,7 +572,7 @@ export default function ControlsPage() {
               <Button variant="ghost" size="icon" onClick={() => { setSYear(''); setSMonth(''); setSDay(''); }}>×</Button>
             </div>
           </div>
-          <div className="space-y-2 col-span-2">
+          <div className="space-y-2">
             <Label>完成日期 (迄)</Label>
             <div className="flex gap-2">
               <Select value={eYear} onValueChange={setEYear}>
@@ -499,7 +600,8 @@ export default function ControlsPage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
+    </Card>
 
       <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
         <div className="font-medium">總計: {totalItems} 筆管制單</div>

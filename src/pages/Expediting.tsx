@@ -9,6 +9,7 @@ import { AlarmClock, ShieldAlert, TrendingUp } from 'lucide-react';
 export default function ExpeditingPage() {
   const [controls, setControls] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [requisitions, setRequisitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterDay, setFilterDay] = useState<number | null>(null);
   const [page, setPage] = useState(1);
@@ -18,14 +19,16 @@ export default function ExpeditingPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [ctrls, mats] = await Promise.all([
+        const [ctrls, mats, reqs] = await Promise.all([
           getCollection('controls'),
-          getCollection('materials')
+          getCollection('materials'),
+          getCollection('requisitions')
         ]);
         // Only active/incomplete controls
         const activeCtrls = ctrls.filter((c: any) => c.status === '處理中' || c.status === '缺料管制中');
         setControls(activeCtrls);
         setMaterials(mats);
+        setRequisitions(reqs);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -35,12 +38,17 @@ export default function ExpeditingPage() {
     loadData();
   }, []);
 
-  const calculateDays = (start: string) => {
-    return Math.max(1, differenceInDays(new Date(), parseISO(start)));
+  const calculateDays = (control: any) => {
+    const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
+    if (!req || !req.returnDate) return 0;
+    const start = parseISO(req.returnDate);
+    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
+    return Math.max(0, differenceInDays(end, start));
   };
 
   const dayGroups = useMemo(() => {
     const groups = {
+      '0天': 0,
       '1天': 0,
       '2天': 0,
       '3天': 0,
@@ -51,8 +59,9 @@ export default function ExpeditingPage() {
     };
     
     controls.forEach(c => {
-      const days = calculateDays(c.startDate);
-      if (days === 1) groups['1天']++;
+      const days = calculateDays(c);
+      if (days === 0) groups['0天']++;
+      else if (days === 1) groups['1天']++;
       else if (days === 2) groups['2天']++;
       else if (days === 3) groups['3天']++;
       else if (days === 4) groups['4天']++;
@@ -62,11 +71,12 @@ export default function ExpeditingPage() {
     });
     
     return groups;
-  }, [controls]);
+  }, [controls, requisitions]);
 
   const getLegendColorClass = (days: number) => {
-    if (days === 1) return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-300';
-    if (days === 2) return 'bg-green-200 text-green-800 border-green-400 dark:bg-green-900/60 dark:text-green-300';
+    if (days === 0) return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-300';
+    if (days === 1) return 'bg-cyan-200 text-cyan-900 border-cyan-400 dark:bg-cyan-900/50 dark:text-cyan-300';
+    if (days === 2) return 'bg-blue-200 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-300';
     if (days === 3) return 'bg-lime-200 text-lime-800 border-lime-400 dark:bg-lime-900/60 dark:text-lime-300';
     if (days === 4) return 'bg-yellow-200 text-yellow-800 border-yellow-400 dark:bg-yellow-900/60 dark:text-yellow-300';
     if (days === 5) return 'bg-amber-200 text-amber-800 border-amber-400 dark:bg-amber-900/60 dark:text-amber-300';
@@ -75,25 +85,26 @@ export default function ExpeditingPage() {
   };
 
   const getRowColorClass = (days: number) => {
-    if (days === 1) return 'bg-emerald-50/50 hover:bg-emerald-100/50';
-    if (days === 2) return 'bg-green-50 hover:bg-green-100';
+    if (days === 0) return 'bg-slate-50/50 hover:bg-slate-100/50';
+    if (days === 1) return 'bg-cyan-100/50 hover:bg-cyan-200/50 font-medium';
+    if (days === 2) return 'bg-blue-100 hover:bg-blue-200 font-medium';
     if (days === 3) return 'bg-lime-100/50 hover:bg-lime-200/50';
     if (days === 4) return 'bg-yellow-100 hover:bg-yellow-200';
     if (days === 5) return 'bg-amber-100 hover:bg-amber-200';
     if (days === 6) return 'bg-orange-100 hover:bg-orange-200';
-    return 'bg-red-100 hover:bg-red-200 text-red-900';
+    return 'bg-red-100 hover:bg-red-200 text-red-900 font-bold';
   };
 
   const filteredControls = useMemo(() => {
     let result = controls;
     if (filterDay !== null) {
       result = result.filter(c => {
-        const days = calculateDays(c.startDate);
+        const days = calculateDays(c);
         return filterDay === 7 ? days >= 7 : days === filterDay;
       });
     }
-    return result.sort((a, b) => calculateDays(b.startDate) - calculateDays(a.startDate));
-  }, [controls, filterDay]);
+    return result.sort((a, b) => calculateDays(b) - calculateDays(a));
+  }, [controls, filterDay, requisitions]);
 
   const totalItems = filteredControls.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -111,7 +122,7 @@ export default function ExpeditingPage() {
       <Card className="p-4 bg-muted/30">
         <div className="mb-2 font-bold text-lg">管制天數分組統計與圖例</div>
         <div className="flex flex-wrap gap-4">
-          {[1, 2, 3, 4, 5, 6, 7].map(d => {
+          {[0, 1, 2, 3, 4, 5, 6, 7].map(d => {
             const label = d === 7 ? '7天以上' : `${d}天`;
             const count = dayGroups[label as keyof typeof dayGroups];
             const isActive = filterDay === d;
@@ -159,7 +170,7 @@ export default function ExpeditingPage() {
           <CardContent>
             <div className="text-2xl font-bold text-amber-500">
               {filteredControls.length > 0 
-                ? (filteredControls.reduce((sum, c) => sum + calculateDays(c.startDate), 0) / filteredControls.length).toFixed(2) 
+                ? (filteredControls.reduce((sum, c) => sum + calculateDays(c), 0) / filteredControls.length).toFixed(2) 
                 : '0.00'} 
               <span className="text-sm font-normal text-muted-foreground"> 天</span>
             </div>
@@ -196,7 +207,7 @@ export default function ExpeditingPage() {
                 </TableRow>
               ) : (
                 paginatedControls.map((control, index) => {
-                  const days = calculateDays(control.startDate);
+                  const days = calculateDays(control);
                   const rowClass = getRowColorClass(days >= 7 ? 7 : days);
                   const cats = Array.from(new Set(control.items.map((i: any) => materials.find(m => m.id === i.materialId)?.category || '未分類')));
                   return (

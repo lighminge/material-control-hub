@@ -215,7 +215,7 @@ export default function MaterialsPage() {
             <DialogTrigger asChild>
               <Button onClick={openNewForm}>新增物料</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>{editingId ? '編輯物料' : '新增物料'}</DialogTitle>
               </DialogHeader>
@@ -225,6 +225,14 @@ export default function MaterialsPage() {
                   <Input 
                     value={formData.name} 
                     onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    onBlur={() => {
+                      if (formData.name.trim()) {
+                        const isDuplicate = materials.some(m => m.name.toLowerCase() === formData.name.trim().toLowerCase() && m.id !== editingId);
+                        if (isDuplicate) {
+                          setSystemAlert(`系統中已存在相同的物料品號 [${formData.name.trim()}]！`);
+                        }
+                      }
+                    }}
                     placeholder="輸入物料品號"
                   />
                 </div>
