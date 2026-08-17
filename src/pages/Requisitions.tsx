@@ -60,6 +60,8 @@ export default function RequisitionsPage() {
   const [searchCtrlId, setSearchCtrlId] = useState('');
   const [searchStaff, setSearchStaff] = useState('all');
   const [searchCategory, setSearchCategory] = useState('all');
+  const [searchReturnDateStart, setSearchReturnDateStart] = useState('');
+  const [searchReturnDateEnd, setSearchReturnDateEnd] = useState('');
 
   // Combobox popover open states
   const [openComboboxIndex, setOpenComboboxIndex] = useState<number | null>(null);
@@ -331,6 +333,8 @@ export default function RequisitionsPage() {
     if (searchCtrlId && !(req.controlDisplayId || '').includes(searchCtrlId)) return false;
     if (searchStaff !== 'all' && req.staffId !== searchStaff) return false;
     if (searchCategory !== 'all' && (req.category || '未分類') !== searchCategory) return false;
+    if (searchReturnDateStart && (!req.returnDate || req.returnDate < searchReturnDateStart)) return false;
+    if (searchReturnDateEnd && (!req.returnDate || req.returnDate > searchReturnDateEnd)) return false;
     return true;
   });
 
@@ -581,7 +585,7 @@ export default function RequisitionsPage() {
     </div>
 
       <Card className="mb-6 p-4 bg-muted/30">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="space-y-2">
             <Label>查詢領料單號</Label>
             <Input placeholder="輸入單號" value={searchReqId} onChange={(e) => setSearchReqId(e.target.value)} />
@@ -618,6 +622,26 @@ export default function RequisitionsPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>繳回日期 (起)</Label>
+            <Input 
+              type="date" 
+              value={searchReturnDateStart} 
+              onChange={(e) => setSearchReturnDateStart(e.target.value)} 
+              onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }}
+              style={{ colorScheme: 'light dark' }} 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>繳回日期 (迄)</Label>
+            <Input 
+              type="date" 
+              value={searchReturnDateEnd} 
+              onChange={(e) => setSearchReturnDateEnd(e.target.value)} 
+              onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }}
+              style={{ colorScheme: 'light dark' }} 
+            />
+          </div>
         </div>
       </Card>
 
@@ -653,11 +677,11 @@ export default function RequisitionsPage() {
               <TableRow>
                 <TableHead className="w-[140px]">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
+                <TableHead>狀態</TableHead>
                 <TableHead>領料單號</TableHead>
                 <TableHead>領料單分類</TableHead>
                 <TableHead>關聯管制單號</TableHead>
                 <TableHead>備料人員</TableHead>
-                <TableHead>狀態</TableHead>
                 <TableHead>完成日期</TableHead>
               </TableRow>
             </TableHeader>
@@ -696,15 +720,15 @@ export default function RequisitionsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
-                    <TableCell>{req.category || '未分類'}</TableCell>
-                    <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
-                    <TableCell>{req.staffName}</TableCell>
                     <TableCell>
                       <Badge variant={req.status === '已完成' ? 'default' : 'destructive'}>
                         {req.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
+                    <TableCell>{req.category || '未分類'}</TableCell>
+                    <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
+                    <TableCell>{req.staffName}</TableCell>
                     <TableCell>{req.completionDate || '-'}</TableCell>
                   </TableRow>
                 ))
