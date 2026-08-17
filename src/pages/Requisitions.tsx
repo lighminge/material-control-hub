@@ -35,6 +35,7 @@ export type Requisition = {
   items: RequisitionItem[];
   status: '已完成' | '缺料管制中';
   completionDate?: string | null;
+  returnDate?: string | null;
   createdAt?: any;
 };
 
@@ -70,7 +71,8 @@ export default function RequisitionsPage() {
     staffName: '',
     itemCount: 0,
     items: [],
-    status: '已完成'
+    status: '已完成',
+    returnDate: ''
   });
 
   const loadData = async () => {
@@ -319,7 +321,7 @@ export default function RequisitionsPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ displayId: '', category: '未分類', staffId: '', staffName: '', itemCount: 0, items: [], status: '已完成' });
+    setFormData({ displayId: '', category: '未分類', staffId: '', staffName: '', itemCount: 0, items: [], status: '已完成', returnDate: '' });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -414,8 +416,17 @@ export default function RequisitionsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>領料單繳回日期</Label>
+                  <Input 
+                    type="date"
+                    value={formData.returnDate || ''}
+                    onChange={(e) => setFormData({...formData, returnDate: e.target.value})}
+                    style={{ colorScheme: 'light dark' }}
+                  />
+                </div>
                 {editingId && (
-                  <div className="space-y-2 col-span-2 sm:col-span-1">
+                  <div className="space-y-2 col-span-2 sm:col-span-2">
                     <Label>關聯管制單號</Label>
                     <div className="flex h-10 w-full items-center px-3 rounded-md border border-input bg-muted/50">
                       {formData.controlDisplayId || '無'}
@@ -469,7 +480,7 @@ export default function RequisitionsPage() {
                             <CommandList>
                               <CommandEmpty>找不到對應的物料。</CommandEmpty>
                               <CommandGroup>
-                                {materials.map((mat) => (
+                                {materials.filter(mat => !formData.category || formData.category === '未分類' || mat.category === formData.category).map((mat) => (
                                   <CommandItem
                                     key={mat.id}
                                     value={mat.name} // By default, CommandItem filters based on text content / value

@@ -25,6 +25,7 @@ export default function MaterialsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<Material | null>(null);
+  const [systemAlert, setSystemAlert] = useState<string | null>(null);
   
   const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'cat_asc' | 'cat_desc' | 'none'>('none');
   const [searchName, setSearchName] = useState('');
@@ -87,6 +88,17 @@ export default function MaterialsPage() {
   }, []);
 
   const handleSave = async () => {
+    if (!formData.name.trim()) {
+      setSystemAlert('物料品號不能為空白！');
+      return;
+    }
+
+    const isDuplicate = materials.some(m => m.name.toLowerCase() === formData.name.trim().toLowerCase() && m.id !== editingId);
+    if (isDuplicate) {
+      setSystemAlert(`系統中已存在相同的物料品號 [${formData.name.trim()}]！`);
+      return;
+    }
+
     try {
       if (editingId) {
         await updateDocument('materials', editingId, formData);
@@ -164,6 +176,18 @@ export default function MaterialsPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!systemAlert} onOpenChange={(open) => !open && setSystemAlert(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">系統提示</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center font-bold text-lg">{systemAlert}</div>
+          <div className="flex justify-center">
+            <Button onClick={() => setSystemAlert(null)}>確認</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>
         <DialogContent>
           <DialogHeader>

@@ -34,6 +34,7 @@ export type Control = {
 export default function ControlsPage() {
   const [controls, setControls] = useState<Control[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [requisitions, setRequisitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState<Control | null>(null);
@@ -46,8 +47,23 @@ export default function ControlsPage() {
   // Filters
   const [searchStatus, setSearchStatus] = useState('all');
   const [searchControlId, setSearchControlId] = useState('');
-  const [searchStartDate, setSearchStartDate] = useState('');
-  const [searchEndDate, setSearchEndDate] = useState('');
+  const [sYear, setSYear] = useState('');
+  const [sMonth, setSMonth] = useState('');
+  const [sDay, setSDay] = useState('');
+  const [eYear, setEYear] = useState('');
+  const [eMonth, setEMonth] = useState('');
+  const [eDay, setEDay] = useState('');
+
+  const searchStartDate = sYear && sMonth && sDay ? `${sYear}-${sMonth.padStart(2, '0')}-${sDay.padStart(2, '0')}` : '';
+  const searchEndDate = eYear && eMonth && eDay ? `${eYear}-${eMonth.padStart(2, '0')}-${eDay.padStart(2, '0')}` : '';
+
+  const QUICK_PHRASES = [
+    "廠商延遲交貨",
+    "已聯絡廠商催促",
+    "等待進口報關中",
+    "預計下週到貨",
+    "物料測試檢驗中"
+  ];
 
   const [restockItemIndex, setRestockItemIndex] = useState<number | null>(null);
   const [enteredStock, setEnteredStock] = useState<string>('');
@@ -56,13 +72,15 @@ export default function ControlsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [data, mats] = await Promise.all([
+      const [data, mats, reqs] = await Promise.all([
         getCollection('controls'),
-        getCollection('materials')
+        getCollection('materials'),
+        getCollection('requisitions')
       ]);
       const sortedData = (data as Control[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
       setControls(sortedData);
       setMaterials(mats);
+      setRequisitions(reqs);
     } catch (error) {
       console.error("Error loading controls:", error);
     } finally {
@@ -196,10 +214,12 @@ export default function ControlsPage() {
     }
   };
 
-  const calculateDays = (startDate: string, endDate: string | null) => {
-    if (!startDate) return 0;
-    const start = parseISO(startDate);
-    const end = endDate ? parseISO(endDate) : new Date();
+  const calculateDays = (control: Control) => {
+    const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
+    if (!req || !req.returnDate) return 0;
+    
+    const start = parseISO(req.returnDate);
+    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
     return Math.max(0, differenceInDays(end, start));
   };
 
@@ -266,7 +286,7 @@ export default function ControlsPage() {
                 <Label>補完日期</Label>
                 <Input 
                   type="date" 
-                  className="w-full sm:w-[200px]"
+                  className="w-full h-12 text-lg font-bold shadow-sm"
                   style={{ colorScheme: 'light dark' }}
                   value={restockDateStr} 
                   onChange={(e) => setRestockDateStr(e.target.value)} 
@@ -348,7 +368,7 @@ export default function ControlsPage() {
                       <div className="col-span-2">
                         <Label className="text-xs text-muted-foreground">缺件狀態</Label>
                         {item.missingQuantity > 0 ? (
-                          <div className="font-bold text-destructive">缺 {item.missingQuantity}</div>
+                          <div className="font-bold text-destructive">缺 {item.missingQuantity} PCS</div>
                         ) : (
                           <div className="font-bold text-green-600">已補完</div>
                         )}
@@ -372,11 +392,24 @@ export default function ControlsPage() {
                       </div>
                       <div className="col-span-4 space-y-1">
                         <Label className="text-xs">後續處理情況/備註</Label>
-                        <Input 
-                          value={item.notes} 
-                          onChange={(e) => handleItemNoteChange(index, e.target.value)}
-                          placeholder="進度說明..."
-                        />
+                        <div className="flex gap-1">
+                          <Input 
+                            value={item.notes} 
+                            onChange={(e) => handleItemNoteChange(index, e.target.value)}
+                            placeholder="進度說明..."
+                            className="flex-1"
+                          />
+                          <Select onValueChange={(val) => handleItemNoteChange(index, item.notes ? `${item.notes}, ${val}` : val)}>
+                            <SelectTrigger className="w-10 px-2 flex-shrink-0">
+                              <SelectValue placeholder="+" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {QUICK_PHRASES.map(phrase => (
+                                <SelectItem key={phrase} value={phrase}>{phrase}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -411,23 +444,59 @@ export default function ControlsPage() {
             <Label>查詢管制單號</Label>
             <Input placeholder="輸入管制單號" value={searchControlId} onChange={(e) => setSearchControlId(e.target.value)} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label>完成日期 (起)</Label>
-            <Input 
-              type="date"
-              value={searchStartDate} 
-              onChange={(e) => setSearchStartDate(e.target.value)}
-              style={{ colorScheme: 'light dark' }}
-            />
+            <div className="flex gap-2">
+              <Select value={sYear} onValueChange={setSYear}>
+                <SelectTrigger><SelectValue placeholder="年" /></SelectTrigger>
+                <SelectContent>
+                  {[...Array(5)].map((_, i) => {
+                    const y = new Date().getFullYear() - 2 + i;
+                    return <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+              <Select value={sMonth} onValueChange={setSMonth}>
+                <SelectTrigger><SelectValue placeholder="月" /></SelectTrigger>
+                <SelectContent>
+                  {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={(i+1).toString()}>{i+1}月</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={sDay} onValueChange={setSDay}>
+                <SelectTrigger><SelectValue placeholder="日" /></SelectTrigger>
+                <SelectContent>
+                  {[...Array(31)].map((_, i) => <SelectItem key={i+1} value={(i+1).toString()}>{i+1}日</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="icon" onClick={() => { setSYear(''); setSMonth(''); setSDay(''); }}>×</Button>
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label>完成日期 (迄)</Label>
-            <Input 
-              type="date"
-              value={searchEndDate} 
-              onChange={(e) => setSearchEndDate(e.target.value)}
-              style={{ colorScheme: 'light dark' }}
-            />
+            <div className="flex gap-2">
+              <Select value={eYear} onValueChange={setEYear}>
+                <SelectTrigger><SelectValue placeholder="年" /></SelectTrigger>
+                <SelectContent>
+                  {[...Array(5)].map((_, i) => {
+                    const y = new Date().getFullYear() - 2 + i;
+                    return <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+              <Select value={eMonth} onValueChange={setEMonth}>
+                <SelectTrigger><SelectValue placeholder="月" /></SelectTrigger>
+                <SelectContent>
+                  {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={(i+1).toString()}>{i+1}月</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={eDay} onValueChange={setEDay}>
+                <SelectTrigger><SelectValue placeholder="日" /></SelectTrigger>
+                <SelectContent>
+                  {[...Array(31)].map((_, i) => <SelectItem key={i+1} value={(i+1).toString()}>{i+1}日</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="icon" onClick={() => { setEYear(''); setEMonth(''); setEDay(''); }}>×</Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -469,8 +538,8 @@ export default function ControlsPage() {
                 <TableHead>關聯領料單</TableHead>
                 <TableHead>缺料項目總數</TableHead>
                 <TableHead>已補完數</TableHead>
-                <TableHead>管制天數</TableHead>
                 <TableHead>完成日期</TableHead>
+                <TableHead>管制天數</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -501,15 +570,15 @@ export default function ControlsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
-                    <TableCell className="text-muted-foreground">{control.requisitionId.startsWith('領') ? control.requisitionId : control.requisitionId.slice(0, 8)}</TableCell>
-                    <TableCell>{control.items.length}</TableCell>
+                    <TableCell className="text-muted-foreground">{control.requisitionId}</TableCell>
+                    <TableCell className="text-destructive font-black text-lg">{control.items.length}</TableCell>
                     <TableCell className="text-green-600 font-bold">{control.items.filter(i => i.missingQuantity === 0).length}</TableCell>
+                    <TableCell>{control.completionDate || '-'}</TableCell>
                     <TableCell>
-                      <div className={`font-bold ${calculateDays(control.startDate, control.completionDate || null) > 7 ? 'text-destructive' : ''}`}>
-                        {calculateDays(control.startDate, control.completionDate || null)} 天
+                      <div className={`font-bold ${calculateDays(control) > 7 ? 'text-destructive' : ''}`}>
+                        {calculateDays(control)} 天
                       </div>
                     </TableCell>
-                    <TableCell>{control.completionDate || '-'}</TableCell>
                   </TableRow>
                 ))
               )}
