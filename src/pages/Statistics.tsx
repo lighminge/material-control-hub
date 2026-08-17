@@ -84,17 +84,18 @@ export default function StatisticsPage() {
     });
 
     let totalDays = 0;
-    const counts = Array(7).fill(0);
+    const counts = Array(8).fill(0);
     
     filteredControls.forEach(c => {
       const d = calculateDays(c.startDate, c.completionDate || null);
       totalDays += d;
-      if (d <= 7) counts[d - 1]++;
-      else counts[6]++;
+      if (d === 0) counts[0]++;
+      else if (d < 7) counts[d]++;
+      else counts[7]++;
     });
 
     const daysData = counts.map((count, index) => ({
-      name: index === 6 ? '7天以上' : `${index + 1}天`,
+      name: index === 7 ? '7天以上' : index === 0 ? '0天' : `${index}天`,
       "數量": count
     }));
 
@@ -119,11 +120,29 @@ export default function StatisticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>管制開始日期區間 (起)</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ colorScheme: 'light dark' }} />
+            <Input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)} 
+              style={{ colorScheme: 'light dark' }}
+              onClick={(e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.showPicker) target.showPicker();
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label>管制開始日期區間 (迄)</Label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ colorScheme: 'light dark' }} />
+            <Input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)} 
+              style={{ colorScheme: 'light dark' }}
+              onClick={(e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.showPicker) target.showPicker();
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label>物料分類</Label>

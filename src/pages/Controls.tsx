@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { differenceInDays, parseISO, format } from 'date-fns';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 
 export type ControlItem = {
   materialId: string;
@@ -50,6 +50,8 @@ export default function ControlsPage() {
   ]);
   const [managePhrasesOpen, setManagePhrasesOpen] = useState(false);
   const [newPhrase, setNewPhrase] = useState('');
+  const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
+  const [editPhraseText, setEditPhraseText] = useState('');
   const [sortBy, setSortBy] = useState('none');
 
   // Filters
@@ -114,6 +116,23 @@ export default function ControlsPage() {
     const updated = [...quickPhrases, newPhrase.trim()];
     setQuickPhrases(updated);
     setNewPhrase('');
+    await setDocumentWithId('settings', 'quickPhrases', { phrases: updated });
+  };
+
+  const handleSaveEditPhrase = async () => {
+    if (editingPhraseIndex === null || !editPhraseText.trim()) return;
+    if (quickPhrases[editingPhraseIndex] === editPhraseText.trim()) {
+      setEditingPhraseIndex(null);
+      return;
+    }
+    if (quickPhrases.includes(editPhraseText.trim())) {
+      setSystemAlert("此辭庫已經存在！");
+      return;
+    }
+    const updated = [...quickPhrases];
+    updated[editingPhraseIndex] = editPhraseText.trim();
+    setQuickPhrases(updated);
+    setEditingPhraseIndex(null);
     await setDocumentWithId('settings', 'quickPhrases', { phrases: updated });
   };
 
@@ -315,12 +334,36 @@ export default function ControlsPage() {
               {quickPhrases.length === 0 ? (
                 <div className="text-center text-muted-foreground py-4">尚無辭庫</div>
               ) : (
-                quickPhrases.map(phrase => (
-                  <div key={phrase} className="flex justify-between items-center p-2 bg-muted/50 rounded hover:bg-muted">
-                    <span className="text-sm">{phrase}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeletePhrase(phrase)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                quickPhrases.map((phrase, i) => (
+                  <div key={i} className="flex justify-between items-center p-2 bg-muted/50 rounded hover:bg-muted">
+                    {editingPhraseIndex === i ? (
+                      <Input 
+                        value={editPhraseText} 
+                        onChange={e => setEditPhraseText(e.target.value)} 
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveEditPhrase(); }} 
+                        autoFocus
+                        className="h-8"
+                      />
+                    ) : (
+                      <span className="text-sm">{phrase}</span>
+                    )}
+                    <div className="flex gap-1 ml-2">
+                      {editingPhraseIndex === i ? (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={handleSaveEditPhrase}>儲存</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingPhraseIndex(null)}>取消</Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(phrase); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeletePhrase(phrase)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -462,16 +505,10 @@ export default function ControlsPage() {
                         )}
                       </div>
                       <div className="col-span-4 space-y-1">
-                        <Label className="text-xs">後續處理情況/備註</Label>
-                        <div className="flex gap-1">
-                          <Input 
-                            value={item.notes} 
-                            onChange={(e) => handleItemNoteChange(index, e.target.value)}
-                            placeholder="進度說明..."
-                            className="flex-1"
-                          />
+                        <div className="flex justify-between items-center mb-1">
+                          <Label className="text-xs font-bold text-muted-foreground">後續處理情況/備註</Label>
                           <Select onValueChange={(val) => handleItemNoteChange(index, item.notes ? `${item.notes}, ${val}` : val)}>
-                            <SelectTrigger className="w-auto px-3 flex-shrink-0 font-medium">
+                            <SelectTrigger className="w-auto h-7 px-2 py-0 text-xs flex-shrink-0 font-medium">
                               <SelectValue placeholder="常用辭庫" />
                             </SelectTrigger>
                             <SelectContent>
@@ -482,13 +519,19 @@ export default function ControlsPage() {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  className="w-full" 
+                                  className="w-full text-xs h-7" 
                                   onClick={(e) => { e.stopPropagation(); setManagePhrasesOpen(true); }}
                                 >管理辭庫</Button>
                               </div>
                             </SelectContent>
                           </Select>
                         </div>
+                        <textarea 
+                          value={item.notes} 
+                          onChange={(e) => handleItemNoteChange(index, e.target.value)}
+                          placeholder="進度說明..."
+                          className="flex min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                        />
                       </div>
                     </CardContent>
                   </Card>

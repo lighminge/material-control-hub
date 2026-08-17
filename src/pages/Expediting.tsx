@@ -12,6 +12,7 @@ export default function ExpeditingPage() {
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterDay, setFilterDay] = useState<number | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -103,6 +104,14 @@ export default function ExpeditingPage() {
         return filterDay === 7 ? days >= 7 : days === filterDay;
       });
     }
+    if (filterCategory !== 'all') {
+      result = result.filter(c => {
+        return c.items.some((item: any) => {
+          const mat = materials.find(m => m.id === item.materialId);
+          return (mat?.category || '未分類') === filterCategory;
+        });
+      });
+    }
     return result.sort((a, b) => calculateDays(b) - calculateDays(a));
   }, [controls, filterDay, requisitions]);
 
@@ -116,6 +125,19 @@ export default function ExpeditingPage() {
         <div className="flex items-center gap-3">
           <AlarmClock className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">稽催作業</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-muted-foreground">物料分類:</span>
+          <select 
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium"
+            value={filterCategory} 
+            onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+          >
+            <option value="all">全部分類</option>
+            <option value="未分類">未分類</option>
+            <option value="TKW">TKW</option>
+            <option value="夾鉗">夾鉗</option>
+          </select>
         </div>
       </div>
 
@@ -210,11 +232,13 @@ export default function ExpeditingPage() {
                   const days = calculateDays(control);
                   const rowClass = getRowColorClass(days >= 7 ? 7 : days);
                   const cats = Array.from(new Set(control.items.map((i: any) => materials.find(m => m.id === i.materialId)?.category || '未分類')));
+                  const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
+                  const displayReqId = req ? (req.displayId || req.id) : control.requisitionId;
                   return (
                     <TableRow key={control.id} className={rowClass}>
                       <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                       <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
-                      <TableCell className="text-muted-foreground">{control.requisitionId.startsWith('領') ? control.requisitionId : control.requisitionId.slice(0, 8)}</TableCell>
+                      <TableCell className="text-muted-foreground">{displayReqId}</TableCell>
                       <TableCell>{cats.join(', ')}</TableCell>
                       <TableCell>
                         <span className="font-bold">{days} 天</span>
