@@ -113,7 +113,7 @@ export default function ExpeditingPage() {
       });
     }
     return result.sort((a, b) => calculateDays(b) - calculateDays(a));
-  }, [controls, filterDay, requisitions]);
+  }, [controls, filterDay, requisitions, filterCategory, materials]);
 
   const totalItems = filteredControls.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -125,19 +125,6 @@ export default function ExpeditingPage() {
         <div className="flex items-center gap-3">
           <AlarmClock className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">稽催作業</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-muted-foreground">物料分類:</span>
-          <select 
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium"
-            value={filterCategory} 
-            onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
-          >
-            <option value="all">全部分類</option>
-            <option value="未分類">未分類</option>
-            <option value="TKW">TKW</option>
-            <option value="夾鉗">夾鉗</option>
-          </select>
         </div>
       </div>
 
@@ -201,8 +188,21 @@ export default function ExpeditingPage() {
       </div>
 
       <Card>
-        <CardHeader className="py-4">
+        <CardHeader className="py-4 flex flex-row items-center justify-between">
           <CardTitle className="text-lg">目前未補完之管制單清單</CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-muted-foreground">物料分類:</span>
+            <select 
+              className="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium"
+              value={filterCategory} 
+              onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+            >
+              <option value="all">全部分類</option>
+              <option value="未分類">未分類</option>
+              <option value="TKW">TKW</option>
+              <option value="夾鉗">夾鉗</option>
+            </select>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
