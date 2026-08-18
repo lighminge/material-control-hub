@@ -24,6 +24,7 @@
     "date-fns": "^4.4.0",
     "firebase": "^12.17.1",
     "lucide-react": "^1.31.0",
+    "lunar-javascript": "^1.7.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",

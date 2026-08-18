@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { differenceInDays, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
+import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
+import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -14,6 +15,7 @@ export default function StatisticsPage() {
   const [controls, setControls] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -23,14 +25,16 @@ export default function StatisticsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [ctrls, reqs, mats] = await Promise.all([
+        const [ctrls, reqs, mats, holsData] = await Promise.all([
           getCollection('controls'),
           getCollection('requisitions'),
-          getCollection('materials')
+          getCollection('materials'),
+          getCollection('holidays')
         ]);
         setControls(ctrls);
         setRequisitions(reqs);
         setMaterials(mats);
+        setHolidays(holsData);
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -38,12 +42,10 @@ export default function StatisticsPage() {
     loadData();
   }, []);
 
-  const calculateDays = (control: any, reqs: any[]) => {
+  const calculateDays = (control: any, reqs: any[], hols: any[]) => {
     const req = reqs.find((r: any) => r.id === control.requisitionId || r.displayId === control.requisitionId);
     if (!req || !req.returnDate) return 0;
-    const start = parseISO(req.returnDate);
-    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
-    return Math.max(0, differenceInDays(end, start));
+    return calculateWorkingDays(req.returnDate, control.completionDate, hols);
   };
 
   const stats = useMemo(() => {
@@ -93,7 +95,7 @@ export default function StatisticsPage() {
     const counts = Array(8).fill(0);
     
     filteredControls.forEach(c => {
-      const d = calculateDays(c, requisitions);
+      const d = calculateDays(c, requisitions, holidays);
       totalDays += d;
       if (d === 0) counts[0]++;
       else if (d < 7) counts[d]++;

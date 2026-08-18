@@ -3,7 +3,8 @@ import { getCollection } from '@/lib/firebase/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { differenceInDays, parseISO } from 'date-fns';
+
+import { calculateWorkingDays } from '@/utils/dateUtils';
 import { AlarmClock, ShieldAlert, TrendingUp } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -11,6 +12,7 @@ export default function ExpeditingPage() {
   const [controls, setControls] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterDay, setFilterDay] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -27,14 +29,16 @@ export default function ExpeditingPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [ctrls, mats, reqs] = await Promise.all([
+        const [ctrls, mats, reqs, holsData] = await Promise.all([
           getCollection('controls'),
           getCollection('materials'),
-          getCollection('requisitions')
+          getCollection('requisitions'),
+          getCollection('holidays')
         ]);
         setControls(ctrls);
         setMaterials(mats);
         setRequisitions(reqs);
+        setHolidays(holsData);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -47,9 +51,7 @@ export default function ExpeditingPage() {
   const calculateDays = (control: any) => {
     const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
     if (!req || !req.returnDate) return 0;
-    const start = parseISO(req.returnDate);
-    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
-    return Math.max(0, differenceInDays(end, start));
+    return calculateWorkingDays(req.returnDate, control.completionDate, holidays);
   };
 
   const currentTabControls = useMemo(() => {

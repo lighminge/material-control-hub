@@ -8,8 +8,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Trash2, Pencil } from 'lucide-react';
+import { calculateWorkingDays } from '@/utils/dateUtils';
 
 export type ControlItem = {
   materialId: string;
@@ -36,6 +37,7 @@ export default function ControlsPage() {
   const [controls, setControls] = useState<Control[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState<Control | null>(null);
@@ -75,16 +77,18 @@ export default function ControlsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [data, mats, reqs, settingsData] = await Promise.all([
+      const [data, mats, reqs, settingsData, holsData] = await Promise.all([
         getCollection('controls'),
         getCollection('materials'),
         getCollection('requisitions'),
-        getCollection('settings')
+        getCollection('settings'),
+        getCollection('holidays')
       ]);
       const sortedData = (data as Control[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
       setControls(sortedData);
       setMaterials(mats);
       setRequisitions(reqs);
+      setHolidays(holsData);
       
       const phrasesDoc = (settingsData as any[]).find(s => s.id === 'quickPhrases');
       if (phrasesDoc && phrasesDoc.phrases) {
@@ -261,10 +265,7 @@ export default function ControlsPage() {
   const calculateDays = (control: Control) => {
     const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
     if (!req || !req.returnDate) return 0;
-    
-    const start = parseISO(req.returnDate);
-    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
-    return Math.max(0, differenceInDays(end, start));
+    return calculateWorkingDays(req.returnDate, control.completionDate, holidays);
   };
 
   const filteredControls = controls.filter(control => {

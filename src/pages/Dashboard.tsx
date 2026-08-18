@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { getCollection } from '@/lib/firebase/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList } from 'recharts';
-import { differenceInDays, parseISO, format, subDays } from 'date-fns';
+import { parseISO, format, subDays } from 'date-fns';
+import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, Package, TrendingUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -29,20 +30,19 @@ export default function Dashboard() {
     return controls.reduce((sum, c) => sum + (c.items?.filter((i: any) => i.missingQuantity === 0).length || 0), 0);
   }, [controls]);
 
-  const calculateDays = (control: any, reqs: any[]) => {
+  const calculateDays = (control: any, reqs: any[], hols: any[]) => {
     const req = reqs.find((r: any) => r.id === control.requisitionId || r.displayId === control.requisitionId);
     if (!req || !req.returnDate) return 0;
-    const start = parseISO(req.returnDate);
-    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
-    return Math.max(0, differenceInDays(end, start));
+    return calculateWorkingDays(req.returnDate, control.completionDate, hols);
   };
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [reqs, controlsData] = await Promise.all([
+        const [reqs, controlsData, holsData] = await Promise.all([
           getCollection('requisitions'),
-          getCollection('controls')
+          getCollection('controls'),
+          getCollection('holidays')
         ]);
 
         const getYearFromDate = (dateVal: any, defaultYear: string) => {
@@ -78,11 +78,11 @@ export default function Dashboard() {
         });
 
         setControls(filteredControls);
-        const activeControls = filteredControls.filter((c: any) => c.status === '處理中');
+        const activeControls = filteredControls.filter((c: any) => c.status === '處理中' || c.status === '缺料管制中');
         
         let totalDays = 0;
         filteredControls.forEach((c: any) => {
-          totalDays += calculateDays(c, reqs);
+          totalDays += calculateDays(c, reqs, holsData);
         });
 
         setStats({
@@ -102,7 +102,7 @@ export default function Dashboard() {
 
         const counts = Array(8).fill(0);
         filteredControls.forEach((c: any) => {
-          const d = calculateDays(c, reqs);
+          const d = calculateDays(c, reqs, holsData);
           if (d === 0) counts[0]++;
           else if (d < 7) counts[d]++;
           else counts[7]++;
