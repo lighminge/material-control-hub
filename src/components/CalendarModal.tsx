@@ -163,10 +163,12 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
               if (!day) return <div key={`empty-${idx}`} className="bg-muted/50 rounded-md border border-dashed border-muted-foreground/30 min-h-[100px]" />;
               
               let bgColor = day.isWeekend ? 'bg-muted/30' : 'bg-background';
-              let borderColor = day.isToday ? 'border-primary border-2' : 'border-border border';
+              let borderColor = day.isToday ? 'border-amber-500 border-2 shadow-sm ring-1 ring-amber-500' : 'border-border border';
               
               if (day.custom?.type === 'holiday') bgColor = 'bg-red-50';
               if (day.custom?.type === 'workday') bgColor = 'bg-green-50';
+              
+              if (day.isToday) bgColor = 'bg-amber-50/50';
 
               return (
                 <div 
@@ -179,9 +181,12 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
                   className={`${bgColor} ${borderColor} rounded-md p-2 min-h-[100px] cursor-pointer hover:shadow-md transition-shadow relative flex flex-col`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className={`font-bold ${day.isWeekend || day.custom?.type === 'holiday' ? 'text-destructive' : ''} ${day.isToday ? 'bg-primary text-primary-foreground px-2 py-0.5 rounded-full text-xs' : ''}`}>
+                    <span className={`font-bold ${day.isWeekend || day.custom?.type === 'holiday' ? 'text-destructive' : ''} ${day.isToday ? 'bg-amber-500 text-white px-2.5 py-0.5 rounded-full text-sm shadow-sm' : ''}`}>
                       {day.date}
                     </span>
+                    {day.isToday && (
+                      <span className="text-xs font-bold text-amber-600 animate-pulse">今日</span>
+                    )}
                   </div>
                   
                   <div className="mt-2 flex flex-col gap-1 flex-1">
