@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { differenceInDays, parseISO } from 'date-fns';
 import { AlarmClock, ShieldAlert, TrendingUp } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function ExpeditingPage() {
   const [controls, setControls] = useState<any[]>([]);
@@ -139,9 +140,34 @@ export default function ExpeditingPage() {
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const paginatedControls = filteredControls.slice((page - 1) * pageSize, page * pageSize);
 
+  const handleExportExcel = () => {
+    const exportData = filteredControls.map((control, index) => {
+      const days = calculateDays(control);
+      const cats = Array.from(new Set(control.items.map((i: any) => materials.find(m => m.id === i.materialId)?.category || '未分類')));
+      const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
+      const displayReqId = req ? (req.displayId || req.id) : control.requisitionId;
+      return {
+        '序號': index + 1,
+        '管制單號': control.displayId || control.id?.slice(0, 8),
+        '關聯領料單': displayReqId,
+        '涵蓋物料分類': cats.join(', '),
+        '管制天數': days,
+        '缺料項目總數': control.items.length,
+        '已補完數': control.items.filter((i: any) => i.missingQuantity === 0).length,
+        '狀態': control.status
+      };
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    const sheetName = activeTab === 'active' ? '未結案管制單' : '已結案管制單';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${sheetName}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-muted/30 p-4 rounded-xl border border-border/50">
+      <div className="flex items-center gap-6 bg-muted/30 p-4 rounded-xl border border-border/50">
         <div className="flex items-center gap-3">
           <AlarmClock className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">稽催作業</h1>
@@ -244,6 +270,33 @@ export default function ExpeditingPage() {
         </Card>
       </div>
 
+      <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md mt-4">
+        <div className="font-medium">總計: {totalItems} 筆管制單</div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">每頁顯示:</span>
+            <select 
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              value={pageSize} 
+              onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1); }}
+            >
+              <option value={10}>10 筆</option>
+              <option value={20}>20 筆</option>
+              <option value={30}>30 筆</option>
+              <option value={50}>50 筆</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="px-2 py-1 border rounded hover:bg-muted disabled:opacity-50 text-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</button>
+            <span className="text-sm">第 {page} / {totalPages} 頁</span>
+            <button className="px-2 py-1 border rounded hover:bg-muted disabled:opacity-50 text-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</button>
+          </div>
+          <button onClick={handleExportExcel} className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white rounded-md ml-2 font-bold flex items-center">
+            匯出 Excel
+          </button>
+        </div>
+      </div>
+
       <Card>
         <CardHeader className="py-4 flex flex-row items-center justify-between">
           <CardTitle className="text-lg">
@@ -317,32 +370,6 @@ export default function ExpeditingPage() {
           </Table>
         </CardContent>
       </Card>
-      
-      {!loading && paginatedControls.length > 0 && (
-        <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md mt-4">
-          <div className="font-medium">總計: {totalItems} 筆管制單</div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">每頁顯示:</span>
-              <select 
-                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                value={pageSize} 
-                onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1); }}
-              >
-                <option value={10}>10 筆</option>
-                <option value={20}>20 筆</option>
-                <option value={30}>30 筆</option>
-                <option value={50}>50 筆</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="px-2 py-1 border rounded hover:bg-muted disabled:opacity-50 text-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</button>
-              <span className="text-sm">第 {page} / {totalPages} 頁</span>
-              <button className="px-2 py-1 border rounded hover:bg-muted disabled:opacity-50 text-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

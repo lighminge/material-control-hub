@@ -60,6 +60,7 @@ export default function RequisitionsPage() {
   const [searchCtrlId, setSearchCtrlId] = useState('');
   const [searchStaff, setSearchStaff] = useState('all');
   const [searchCategory, setSearchCategory] = useState('all');
+  const [searchStatus, setSearchStatus] = useState('all');
   const [searchReturnDateStart, setSearchReturnDateStart] = useState('');
   const [searchReturnDateEnd, setSearchReturnDateEnd] = useState('');
   
@@ -336,6 +337,7 @@ export default function RequisitionsPage() {
     if (searchCtrlId && !(req.controlDisplayId || '').includes(searchCtrlId)) return false;
     if (searchStaff !== 'all' && req.staffId !== searchStaff) return false;
     if (searchCategory !== 'all' && (req.category || '未分類') !== searchCategory) return false;
+    if (searchStatus !== 'all' && req.status !== searchStatus) return false;
     if (searchReturnDateStart && (!req.returnDate || req.returnDate < searchReturnDateStart)) return false;
     if (searchReturnDateEnd && (!req.returnDate || req.returnDate > searchReturnDateEnd)) return false;
     return true;
@@ -348,6 +350,10 @@ export default function RequisitionsPage() {
       return (a.category || '').localeCompare(b.category || '');
     } else if (sortBy === 'category_desc') {
       return (b.category || '').localeCompare(a.category || '');
+    } else if (sortBy === 'status_asc') {
+      return (a.status || '').localeCompare(b.status || '');
+    } else if (sortBy === 'status_desc') {
+      return (b.status || '').localeCompare(a.status || '');
     }
     return 0;
   });
@@ -600,7 +606,7 @@ export default function RequisitionsPage() {
     </div>
 
       <Card className="mb-6 p-4 bg-muted/30">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
           <div className="space-y-2">
             <Label>查詢領料單號</Label>
             <Input placeholder="輸入單號" value={searchReqId} onChange={(e) => setSearchReqId(e.target.value)} />
@@ -634,6 +640,19 @@ export default function RequisitionsPage() {
                 <SelectItem value="未分類">未分類</SelectItem>
                 <SelectItem value="TKW">TKW</SelectItem>
                 <SelectItem value="夾鉗">夾鉗</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>狀態</Label>
+            <Select value={searchStatus} onValueChange={setSearchStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部狀態" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="已完成">已完成</SelectItem>
+                <SelectItem value="缺料管制中">缺料管制中</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -674,6 +693,8 @@ export default function RequisitionsPage() {
                 <SelectItem value="id_asc">領料單號 (小到大)</SelectItem>
                 <SelectItem value="category_asc">分類 (A - Z)</SelectItem>
                 <SelectItem value="category_desc">分類 (Z - A)</SelectItem>
+                <SelectItem value="status_asc">狀態 (已完成 - 缺料)</SelectItem>
+                <SelectItem value="status_desc">狀態 (缺料 - 已完成)</SelectItem>
               </SelectContent>
             </Select>
           </div>

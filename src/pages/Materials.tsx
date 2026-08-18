@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import * as XLSX from 'xlsx';
 
 export type Material = {
   id?: string;
@@ -173,6 +174,25 @@ export default function MaterialsPage() {
   const histTotalItems = filteredHist.length;
   const histTotalPages = Math.ceil(histTotalItems / histPageSize) || 1;
   const histPaginatedData = filteredHist.slice((histPage - 1) * histPageSize, histPage * histPageSize);
+
+  const handleExportExcel = () => {
+    const exportData = filteredHist.map((log, index) => {
+      const mat = materials.find(m => m.id === log.materialId);
+      return {
+        '序號': index + 1,
+        '補完日期': log.restockDate,
+        '物料分類': mat?.category || '未分類',
+        '物料品號': log.materialName,
+        '來源管制單號': log.controlId,
+        '補完/進貨備註': log.notes || ''
+      };
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "庫存變更歷程");
+    XLSX.writeFile(wb, `庫存變更歷程_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
 
   return (
     <div className="space-y-6">
@@ -466,6 +486,7 @@ export default function MaterialsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <Button onClick={handleExportExcel} className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white ml-2">匯出 Excel</Button>
             </div>
             
             <div className="flex items-center gap-4">

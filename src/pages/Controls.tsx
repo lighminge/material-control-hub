@@ -57,6 +57,7 @@ export default function ControlsPage() {
   // Filters
   const [searchStatus, setSearchStatus] = useState('all');
   const [searchControlId, setSearchControlId] = useState('');
+  const [searchReqId, setSearchReqId] = useState('');
   const [sYear, setSYear] = useState('');
   const [sMonth, setSMonth] = useState('');
   const [sDay, setSDay] = useState('');
@@ -269,6 +270,10 @@ export default function ControlsPage() {
   const filteredControls = controls.filter(control => {
     if (searchStatus !== 'all' && control.status !== searchStatus) return false;
     if (searchControlId && !(control.displayId || control.id || '').includes(searchControlId)) return false;
+    if (searchReqId && !(control.requisitionId || '').includes(searchReqId)) {
+      const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
+      if (!req || !(req.displayId || req.id || '').includes(searchReqId)) return false;
+    }
     if (searchStartDate && control.completionDate && control.completionDate < searchStartDate) return false;
     if (searchEndDate && control.completionDate && control.completionDate > searchEndDate) return false;
     // If date range is specified but control has no completion date, it shouldn't match completed range
@@ -281,6 +286,16 @@ export default function ControlsPage() {
   else if (sortBy === 'id_desc') sortedControls.sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
   else if (sortBy === 'date_asc') sortedControls.sort((a, b) => a.startDate.localeCompare(b.startDate));
   else if (sortBy === 'date_desc') sortedControls.sort((a, b) => b.startDate.localeCompare(a.startDate));
+  else if (sortBy === 'req_asc') sortedControls.sort((a, b) => {
+    const reqA = requisitions.find(r => r.id === a.requisitionId || r.displayId === a.requisitionId);
+    const reqB = requisitions.find(r => r.id === b.requisitionId || r.displayId === b.requisitionId);
+    return (reqA?.displayId || a.requisitionId || '').localeCompare(reqB?.displayId || b.requisitionId || '');
+  });
+  else if (sortBy === 'req_desc') sortedControls.sort((a, b) => {
+    const reqA = requisitions.find(r => r.id === a.requisitionId || r.displayId === a.requisitionId);
+    const reqB = requisitions.find(r => r.id === b.requisitionId || r.displayId === b.requisitionId);
+    return (reqB?.displayId || b.requisitionId || '').localeCompare(reqA?.displayId || a.requisitionId || '');
+  });
 
   const totalItems = sortedControls.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -582,8 +597,14 @@ export default function ControlsPage() {
                   <SelectItem value="id_desc">管制單號 (由大到小)</SelectItem>
                   <SelectItem value="date_asc">管制開始日期 (舊到新)</SelectItem>
                   <SelectItem value="date_desc">管制開始日期 (新到舊)</SelectItem>
+                  <SelectItem value="req_asc">關聯領料單 (由小到大)</SelectItem>
+                  <SelectItem value="req_desc">關聯領料單 (由大到小)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>查詢關聯領料單號</Label>
+              <Input placeholder="輸入領料單號" value={searchReqId} onChange={(e) => setSearchReqId(e.target.value)} />
             </div>
           </div>
           
@@ -642,11 +663,11 @@ export default function ControlsPage() {
               <Button variant="ghost" size="icon" onClick={() => { setEYear(''); setEMonth(''); setEDay(''); }}>×</Button>
             </div>
           </div>
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
 
-      <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">
+      <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md mb-6">
         <div className="font-medium">總計: {totalItems} 筆管制單</div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">

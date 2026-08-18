@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getCollection } from '@/lib/firebase/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { differenceInDays, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList } from 'recharts';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
+import * as XLSX from 'xlsx';
 
 export default function StatisticsPage() {
   const [controls, setControls] = useState<any[]>([]);
@@ -107,9 +109,37 @@ export default function StatisticsPage() {
       reqCount: filteredReqs.length,
       ctrlCount: filteredControls.length,
       avgDays: filteredControls.length > 0 ? (totalDays / filteredControls.length).toFixed(2) : '0.00',
-      daysData
+      daysData,
+      pieData: daysData.filter(d => d.數量 > 0).map(d => ({ name: d.name, value: d.數量 }))
     };
   }, [controls, requisitions, materials, startDate, endDate, category]);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#8884d8', '#8dd1e1'];
+
+  const handleExportExcel = () => {
+    // We want to export stats.daysData + basic stats
+    const basicStats = [
+      { '項目': '總領料單數', '數值': stats.reqCount },
+      { '項目': '總管制單數', '數值': stats.ctrlCount },
+      { '項目': '平均管制天數', '數值': stats.avgDays }
+    ];
+    
+    const daysStats = stats.daysData.map(d => ({
+      '天數群組': d.name,
+      '數量': d.數量,
+      '佔比': stats.ctrlCount > 0 ? ((d.數量 / stats.ctrlCount) * 100).toFixed(1) + '%' : '0%'
+    }));
+    
+    const wb = XLSX.utils.book_new();
+    
+    const wsBasic = XLSX.utils.json_to_sheet(basicStats);
+    XLSX.utils.book_append_sheet(wb, wsBasic, "基本統計");
+    
+    const wsDays = XLSX.utils.json_to_sheet(daysStats);
+    XLSX.utils.book_append_sheet(wb, wsDays, "天數統計");
+    
+    XLSX.writeFile(wb, `統計資料_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
 
   return (
     <div className="space-y-6">
@@ -118,6 +148,9 @@ export default function StatisticsPage() {
           <PieChart className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
         </div>
+        <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+          匯出 Excel
+        </Button>
       </div>
 
       <Card className="p-4 bg-muted/30">
@@ -235,6 +268,58 @@ export default function StatisticsPage() {
                 )}
               </ComposedChart>
             </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="flex flex-col mb-10">
+        <CardHeader>
+          <CardTitle>管制天數佔比</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">各管制天數在總單量中的百分比</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={stats.pieData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    innerRadius={40}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  >
+                    {stats.pieData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg mb-4">數據總覽</h3>
+              <div className="space-y-2">
+                {stats.daysData.map((d, i) => (
+                  <div key={d.name} className="flex justify-between items-center text-sm border-b pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
+                      <span>{d.name}</span>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="font-bold">{d.數量} 筆</span>
+                      <span className="text-muted-foreground w-12 text-right">
+                        {stats.ctrlCount > 0 ? ((d.數量 / stats.ctrlCount) * 100).toFixed(1) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
