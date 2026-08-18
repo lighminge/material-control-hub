@@ -289,9 +289,10 @@ export default function StatisticsPage() {
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
-                    innerRadius={40}
-                    paddingAngle={5}
+                    innerRadius={0}
                     dataKey="value"
+                    stroke="white"
+                    strokeWidth={1}
                     label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                   >
                     {stats.pieData.map((_, index) => (
@@ -307,16 +308,14 @@ export default function StatisticsPage() {
               <h3 className="font-bold text-lg mb-4">數據總覽</h3>
               <div className="space-y-2">
                 {stats.daysData.map((d, i) => (
-                  <div key={d.name} className="flex justify-between items-center text-sm border-b pb-2">
-                    <div className="flex items-center gap-2">
+                  <div key={d.name} className="flex items-center gap-6 text-sm border-b pb-2">
+                    <div className="flex items-center gap-2 w-20">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
                       <span>{d.name}</span>
                     </div>
-                    <div className="flex gap-4">
-                      <span className="font-bold">{d.數量} 筆</span>
-                      <span className="text-muted-foreground w-12 text-right">
-                        {stats.ctrlCount > 0 ? ((d.數量 / stats.ctrlCount) * 100).toFixed(1) : 0}%
-                      </span>
+                    <div className="font-bold w-16 text-right">{d.數量} 筆</div>
+                    <div className="text-muted-foreground w-16 text-right">
+                      {stats.ctrlCount > 0 ? ((d.數量 / stats.ctrlCount) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
                 ))}

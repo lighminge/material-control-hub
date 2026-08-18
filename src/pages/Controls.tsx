@@ -54,7 +54,7 @@ export default function ControlsPage() {
   const [newPhrase, setNewPhrase] = useState('');
   const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
   const [editPhraseText, setEditPhraseText] = useState('');
-  const [sortBy, setSortBy] = useState('none');
+  const [sortBy, setSortBy] = useState('status_asc');
 
   // Filters
   const [searchStatus, setSearchStatus] = useState('all');
@@ -296,6 +296,14 @@ export default function ControlsPage() {
     const reqA = requisitions.find(r => r.id === a.requisitionId || r.displayId === a.requisitionId);
     const reqB = requisitions.find(r => r.id === b.requisitionId || r.displayId === b.requisitionId);
     return (reqB?.displayId || b.requisitionId || '').localeCompare(reqA?.displayId || a.requisitionId || '');
+  });
+  else if (sortBy === 'status_asc') sortedControls.sort((a, b) => {
+    if (a.status === b.status) return (b.displayId || '').localeCompare(a.displayId || '');
+    return a.status === '處理中' ? -1 : 1;
+  });
+  else if (sortBy === 'status_desc') sortedControls.sort((a, b) => {
+    if (a.status === b.status) return (b.displayId || '').localeCompare(a.displayId || '');
+    return a.status === '已結案' ? -1 : 1;
   });
 
   const totalItems = sortedControls.length;
@@ -594,6 +602,8 @@ export default function ControlsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">預設排序</SelectItem>
+                  <SelectItem value="status_asc">狀態 (處理中 - 已結案)</SelectItem>
+                  <SelectItem value="status_desc">狀態 (已結案 - 處理中)</SelectItem>
                   <SelectItem value="id_asc">管制單號 (由小到大)</SelectItem>
                   <SelectItem value="id_desc">管制單號 (由大到小)</SelectItem>
                   <SelectItem value="date_asc">管制開始日期 (舊到新)</SelectItem>

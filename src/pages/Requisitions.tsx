@@ -64,8 +64,7 @@ export default function RequisitionsPage() {
   const [searchReturnDateStart, setSearchReturnDateStart] = useState('');
   const [searchReturnDateEnd, setSearchReturnDateEnd] = useState('');
   
-  // Sort
-  const [sortBy, setSortBy] = useState<'id_asc' | 'id_desc' | 'category_asc' | 'category_desc'>('id_desc');
+  const [sortBy, setSortBy] = useState<string>('status_desc');
 
   // Combobox popover open states
   const [openComboboxIndex, setOpenComboboxIndex] = useState<number | null>(null);
@@ -351,9 +350,13 @@ export default function RequisitionsPage() {
     } else if (sortBy === 'category_desc') {
       return (b.category || '').localeCompare(a.category || '');
     } else if (sortBy === 'status_asc') {
-      return (a.status || '').localeCompare(b.status || '');
+      // 已完成 first, then 缺料管制中
+      if (a.status === b.status) return (b.displayId || '').localeCompare(a.displayId || '');
+      return a.status === '已完成' ? -1 : 1;
     } else if (sortBy === 'status_desc') {
-      return (b.status || '').localeCompare(a.status || '');
+      // 缺料管制中 first, then 已完成
+      if (a.status === b.status) return (b.displayId || '').localeCompare(a.displayId || '');
+      return a.status === '缺料管制中' ? -1 : 1;
     }
     return 0;
   });

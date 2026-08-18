@@ -79,7 +79,7 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
     }
   };
 
-  const { calendarDays } = useMemo(() => {
+  const { calendarDays, stats } = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
@@ -93,12 +93,29 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
     const holidayMap = new Map(holidays.map(h => [h.date, h]));
     const todayStr = new Date().toISOString().split('T')[0];
 
+    let workdays = 0;
+    let restdays = 0;
+    let customHolidaysCount = 0;
+    let customWorkdaysCount = 0;
+
     for (let i = 1; i <= daysInMonth; i++) {
       const d = new Date(year, month, i);
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       const custom = holidayMap.get(dateStr);
       
+      let isWorkday = !isWeekend;
+      if (custom?.type === 'holiday') {
+        isWorkday = false;
+        customHolidaysCount++;
+      } else if (custom?.type === 'workday') {
+        isWorkday = true;
+        customWorkdaysCount++;
+      }
+
+      if (isWorkday) workdays++;
+      else restdays++;
+
       const taiwanInfo = getTaiwanDateInfo(d);
       
       days.push({
@@ -110,13 +127,16 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
         festivals: taiwanInfo.festivals
       });
     }
-    return { calendarDays: days };
+    return { 
+      calendarDays: days,
+      stats: { workdays, restdays, customHolidaysCount, customWorkdaysCount }
+    };
   }, [currentDate, holidays]);
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
@@ -129,23 +149,41 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
           
           <div className="flex justify-between items-center my-4">
             <Button variant="outline" onClick={handlePrevMonth}>◀ 上個月</Button>
-            <div className="flex items-center gap-2">
-              <Select value={currentDate.getFullYear().toString()} onValueChange={handleYearChange}>
-                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Array.from({length: 10}, (_, i) => currentDate.getFullYear() - 5 + i).map(y => (
-                    <SelectItem key={y} value={y.toString()}>{y} 年</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={(currentDate.getMonth() + 1).toString()} onValueChange={handleMonthChange}>
-                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Array.from({length: 12}, (_, i) => i + 1).map(m => (
-                    <SelectItem key={m} value={m.toString()}>{m} 月</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Select value={currentDate.getFullYear().toString()} onValueChange={handleYearChange}>
+                  <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({length: 10}, (_, i) => currentDate.getFullYear() - 5 + i).map(y => (
+                      <SelectItem key={y} value={y.toString()}>{y} 年</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={(currentDate.getMonth() + 1).toString()} onValueChange={handleMonthChange}>
+                  <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                      <SelectItem key={m} value={m.toString()}>{m} 月</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium bg-muted/30 px-4 py-1.5 rounded-full mt-2">
+                <span>工作日: <strong className="text-foreground">{stats.workdays}</strong> 天</span>
+                <span className="text-muted-foreground/30">|</span>
+                <span>例假日: <strong className="text-foreground">{stats.restdays}</strong> 天</span>
+                {(stats.customHolidaysCount > 0 || stats.customWorkdaysCount > 0) && (
+                  <>
+                    <span className="text-muted-foreground/30">|</span>
+                    <span className="text-amber-600 flex gap-2">
+                      (
+                      {stats.customHolidaysCount > 0 && <span>自訂休假: {stats.customHolidaysCount}</span>}
+                      {stats.customWorkdaysCount > 0 && <span>自訂補班: {stats.customWorkdaysCount}</span>}
+                      )
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
             <Button variant="outline" onClick={handleNextMonth}>下個月 ▶</Button>
           </div>
@@ -241,7 +279,7 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
       </Dialog>
 
       <Dialog open={!!editDate} onOpenChange={(open) => !open && setEditDate(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>設定 {editDate}</DialogTitle>
           </DialogHeader>
