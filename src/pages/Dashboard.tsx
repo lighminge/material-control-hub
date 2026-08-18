@@ -29,8 +29,12 @@ export default function Dashboard() {
     return controls.reduce((sum, c) => sum + (c.items?.filter((i: any) => i.missingQuantity === 0).length || 0), 0);
   }, [controls]);
 
-  const calculateDays = (start: string, end: string | null) => {
-    return Math.max(1, differenceInDays(end ? parseISO(end) : new Date(), parseISO(start)));
+  const calculateDays = (control: any, reqs: any[]) => {
+    const req = reqs.find((r: any) => r.id === control.requisitionId || r.displayId === control.requisitionId);
+    if (!req || !req.returnDate) return 0;
+    const start = parseISO(req.returnDate);
+    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
+    return Math.max(0, differenceInDays(end, start));
   };
 
   useEffect(() => {
@@ -78,7 +82,7 @@ export default function Dashboard() {
         
         let totalDays = 0;
         filteredControls.forEach((c: any) => {
-          totalDays += calculateDays(c.startDate, c.completionDate || null);
+          totalDays += calculateDays(c, reqs);
         });
 
         setStats({
@@ -96,14 +100,16 @@ export default function Dashboard() {
         });
         setControlTrendData(trendData);
 
-        const counts = Array(7).fill(0);
+        const counts = Array(8).fill(0);
         filteredControls.forEach((c: any) => {
-          const d = calculateDays(c.startDate, c.completionDate || null);
-          if (d <= 7) counts[d - 1]++;
+          const d = calculateDays(c, reqs);
+          if (d === 0) counts[0]++;
+          else if (d < 7) counts[d]++;
+          else counts[7]++;
         });
         
         const daysData = counts.map((count, index) => ({
-          name: `${index + 1}天`,
+          name: index === 7 ? '7天以上' : index === 0 ? '0天' : `${index}天`,
           "數量": count
         }));
         setControlDaysData(daysData);

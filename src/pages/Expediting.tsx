@@ -16,6 +16,12 @@ export default function ExpeditingPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  const [searchStartDateStart, setSearchStartDateStart] = useState('');
+  const [searchStartDateEnd, setSearchStartDateEnd] = useState('');
+  const [searchCompDateStart, setSearchCompDateStart] = useState('');
+  const [searchCompDateEnd, setSearchCompDateEnd] = useState('');
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -25,9 +31,7 @@ export default function ExpeditingPage() {
           getCollection('materials'),
           getCollection('requisitions')
         ]);
-        // Only active/incomplete controls
-        const activeCtrls = ctrls.filter((c: any) => c.status === '處理中' || c.status === '缺料管制中');
-        setControls(activeCtrls);
+        setControls(ctrls);
         setMaterials(mats);
         setRequisitions(reqs);
       } catch (error) {
@@ -47,6 +51,16 @@ export default function ExpeditingPage() {
     return Math.max(0, differenceInDays(end, start));
   };
 
+  const currentTabControls = useMemo(() => {
+    return controls.filter(c => {
+      if (activeTab === 'active') {
+        return c.status === '處理中' || c.status === '缺料管制中';
+      } else {
+        return c.status === '已結案';
+      }
+    });
+  }, [controls, activeTab]);
+
   const dayGroups = useMemo(() => {
     const groups = {
       '0天': 0,
@@ -59,7 +73,7 @@ export default function ExpeditingPage() {
       '7天以上': 0,
     };
     
-    controls.forEach(c => {
+    currentTabControls.forEach(c => {
       const days = calculateDays(c);
       if (days === 0) groups['0天']++;
       else if (days === 1) groups['1天']++;
@@ -72,7 +86,7 @@ export default function ExpeditingPage() {
     });
     
     return groups;
-  }, [controls, requisitions]);
+  }, [currentTabControls, requisitions]);
 
   const getLegendColorClass = (days: number) => {
     if (days === 0) return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-300';
@@ -97,7 +111,7 @@ export default function ExpeditingPage() {
   };
 
   const filteredControls = useMemo(() => {
-    let result = controls;
+    let result = currentTabControls;
     if (filterDay !== null) {
       result = result.filter(c => {
         const days = calculateDays(c);
@@ -112,8 +126,14 @@ export default function ExpeditingPage() {
         });
       });
     }
+    if (activeTab === 'completed') {
+      if (searchStartDateStart) result = result.filter(c => c.startDate >= searchStartDateStart);
+      if (searchStartDateEnd) result = result.filter(c => c.startDate <= searchStartDateEnd);
+      if (searchCompDateStart) result = result.filter(c => c.completionDate >= searchCompDateStart);
+      if (searchCompDateEnd) result = result.filter(c => c.completionDate <= searchCompDateEnd);
+    }
     return result.sort((a, b) => calculateDays(b) - calculateDays(a));
-  }, [controls, filterDay, requisitions, filterCategory, materials]);
+  }, [currentTabControls, filterDay, requisitions, filterCategory, materials, activeTab, searchStartDateStart, searchStartDateEnd, searchCompDateStart, searchCompDateEnd]);
 
   const totalItems = filteredControls.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -126,7 +146,44 @@ export default function ExpeditingPage() {
           <AlarmClock className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">稽催作業</h1>
         </div>
+        <div className="flex bg-muted p-1 rounded-md">
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'active' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:bg-background/50'}`}
+            onClick={() => { setActiveTab('active'); setPage(1); }}
+          >
+            目前未結案
+          </button>
+          <button 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'completed' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:bg-background/50'}`}
+            onClick={() => { setActiveTab('completed'); setPage(1); }}
+          >
+            已結案管制
+          </button>
+        </div>
       </div>
+
+      {activeTab === 'completed' && (
+        <Card className="p-4 bg-muted/30">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">管制開始日期 (起)</label>
+              <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={searchStartDateStart} onChange={e => setSearchStartDateStart(e.target.value)} onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }} style={{ colorScheme: 'light dark' }} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">管制開始日期 (迄)</label>
+              <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={searchStartDateEnd} onChange={e => setSearchStartDateEnd(e.target.value)} onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }} style={{ colorScheme: 'light dark' }} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">完成日期 (起)</label>
+              <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={searchCompDateStart} onChange={e => setSearchCompDateStart(e.target.value)} onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }} style={{ colorScheme: 'light dark' }} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">完成日期 (迄)</label>
+              <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={searchCompDateEnd} onChange={e => setSearchCompDateEnd(e.target.value)} onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }} style={{ colorScheme: 'light dark' }} />
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4 bg-muted/30">
         <div className="mb-2 font-bold text-lg">管制天數分組統計與圖例</div>
@@ -189,7 +246,9 @@ export default function ExpeditingPage() {
 
       <Card>
         <CardHeader className="py-4 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">目前未補完之管制單清單</CardTitle>
+          <CardTitle className="text-lg">
+            {activeTab === 'active' ? '目前未補完之管制單清單' : '已結案之管制單清單'}
+          </CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-muted-foreground">物料分類:</span>
             <select 

@@ -62,6 +62,9 @@ export default function RequisitionsPage() {
   const [searchCategory, setSearchCategory] = useState('all');
   const [searchReturnDateStart, setSearchReturnDateStart] = useState('');
   const [searchReturnDateEnd, setSearchReturnDateEnd] = useState('');
+  
+  // Sort
+  const [sortBy, setSortBy] = useState<'id_asc' | 'id_desc' | 'category_asc' | 'category_desc'>('id_desc');
 
   // Combobox popover open states
   const [openComboboxIndex, setOpenComboboxIndex] = useState<number | null>(null);
@@ -336,6 +339,17 @@ export default function RequisitionsPage() {
     if (searchReturnDateStart && (!req.returnDate || req.returnDate < searchReturnDateStart)) return false;
     if (searchReturnDateEnd && (!req.returnDate || req.returnDate > searchReturnDateEnd)) return false;
     return true;
+  }).sort((a, b) => {
+    if (sortBy === 'id_asc') {
+      return (a.displayId || '').localeCompare(b.displayId || '');
+    } else if (sortBy === 'id_desc') {
+      return (b.displayId || '').localeCompare(a.displayId || '');
+    } else if (sortBy === 'category_asc') {
+      return (a.category || '').localeCompare(b.category || '');
+    } else if (sortBy === 'category_desc') {
+      return (b.category || '').localeCompare(a.category || '');
+    }
+    return 0;
   });
 
   const totalItems = filteredRequisitions.length;
@@ -426,6 +440,7 @@ export default function RequisitionsPage() {
                     type="date"
                     value={formData.returnDate || ''}
                     onChange={(e) => setFormData({...formData, returnDate: e.target.value})}
+                    onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }}
                     style={{ colorScheme: 'light dark' }}
                   />
                 </div>
@@ -649,6 +664,20 @@ export default function RequisitionsPage() {
         <div className="font-medium">總計: {totalItems} 筆領料單</div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
+            <Label>排序:</Label>
+            <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="id_desc">領料單號 (大到小)</SelectItem>
+                <SelectItem value="id_asc">領料單號 (小到大)</SelectItem>
+                <SelectItem value="category_asc">分類 (A - Z)</SelectItem>
+                <SelectItem value="category_desc">分類 (Z - A)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
             <Label>每頁顯示:</Label>
             <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
               <SelectTrigger className="w-[100px]">
@@ -682,17 +711,18 @@ export default function RequisitionsPage() {
                 <TableHead>領料單分類</TableHead>
                 <TableHead>關聯管制單號</TableHead>
                 <TableHead>備料人員</TableHead>
+                <TableHead>領料單繳回日期</TableHead>
                 <TableHead>完成日期</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={9} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-24">尚無領料單資料</TableCell>
+                  <TableCell colSpan={9} className="text-center h-24">尚無領料單資料</TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((req, index) => (
@@ -729,6 +759,7 @@ export default function RequisitionsPage() {
                     <TableCell>{req.category || '未分類'}</TableCell>
                     <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
                     <TableCell>{req.staffName}</TableCell>
+                    <TableCell>{req.returnDate || '-'}</TableCell>
                     <TableCell>{req.completionDate || '-'}</TableCell>
                   </TableRow>
                 ))

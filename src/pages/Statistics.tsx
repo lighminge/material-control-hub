@@ -36,8 +36,12 @@ export default function StatisticsPage() {
     loadData();
   }, []);
 
-  const calculateDays = (start: string, end: string | null) => {
-    return Math.max(1, differenceInDays(end ? parseISO(end) : new Date(), parseISO(start)));
+  const calculateDays = (control: any, reqs: any[]) => {
+    const req = reqs.find((r: any) => r.id === control.requisitionId || r.displayId === control.requisitionId);
+    if (!req || !req.returnDate) return 0;
+    const start = parseISO(req.returnDate);
+    const end = control.completionDate ? parseISO(control.completionDate) : new Date();
+    return Math.max(0, differenceInDays(end, start));
   };
 
   const stats = useMemo(() => {
@@ -87,7 +91,7 @@ export default function StatisticsPage() {
     const counts = Array(8).fill(0);
     
     filteredControls.forEach(c => {
-      const d = calculateDays(c.startDate, c.completionDate || null);
+      const d = calculateDays(c, requisitions);
       totalDays += d;
       if (d === 0) counts[0]++;
       else if (d < 7) counts[d]++;
