@@ -114,128 +114,168 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
   }, [currentDate, holidays]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
-            <DialogTitle>行事曆設定</DialogTitle>
-          </div>
-          <DialogDescription>
-            設定自訂的例假日或補班日，系統計算「管制天數」時將自動跳過休假日。
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="flex justify-between items-center my-4">
-          <Button variant="outline" onClick={handlePrevMonth}>◀ 上個月</Button>
-          <div className="flex items-center gap-2">
-            <Select value={currentDate.getFullYear().toString()} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Array.from({length: 10}, (_, i) => currentDate.getFullYear() - 5 + i).map(y => (
-                  <SelectItem key={y} value={y.toString()}>{y} 年</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={(currentDate.getMonth() + 1).toString()} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Array.from({length: 12}, (_, i) => i + 1).map(m => (
-                  <SelectItem key={m} value={m.toString()}>{m} 月</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" onClick={handleNextMonth}>下個月 ▶</Button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-2">
-          {['日', '一', '二', '三', '四', '五', '六'].map(d => (
-            <div key={d} className="text-center font-bold p-2 bg-primary text-primary-foreground rounded-md">
-              星期{d}
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              <DialogTitle>行事曆設定</DialogTitle>
             </div>
-          ))}
+            <DialogDescription>
+              設定自訂的例假日或補班日，系統計算「管制天數」時將自動跳過休假日。
+            </DialogDescription>
+          </DialogHeader>
           
-          {loading ? (
-            <div className="col-span-7 text-center p-10">載入中...</div>
-          ) : (
-            calendarDays.map((day, idx) => {
-              if (!day) return <div key={`empty-${idx}`} className="bg-muted/50 rounded-md border border-dashed border-muted-foreground/30 min-h-[100px]" />;
-              
-              let bgColor = day.isWeekend ? 'bg-muted/30' : 'bg-background';
-              let borderColor = day.isToday ? 'border-amber-500 border-2 shadow-sm ring-1 ring-amber-500' : 'border-border border';
-              
-              if (day.custom?.type === 'holiday') bgColor = 'bg-red-50';
-              if (day.custom?.type === 'workday') bgColor = 'bg-green-50';
-              
-              if (day.isToday) bgColor = 'bg-amber-50/50';
-
-              return (
-                <div 
-                  key={day.dateStr}
-                  onClick={() => {
-                    setEditDate(day.dateStr);
-                    setEditType(day.custom?.type || 'holiday');
-                    setEditDesc(day.custom?.description || '');
-                  }}
-                  className={`${bgColor} ${borderColor} rounded-md p-2 min-h-[100px] cursor-pointer hover:shadow-md transition-shadow relative flex flex-col`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className={`font-bold ${day.isWeekend || day.custom?.type === 'holiday' ? 'text-destructive' : ''} ${day.isToday ? 'bg-amber-500 text-white px-2.5 py-0.5 rounded-full text-sm shadow-sm' : ''}`}>
-                      {day.date}
-                    </span>
-                    {day.isToday && (
-                      <span className="text-xs font-bold text-amber-600 animate-pulse">今日</span>
-                    )}
-                  </div>
-                  
-                  <div className="mt-2 flex flex-col gap-1 flex-1">
-                    {day.festivals.map((f: string, i: number) => (
-                      <span key={i} className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded w-fit">
-                        {f}
-                      </span>
-                    ))}
-                    {day.custom && (
-                      <span className={`text-[10px] px-1 py-0.5 rounded w-fit mt-auto ${day.custom.type === 'holiday' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                        {day.custom.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {editDate && (
-          <div className="mt-6 p-4 border rounded-md bg-muted/30">
-            <h3 className="font-bold mb-4">設定 {editDate}</h3>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Label>類型</Label>
-                <Select value={editType} onValueChange={(val: any) => setEditType(val)}>
-                  <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="holiday">休假日</SelectItem>
-                    <SelectItem value="workday">補班日</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1 flex items-center gap-2">
-                <Label>說明</Label>
-                <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="例如：國定假日、彈性放假..." />
-              </div>
+          <div className="flex justify-between items-center my-4">
+            <Button variant="outline" onClick={handlePrevMonth}>◀ 上個月</Button>
+            <div className="flex items-center gap-2">
+              <Select value={currentDate.getFullYear().toString()} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({length: 10}, (_, i) => currentDate.getFullYear() - 5 + i).map(y => (
+                    <SelectItem key={y} value={y.toString()}>{y} 年</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={(currentDate.getMonth() + 1).toString()} onValueChange={handleMonthChange}>
+                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                    <SelectItem key={m} value={m.toString()}>{m} 月</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={handleNextMonth}>下個月 ▶</Button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {['日', '一', '二', '三', '四', '五', '六'].map(d => (
+              <div key={d} className="text-center font-bold p-2 bg-primary text-primary-foreground rounded-md">
+                星期{d}
+              </div>
+            ))}
+            
+            {loading ? (
+              <div className="col-span-7 text-center p-10">載入中...</div>
+            ) : (
+              calendarDays.map((day, idx) => {
+                if (!day) return <div key={`empty-${idx}`} className="bg-muted/50 rounded-md border border-dashed border-muted-foreground/30 min-h-[100px]" />;
+                
+                let bgColor = day.isWeekend ? 'bg-muted/30' : 'bg-background';
+                let borderColor = day.isToday ? 'border-amber-500 border-2 shadow-sm ring-1 ring-amber-500' : 'border-border border';
+                
+                if (day.custom?.type === 'holiday') bgColor = 'bg-red-50';
+                if (day.custom?.type === 'workday') bgColor = 'bg-green-50';
+                
+                if (day.isToday) bgColor = 'bg-amber-50/50';
+
+                return (
+                  <div 
+                    key={day.dateStr}
+                    onClick={() => {
+                      setEditDate(day.dateStr);
+                      setEditType(day.custom?.type || 'holiday');
+                      setEditDesc(day.custom?.description || '');
+                    }}
+                    className={`${bgColor} ${borderColor} rounded-md p-2 min-h-[100px] cursor-pointer hover:shadow-md transition-shadow relative flex flex-col`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className={`font-bold ${day.isWeekend || day.custom?.type === 'holiday' ? 'text-destructive' : ''} ${day.isToday ? 'bg-amber-500 text-white px-2.5 py-0.5 rounded-full text-sm shadow-sm' : ''}`}>
+                        {day.date}
+                      </span>
+                      {day.isToday && (
+                        <span className="text-xs font-bold text-amber-600 animate-pulse">今日</span>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 flex flex-col gap-1 flex-1">
+                      {day.festivals.map((f: string, i: number) => (
+                        <span key={i} className="text-[10px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded w-fit">
+                          {f}
+                        </span>
+                      ))}
+                      {day.custom && (
+                        <span className={`text-[10px] px-1 py-0.5 rounded w-fit mt-auto ${day.custom.type === 'holiday' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          {day.custom.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="mt-8 border-t pt-6">
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              已設定之放假日及補班日清單
+            </h3>
+            {holidays.length === 0 ? (
+              <div className="text-muted-foreground text-center py-6 bg-muted/20 rounded-md">目前尚無任何自訂休假或補班設定</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {holidays.sort((a, b) => a.date.localeCompare(b.date)).map(h => (
+                  <div key={h.id} className={`flex justify-between items-center p-3 rounded-md border ${h.type === 'holiday' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`font-bold ${h.type === 'holiday' ? 'text-red-700' : 'text-green-700'}`}>{h.date}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${h.type === 'holiday' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {h.type === 'holiday' ? '休假日' : '補班日'}
+                      </span>
+                      <span className="text-sm font-medium">{h.description}</span>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-8 hover:bg-black/5" onClick={() => {
+                      setEditDate(h.date);
+                      setEditType(h.type);
+                      setEditDesc(h.description);
+                    }}>編輯</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editDate} onOpenChange={(open) => !open && setEditDate(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>設定 {editDate}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label>類型</Label>
+              <Select value={editType} onValueChange={(val: any) => setEditType(val)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="holiday">休假日</SelectItem>
+                  <SelectItem value="workday">補班日</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>說明</Label>
+              <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="例如：國定假日、彈性放假..." autoFocus />
+            </div>
+          </div>
+          <div className="flex justify-between mt-2">
+            {holidays.find(h => h.date === editDate) ? (
+              <Button variant="destructive" onClick={deleteSetting}>刪除設定</Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditDate(null)}>取消</Button>
-              {holidays.find(h => h.date === editDate) && (
-                <Button variant="destructive" onClick={deleteSetting}>刪除設定</Button>
-              )}
               <Button onClick={saveSetting}>儲存設定</Button>
             </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
