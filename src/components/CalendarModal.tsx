@@ -91,7 +91,8 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
     }
     
     const holidayMap = new Map(holidays.map(h => [h.date, h]));
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     let workdays = 0;
     let restdays = 0;
