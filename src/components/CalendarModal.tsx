@@ -107,11 +107,11 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
       
       let isWorkday = !isWeekend;
       if (custom?.type === 'holiday') {
+        if (!isWeekend) customHolidaysCount++;
         isWorkday = false;
-        customHolidaysCount++;
       } else if (custom?.type === 'workday') {
+        if (isWeekend) customWorkdaysCount++;
         isWorkday = true;
-        customWorkdaysCount++;
       }
 
       if (isWorkday) workdays++;
@@ -170,20 +170,13 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
                 </Select>
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium bg-muted/30 px-4 py-1.5 rounded-full mt-2">
-                <span>工作日: <strong className="text-foreground">{stats.workdays}</strong> 天</span>
+                <span>
+                  工作日: <strong className="text-foreground">{stats.workdays}</strong> 天
+                  {stats.customHolidaysCount > 0 && <span className="text-red-600 ml-1 text-xs">(已扣除 {stats.customHolidaysCount} 天休假)</span>}
+                  {stats.customWorkdaysCount > 0 && <span className="text-green-600 ml-1 text-xs">(已增加 {stats.customWorkdaysCount} 天補班)</span>}
+                </span>
                 <span className="text-muted-foreground/30">|</span>
                 <span>例假日: <strong className="text-foreground">{stats.restdays}</strong> 天</span>
-                {(stats.customHolidaysCount > 0 || stats.customWorkdaysCount > 0) && (
-                  <>
-                    <span className="text-muted-foreground/30">|</span>
-                    <span className="text-amber-600 flex gap-2">
-                      (
-                      {stats.customHolidaysCount > 0 && <span>自訂休假: {stats.customHolidaysCount}</span>}
-                      {stats.customWorkdaysCount > 0 && <span>自訂補班: {stats.customWorkdaysCount}</span>}
-                      )
-                    </span>
-                  </>
-                )}
               </div>
             </div>
             <Button variant="outline" onClick={handleNextMonth}>下個月 ▶</Button>
