@@ -203,91 +203,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 flex flex-col">
-          <CardHeader className="flex flex-row items-start justify-between pb-2">
-            <div>
-              <CardTitle>近七日管制單數量趨勢</CardTitle>
-              <CardDescription>每日新增的物料管制單數量</CardDescription>
-            </div>
-            <Select value={trendChartType} onValueChange={(val: 'bar'|'line'|'both') => setTrendChartType(val)}>
-              <SelectTrigger className="w-[120px] h-8 text-xs">
-                <SelectValue placeholder="切換圖表" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bar">長條圖</SelectItem>
-                <SelectItem value="line">折線圖</SelectItem>
-                <SelectItem value="both">二者並存</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent className="flex-1 pb-4 pl-2">
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={controlTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} />
-                  <YAxis axisLine={false} tickLine={false} tickMargin={10} allowDecimals={false} />
-                  <Tooltip />
-                  {(trendChartType === 'bar' || trendChartType === 'both') && (
-                    <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                      <LabelList dataKey="數量" position="top" />
-                    </Bar>
-                  )}
-                  {(trendChartType === 'line' || trendChartType === 'both') && (
-                    <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
-                      <LabelList dataKey="數量" position="top" />
-                    </Line>
-                  )}
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="col-span-3 flex flex-col">
-          <CardHeader className="flex flex-row items-start justify-between pb-2">
-            <div>
-              <CardTitle>管制天數分佈</CardTitle>
-              <CardDescription>所有管制單的處理時長分佈</CardDescription>
-            </div>
-            <Select value={chartType} onValueChange={(val: 'bar'|'line'|'both') => setChartType(val)}>
-              <SelectTrigger className="w-[120px] h-8 text-xs">
-                <SelectValue placeholder="切換圖表" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bar">長條圖</SelectItem>
-                <SelectItem value="line">折線圖</SelectItem>
-                <SelectItem value="both">二者並存</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent className="flex-1 pb-4">
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={controlDaysData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} />
-                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
-                  {(chartType === 'bar' || chartType === 'both') && (
-                    <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} maxBarSize={30}>
-                      <LabelList dataKey="數量" position="top" />
-                    </Bar>
-                  )}
-                  {(chartType === 'line' || chartType === 'both') && (
-                    <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
-                      <LabelList dataKey="數量" position="top" />
-                    </Line>
-                  )}
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-border p-6 mt-6">
+      <div className="bg-white rounded-xl shadow-sm border border-border p-6 mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h2 className="text-xl font-bold">目前未結案的所有管制單</h2>
@@ -402,6 +318,92 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4 flex flex-col">
+          <CardHeader className="flex flex-row items-start justify-between pb-2">
+            <div>
+              <CardTitle>近七日管制單數量趨勢</CardTitle>
+              <CardDescription>每日新增的物料管制單數量</CardDescription>
+            </div>
+            <Select value={trendChartType} onValueChange={(val: 'bar'|'line'|'both') => setTrendChartType(val)}>
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue placeholder="切換圖表" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">長條圖</SelectItem>
+                <SelectItem value="line">折線圖</SelectItem>
+                <SelectItem value="both">二者並存</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="flex-1 pb-4 pl-2">
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={controlTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} />
+                  <YAxis axisLine={false} tickLine={false} tickMargin={10} allowDecimals={false} />
+                  <Tooltip />
+                  {(trendChartType === 'bar' || trendChartType === 'both') && (
+                    <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Bar>
+                  )}
+                  {(trendChartType === 'line' || trendChartType === 'both') && (
+                    <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Line>
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-3 flex flex-col">
+          <CardHeader className="flex flex-row items-start justify-between pb-2">
+            <div>
+              <CardTitle>管制天數分佈</CardTitle>
+              <CardDescription>所有管制單的處理時長分佈</CardDescription>
+            </div>
+            <Select value={chartType} onValueChange={(val: 'bar'|'line'|'both') => setChartType(val)}>
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue placeholder="切換圖表" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">長條圖</SelectItem>
+                <SelectItem value="line">折線圖</SelectItem>
+                <SelectItem value="both">二者並存</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="flex-1 pb-4">
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={controlDaysData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} />
+                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
+                  {(chartType === 'bar' || chartType === 'both') && (
+                    <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} maxBarSize={30}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Bar>
+                  )}
+                  {(chartType === 'line' || chartType === 'both') && (
+                    <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                      <LabelList dataKey="數量" position="top" />
+                    </Line>
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+
     </div>
   );
 }

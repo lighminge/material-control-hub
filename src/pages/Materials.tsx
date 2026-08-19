@@ -228,13 +228,14 @@ export default function MaterialsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">物料庫存</h1>
-        {activeTab === 'list' && (
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openNewForm}>新增物料</Button>
-            </DialogTrigger>
+      <div className="flex items-center gap-6 bg-muted/30 p-4 rounded-xl border border-border/50">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold tracking-tight text-primary">物料庫存</h1>
+          {activeTab === 'list' && (
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openNewForm}>新增物料</Button>
+              </DialogTrigger>
             <DialogContent onInteractOutside={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>{editingId ? '編輯物料' : '新增物料'}</DialogTitle>
@@ -293,7 +294,8 @@ export default function MaterialsPage() {
               </div>
             </DialogContent>
           </Dialog>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="flex gap-4 border-b">
@@ -550,7 +552,15 @@ export default function MaterialsPage() {
                         <TableRow key={log.id}>
                           <TableCell>{(histPage - 1) * histPageSize + index + 1}</TableCell>
                           <TableCell className="font-bold text-green-700">{log.restockDate}</TableCell>
-                          <TableCell className="text-muted-foreground">{mat?.category || '未分類'}</TableCell>
+                          <TableCell>
+                            {mat?.category === 'TKW' ? (
+                              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
+                            ) : mat?.category === '夾鉗' ? (
+                              <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
+                            ) : (
+                              <span className="text-muted-foreground">{mat?.category || '未分類'}</span>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{log.materialName}</TableCell>
                           <TableCell>{log.controlId}</TableCell>
                           <TableCell>{log.notes || '-'}</TableCell>

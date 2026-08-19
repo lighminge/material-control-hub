@@ -226,27 +226,7 @@ export default function ExpeditingPage() {
         </Card>
       )}
 
-      <Card className="p-4 bg-muted/30">
-        <div className="mb-2 font-bold text-lg">管制天數分組統計與圖例</div>
-        <div className="flex flex-wrap gap-4">
-          {[0, 1, 2, 3, 4, 5, 6, 7].map(d => {
-            const label = d === 7 ? '7天以上' : `${d}天`;
-            const count = dayGroups[label as keyof typeof dayGroups];
-            const isActive = filterDay === d;
-            return (
-              <button 
-                key={d} 
-                onClick={() => setFilterDay(isActive ? null : d)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
-                  isActive ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 shadow-md' : 'hover:bg-muted'
-                } ${getLegendColorClass(d)}`}
-              >
-                <span className="font-bold text-sm">{label} ({count})</span>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
+
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -312,6 +292,28 @@ export default function ExpeditingPage() {
         </div>
       </div>
 
+      <Card className="p-4 bg-muted/30 mb-4">
+        <div className="mb-2 font-bold text-lg">管制天數分組統計與圖例</div>
+        <div className="flex flex-wrap gap-4">
+          {[0, 1, 2, 3, 4, 5, 6, 7].map(d => {
+            const label = d === 7 ? '7天以上' : `${d}天`;
+            const count = dayGroups[label as keyof typeof dayGroups];
+            const isActive = filterDay === d;
+            return (
+              <button 
+                key={d} 
+                onClick={() => setFilterDay(isActive ? null : d)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
+                  isActive ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 shadow-md' : 'hover:bg-muted'
+                } ${getLegendColorClass(d)}`}
+              >
+                <span className="font-bold text-sm">{label} ({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
       <Card>
         <CardHeader className="py-4 flex flex-row items-center justify-between">
           <CardTitle className="text-lg">
@@ -373,7 +375,19 @@ export default function ExpeditingPage() {
                           {control.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{cats.join(', ')}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {cats.map((cat: any) => (
+                            cat === 'TKW' ? (
+                              <span key={cat} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
+                            ) : cat === '夾鉗' ? (
+                              <span key={cat} className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
+                            ) : (
+                              <span key={cat} className="text-muted-foreground">{cat}</span>
+                            )
+                          ))}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span className="font-bold">{days} 天</span>
                       </TableCell>
