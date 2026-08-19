@@ -319,8 +319,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 flex flex-col">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="flex flex-col">
           <CardHeader className="flex flex-row items-start justify-between pb-2">
             <div>
               <CardTitle>近七日管制單數量趨勢</CardTitle>
@@ -361,7 +361,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card className="col-span-3 flex flex-col">
+        <Card className="flex flex-col">
           <CardHeader className="flex flex-row items-start justify-between pb-2">
             <div>
               <CardTitle>管制天數分佈</CardTitle>
