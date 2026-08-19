@@ -108,7 +108,14 @@ export default function RequisitionsPage() {
     setFormData({ ...formData, staffId, staffName: staff?.name || '' });
   };
 
+  const [categoryError, setCategoryError] = useState(false);
+
   const handleAddItem = () => {
+    if (!formData.category || formData.category === '未分類') {
+      setCategoryError(true);
+      return;
+    }
+    setCategoryError(false);
     setFormData({
       ...formData,
       items: [
@@ -395,7 +402,7 @@ export default function RequisitionsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center gap-6 mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-primary">領料單管理</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
@@ -432,8 +439,8 @@ export default function RequisitionsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>領料單分類</Label>
-                  <Select value={formData.category || '未分類'} onValueChange={(val) => setFormData({ ...formData, category: val })}>
-                    <SelectTrigger>
+                  <Select value={formData.category || '未分類'} onValueChange={(val) => { setFormData({ ...formData, category: val }); setCategoryError(false); }}>
+                    <SelectTrigger className={categoryError ? 'border-destructive' : ''}>
                       <SelectValue placeholder="選擇分類" />
                     </SelectTrigger>
                     <SelectContent>
@@ -442,6 +449,7 @@ export default function RequisitionsPage() {
                       <SelectItem value="夾鉗">夾鉗</SelectItem>
                     </SelectContent>
                   </Select>
+                  {categoryError && <p className="text-sm text-destructive mt-1 font-bold">請先選擇領料單分類</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>領料單繳回日期</Label>
@@ -734,7 +742,7 @@ export default function RequisitionsPage() {
                 <TableHead>領料單號</TableHead>
                 <TableHead>領料單分類</TableHead>
                 <TableHead>關聯管制單號</TableHead>
-                <TableHead>備料人員</TableHead>
+                <TableHead>缺料項目總數</TableHead>
                 <TableHead>領料單繳回日期</TableHead>
                 <TableHead>完成日期</TableHead>
               </TableRow>
@@ -782,7 +790,9 @@ export default function RequisitionsPage() {
                     <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
                     <TableCell>{req.category || '未分類'}</TableCell>
                     <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
-                    <TableCell>{req.staffName}</TableCell>
+                    <TableCell className={req.items.filter(i => i.missingQuantity > 0).length > 0 ? "font-bold text-destructive" : ""}>
+                      {req.items.filter(i => i.missingQuantity > 0).length}
+                    </TableCell>
                     <TableCell>{req.returnDate || '-'}</TableCell>
                     <TableCell>{req.completionDate || '-'}</TableCell>
                   </TableRow>

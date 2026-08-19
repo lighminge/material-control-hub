@@ -28,7 +28,7 @@ export default function MaterialsPage() {
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<Material | null>(null);
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
   
-  const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'cat_asc' | 'cat_desc' | 'none'>('none');
+  const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'cat_asc' | 'cat_desc' | 'none'>('asc');
   const [searchName, setSearchName] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
 
@@ -413,7 +413,15 @@ export default function MaterialsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell className="text-muted-foreground">{mat.category || '未分類'}</TableCell>
+                    <TableCell>
+                      {mat.category === 'TKW' ? (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
+                      ) : mat.category === '夾鉗' ? (
+                        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
+                      ) : (
+                        <span className="text-muted-foreground">{mat.category || '未分類'}</span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{mat.name}</TableCell>
                     <TableCell>{mat.stock}</TableCell>
                     <TableCell>{mat.unit}</TableCell>

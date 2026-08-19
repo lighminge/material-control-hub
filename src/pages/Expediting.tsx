@@ -209,6 +209,19 @@ export default function ExpeditingPage() {
               <label className="text-sm font-medium">完成日期 (迄)</label>
               <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={searchCompDateEnd} onChange={e => setSearchCompDateEnd(e.target.value)} onClick={(e) => { const target = e.target as HTMLInputElement; if (target.showPicker) target.showPicker(); }} style={{ colorScheme: 'light dark' }} />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">物料分類</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={filterCategory} 
+                onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+              >
+                <option value="all">全部分類</option>
+                <option value="未分類">未分類</option>
+                <option value="TKW">TKW</option>
+                <option value="夾鉗">夾鉗</option>
+              </select>
+            </div>
           </div>
         </Card>
       )}
@@ -304,19 +317,21 @@ export default function ExpeditingPage() {
           <CardTitle className="text-lg">
             {activeTab === 'active' ? '目前未補完之管制單清單' : '已結案之管制單清單'}
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-muted-foreground">物料分類:</span>
-            <select 
-              className="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium"
-              value={filterCategory} 
-              onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
-            >
-              <option value="all">全部分類</option>
-              <option value="未分類">未分類</option>
-              <option value="TKW">TKW</option>
-              <option value="夾鉗">夾鉗</option>
-            </select>
-          </div>
+          {activeTab === 'active' && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-muted-foreground">物料分類:</span>
+              <select 
+                className="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium"
+                value={filterCategory} 
+                onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+              >
+                <option value="all">全部分類</option>
+                <option value="未分類">未分類</option>
+                <option value="TKW">TKW</option>
+                <option value="夾鉗">夾鉗</option>
+              </select>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -325,11 +340,11 @@ export default function ExpeditingPage() {
                 <TableHead className="w-16">序號</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
+                <TableHead>狀態</TableHead>
                 <TableHead>涵蓋物料分類</TableHead>
                 <TableHead>管制天數</TableHead>
                 <TableHead>缺料項目總數</TableHead>
                 <TableHead>已補完數</TableHead>
-                <TableHead>狀態</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -353,17 +368,17 @@ export default function ExpeditingPage() {
                       <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                       <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
                       <TableCell className="text-muted-foreground">{displayReqId}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={control.status === '已結案' ? '' : 'bg-amber-500 hover:bg-amber-600 text-white border-0'}>
+                          {control.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{cats.join(', ')}</TableCell>
                       <TableCell>
                         <span className="font-bold">{days} 天</span>
                       </TableCell>
                       <TableCell>{control.items.length}</TableCell>
                       <TableCell className="text-green-700 font-bold">{control.items.filter((i: any) => i.missingQuantity === 0).length}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-amber-500 hover:bg-amber-600 text-white border-0">
-                          {control.status}
-                        </Badge>
-                      </TableCell>
                     </TableRow>
                   );
                 })

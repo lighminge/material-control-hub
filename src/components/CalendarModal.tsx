@@ -17,6 +17,12 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
   const [editDate, setEditDate] = useState<string | null>(null);
   const [editType, setEditType] = useState<'holiday' | 'workday'>('holiday');
   const [editDesc, setEditDesc] = useState('');
+  
+  const [listYear, setListYear] = useState(new Date().getFullYear().toString());
+
+  const filteredHolidays = useMemo(() => {
+    return holidays.filter(h => h.date.startsWith(listYear));
+  }, [holidays, listYear]);
 
   const loadHolidays = async () => {
     setLoading(true);
@@ -241,15 +247,37 @@ export function CalendarModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
           </div>
 
           <div className="mt-8 border-t pt-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              已設定之放假日及補班日清單
-            </h3>
-            {holidays.length === 0 ? (
-              <div className="text-muted-foreground text-center py-6 bg-muted/20 rounded-md">目前尚無任何自訂休假或補班設定</div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                已設定之放假日及補班日清單
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">西元年度:</span>
+                  <Select value={listYear} onValueChange={setListYear}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({length: 10}, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                        <SelectItem key={y} value={y.toString()}>{y} 年</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm font-medium bg-muted/40 px-3 py-1.5 rounded-md flex gap-3">
+                  <span className="text-red-600">休假日: {filteredHolidays.filter(h => h.type === 'holiday').length} 筆</span>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span className="text-green-600">補班日: {filteredHolidays.filter(h => h.type === 'workday').length} 筆</span>
+                </div>
+              </div>
+            </div>
+            {filteredHolidays.length === 0 ? (
+              <div className="text-muted-foreground text-center py-6 bg-muted/20 rounded-md">目前該年度尚無任何自訂休假或補班設定</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {holidays.sort((a, b) => a.date.localeCompare(b.date)).map(h => (
+                {filteredHolidays.sort((a, b) => a.date.localeCompare(b.date)).map(h => (
                   <div key={h.id} className={`flex justify-between items-center p-3 rounded-md border ${h.type === 'holiday' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                     <div className="flex items-center gap-3">
                       <span className={`font-bold ${h.type === 'holiday' ? 'text-red-700' : 'text-green-700'}`}>{h.date}</span>

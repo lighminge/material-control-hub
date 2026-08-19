@@ -19,6 +19,8 @@ export default function StatisticsPage() {
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [returnDateStart, setReturnDateStart] = useState('');
+  const [returnDateEnd, setReturnDateEnd] = useState('');
   const [category, setCategory] = useState('all');
   const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
 
@@ -69,6 +71,17 @@ export default function StatisticsPage() {
       }
       if (dateToUse && !isWithinRange(dateToUse)) return false;
       
+      if (returnDateStart || returnDateEnd) {
+        if (!req.returnDate) return false;
+        const d = parseISO(req.returnDate);
+        if (!isNaN(d.getTime())) {
+          if (returnDateStart && isBefore(d, startOfDay(parseISO(returnDateStart)))) return false;
+          if (returnDateEnd && isAfter(d, endOfDay(parseISO(returnDateEnd)))) return false;
+        } else {
+          return false;
+        }
+      }
+      
       // category filter
       if (category !== 'all' && (req.category || '未分類') !== category) return false;
       
@@ -78,6 +91,18 @@ export default function StatisticsPage() {
     // Filter Controls
     const filteredControls = controls.filter(ctrl => {
       if (!isWithinRange(ctrl.startDate)) return false;
+      
+      if (returnDateStart || returnDateEnd) {
+        const req = requisitions.find((r: any) => r.id === ctrl.requisitionId || r.displayId === ctrl.requisitionId);
+        if (!req || !req.returnDate) return false;
+        const d = parseISO(req.returnDate);
+        if (!isNaN(d.getTime())) {
+          if (returnDateStart && isBefore(d, startOfDay(parseISO(returnDateStart)))) return false;
+          if (returnDateEnd && isAfter(d, endOfDay(parseISO(returnDateEnd)))) return false;
+        } else {
+          return false;
+        }
+      }
       
       if (category !== 'all') {
         // Check if any item in the control matches the category
@@ -114,7 +139,7 @@ export default function StatisticsPage() {
       daysData,
       pieData: daysData.filter(d => d.數量 > 0).map(d => ({ name: d.name, value: d.數量 }))
     };
-  }, [controls, requisitions, materials, startDate, endDate, category]);
+  }, [controls, requisitions, materials, startDate, endDate, returnDateStart, returnDateEnd, category]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#8884d8', '#8dd1e1'];
 
@@ -156,9 +181,9 @@ export default function StatisticsPage() {
       </div>
 
       <Card className="p-4 bg-muted/30">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="space-y-2">
-            <Label>管制開始日期區間 (起)</Label>
+            <Label>管制開始日期 (起)</Label>
             <Input 
               type="date" 
               value={startDate} 
@@ -171,11 +196,37 @@ export default function StatisticsPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>管制開始日期區間 (迄)</Label>
+            <Label>管制開始日期 (迄)</Label>
             <Input 
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)} 
+              style={{ colorScheme: 'light dark' }}
+              onClick={(e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.showPicker) target.showPicker();
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>領料單繳回日期 (起)</Label>
+            <Input 
+              type="date" 
+              value={returnDateStart} 
+              onChange={(e) => setReturnDateStart(e.target.value)} 
+              style={{ colorScheme: 'light dark' }}
+              onClick={(e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.showPicker) target.showPicker();
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>領料單繳回日期 (迄)</Label>
+            <Input 
+              type="date" 
+              value={returnDateEnd} 
+              onChange={(e) => setReturnDateEnd(e.target.value)} 
               style={{ colorScheme: 'light dark' }}
               onClick={(e) => {
                 const target = e.target as HTMLInputElement;
@@ -293,7 +344,7 @@ export default function StatisticsPage() {
                     dataKey="value"
                     stroke="white"
                     strokeWidth={1}
-                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    label={({ name, percent, value }) => `${name} ${((percent || 0) * 100).toFixed(0)}% (${value}筆)`}
                   >
                     {stats.pieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
