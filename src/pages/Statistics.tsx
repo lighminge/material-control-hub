@@ -401,7 +401,7 @@ export default function StatisticsPage() {
                       <TableHead>管制單號</TableHead>
                       <TableHead>關聯領料單</TableHead>
                       <TableHead>狀態</TableHead>
-                      <TableHead>管制開始日</TableHead>
+                      <TableHead>領料單繳回日</TableHead>
                       <TableHead>完成日期</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -427,7 +427,7 @@ export default function StatisticsPage() {
                             <TableCell className="font-bold">{c.displayId || c.id?.slice(0, 8)}</TableCell>
                             <TableCell className="text-muted-foreground">{displayReqId}</TableCell>
                             <TableCell>{c.status}</TableCell>
-                            <TableCell>{c.startDate}</TableCell>
+                            <TableCell>{req?.returnDate || '-'}</TableCell>
                             <TableCell>{c.completionDate || '-'}</TableCell>
                           </TableRow>
                         );
