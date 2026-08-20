@@ -104,57 +104,59 @@ export default function StaffPage() {
       </Dialog>
 
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">人員管理</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewForm}>新增人員</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingId ? '編輯人員' : '新增人員'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>姓名</Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="輸入姓名"
-                />
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold tracking-tight text-primary">人員管理</h1>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openNewForm}>新增人員</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingId ? '編輯人員' : '新增人員'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>姓名</Label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    placeholder="輸入姓名"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>性別</Label>
+                  <Select value={formData.gender} onValueChange={(val) => setFormData({...formData, gender: val})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇性別" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="男">男</SelectItem>
+                      <SelectItem value="女">女</SelectItem>
+                      <SelectItem value="其他">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>職稱</Label>
+                  <Input 
+                    value={formData.title} 
+                    onChange={(e) => setFormData({...formData, title: e.target.value})} 
+                    placeholder="輸入職稱"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>備註</Label>
+                  <Input 
+                    value={formData.notes} 
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})} 
+                    placeholder="其他備註"
+                  />
+                </div>
+                <Button className="w-full" onClick={handleSave}>儲存</Button>
               </div>
-              <div className="space-y-2">
-                <Label>性別</Label>
-                <Select value={formData.gender} onValueChange={(val) => setFormData({...formData, gender: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="選擇性別" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="男">男</SelectItem>
-                    <SelectItem value="女">女</SelectItem>
-                    <SelectItem value="其他">其他</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>職稱</Label>
-                <Input 
-                  value={formData.title} 
-                  onChange={(e) => setFormData({...formData, title: e.target.value})} 
-                  placeholder="輸入職稱"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>備註</Label>
-                <Input 
-                  value={formData.notes} 
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})} 
-                  placeholder="其他備註"
-                />
-              </div>
-              <Button className="w-full" onClick={handleSave}>儲存</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex justify-between items-center bg-muted/50 p-4 rounded-md">

@@ -174,11 +174,24 @@ export default function StatisticsPage() {
       '佔比': stats.ctrlCount > 0 ? ((d.數量 / stats.ctrlCount) * 100).toFixed(1) + '%' : '0%'
     }));
     
-    const detailsStats = stats.filteredControls.map((c, index) => {
+    const sortedControls = [...stats.filteredControls].sort((a, b) => {
+      const dA = calculateDays(a, requisitions, holidays);
+      const dB = calculateDays(b, requisitions, holidays);
+      return dA - dB;
+    });
+
+    let completedCount = 0;
+    let processingCount = 0;
+
+    const detailsStats: any[] = sortedControls.map((c, index) => {
       const req = requisitions.find((r: any) => r.id === c.requisitionId || r.displayId === c.requisitionId);
       const displayReqId = req ? (req.displayId || req.id) : c.requisitionId;
       const d = calculateDays(c, requisitions, holidays);
       const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
+      
+      if (c.status === '已結案') completedCount++;
+      else processingCount++;
+
       return {
         '序號': index + 1,
         '天數群組': dayLabel,
@@ -189,6 +202,15 @@ export default function StatisticsPage() {
         '完成日期': c.completionDate || '-',
         '管制天數': d
       };
+    });
+
+    detailsStats.push({});
+    detailsStats.push({
+      '序號': '總計',
+      '天數群組': `總筆數: ${sortedControls.length}`,
+      '管制單號': `平均日數: ${stats.avgDays}`,
+      '關聯領料單': `已結案: ${completedCount}`,
+      '狀態': `處理中: ${processingCount}`
     });
     
     const wb = XLSX.utils.book_new();
@@ -381,6 +403,7 @@ export default function StatisticsPage() {
                     dataKey="value"
                     stroke="white"
                     strokeWidth={1}
+                    isAnimationActive={false}
                     label={({ name, percent, value }) => `${name} ${((percent || 0) * 100).toFixed(0)}% (${value}筆)`}
                   >
                     {stats.pieData.map((entry, index) => (
@@ -416,6 +439,15 @@ export default function StatisticsPage() {
                     </div>
                   </div>
                 ))}
+                <div className="flex items-center gap-6 text-sm border-t-2 pt-2 mt-2">
+                  <div className="flex items-center gap-2 w-20">
+                    <span className="font-bold">總計</span>
+                  </div>
+                  <div className="font-bold w-16 text-right">{stats.ctrlCount} 筆</div>
+                  <div className="text-muted-foreground w-16 text-right">
+                    {stats.ctrlCount > 0 ? '100.0%' : '0%'}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

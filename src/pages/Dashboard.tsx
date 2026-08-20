@@ -43,10 +43,14 @@ export default function Dashboard() {
   };
 
   const getDaysBadgeColor = (days: number) => {
-    if (days >= 7) return 'bg-purple-100 text-purple-700 border-purple-200 font-black text-base shadow-sm px-3';
-    if (days >= 5) return 'bg-red-100 text-red-700 border-red-200 font-bold px-2.5';
-    if (days >= 3) return 'bg-amber-100 text-amber-700 border-amber-200 font-semibold px-2.5';
-    return 'bg-green-100 text-green-700 border-green-200 font-medium px-2.5';
+    if (days === 0) return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-300';
+    if (days === 1) return 'bg-cyan-200 text-cyan-900 border-cyan-400 dark:bg-cyan-900/50 dark:text-cyan-300';
+    if (days === 2) return 'bg-blue-200 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-300';
+    if (days === 3) return 'bg-lime-200 text-lime-800 border-lime-400 dark:bg-lime-900/60 dark:text-lime-300';
+    if (days === 4) return 'bg-yellow-200 text-yellow-800 border-yellow-400 dark:bg-yellow-900/60 dark:text-yellow-300';
+    if (days === 5) return 'bg-amber-200 text-amber-800 border-amber-400 dark:bg-amber-900/60 dark:text-amber-300';
+    if (days === 6) return 'bg-orange-200 text-orange-800 border-orange-400 dark:bg-orange-900/60 dark:text-orange-300';
+    return 'bg-red-500 text-white border-red-600 dark:bg-red-700 dark:text-white font-bold';
   };
 
   useEffect(() => {
@@ -207,9 +211,9 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h2 className="text-xl font-bold">目前未結案的所有管制單</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              總計 <span className="font-bold text-primary">{enrichedActiveControls.length}</span> 筆管制單
-            </p>
+            <div className="mt-2 text-sm bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1.5 rounded-md inline-block font-bold shadow-sm">
+              總共 {enrichedActiveControls.length} 筆未結案
+            </div>
           </div>
           <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
@@ -227,19 +231,24 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2 bg-muted/20 p-2 rounded-lg border border-border/50">
-              <span className="flex items-center gap-1.5 bg-green-50 px-2 py-1 rounded text-sm text-green-700 border border-green-100"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>0~2天</span>
-              <span className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded text-sm text-amber-700 border border-amber-100"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>3~4天</span>
-              <span className="flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded text-sm text-red-700 border border-red-100"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>5~6天</span>
-              <span className="flex items-center gap-1.5 bg-purple-50 px-2 py-1 rounded text-sm text-purple-700 border border-purple-100"><div className="w-2.5 h-2.5 rounded-full bg-purple-500"></div>7天以上</span>
+            <div className="flex gap-2 bg-muted/20 p-2 rounded-lg border border-border/50 flex-wrap justify-end">
+              <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-sm text-slate-800 border border-slate-300">0天</span>
+              <span className="flex items-center gap-1.5 bg-cyan-200 px-2 py-1 rounded text-sm text-cyan-900 border border-cyan-400">1天</span>
+              <span className="flex items-center gap-1.5 bg-blue-200 px-2 py-1 rounded text-sm text-blue-900 border border-blue-400">2天</span>
+              <span className="flex items-center gap-1.5 bg-lime-200 px-2 py-1 rounded text-sm text-lime-800 border border-lime-400">3天</span>
+              <span className="flex items-center gap-1.5 bg-yellow-200 px-2 py-1 rounded text-sm text-yellow-800 border border-yellow-400">4天</span>
+              <span className="flex items-center gap-1.5 bg-amber-200 px-2 py-1 rounded text-sm text-amber-800 border border-amber-400">5天</span>
+              <span className="flex items-center gap-1.5 bg-orange-200 px-2 py-1 rounded text-sm text-orange-800 border border-orange-400">6天</span>
+              <span className="flex items-center gap-1.5 bg-red-500 px-2 py-1 rounded text-sm text-white border border-red-600 font-bold">7天以上</span>
             </div>
           </div>
         </div>
 
-        <div className="border rounded-md">
+        <div className="border rounded-md overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead className="w-16">序號</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
                 <TableHead>管制開始日</TableHead>
@@ -251,15 +260,16 @@ export default function Dashboard() {
             <TableBody>
               {enrichedActiveControls.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                     太棒了！目前沒有未結案的管制單。
                   </TableCell>
                 </TableRow>
               ) : (
                 enrichedActiveControls
                   .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                  .map(c => (
+                  .map((c, index) => (
                     <TableRow key={c.id}>
+                      <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
                       <TableCell className="font-medium">{c.id}</TableCell>
                       <TableCell>{c.requisitionId}</TableCell>
                       <TableCell>{c.startDate}</TableCell>

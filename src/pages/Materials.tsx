@@ -315,73 +315,74 @@ export default function MaterialsPage() {
 
       {activeTab === 'list' && (
         <>
-          <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Label>查詢品號:</Label>
-            <Input 
-              placeholder="輸入關鍵字..." 
-              value={searchName} 
-              onChange={(e) => { setSearchName(e.target.value); setPage(1); }}
-              className="w-32 h-8 text-xs"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Label>查詢分類:</Label>
-            <Select value={searchCategory} onValueChange={(val) => { setSearchCategory(val); setPage(1); }}>
-              <SelectTrigger className="w-[100px] h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部分類</SelectItem>
-                <SelectItem value="未分類">未分類</SelectItem>
-                <SelectItem value="TKW">TKW</SelectItem>
-                <SelectItem value="夾鉗">夾鉗</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="flex flex-col gap-4 bg-muted/50 p-4 rounded-md">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label>查詢品號:</Label>
+                <Input 
+                  placeholder="輸入關鍵字..." 
+                  value={searchName} 
+                  onChange={(e) => { setSearchName(e.target.value); setPage(1); }}
+                  className="w-32 h-8 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>查詢分類:</Label>
+                <Select value={searchCategory} onValueChange={(val) => { setSearchCategory(val); setPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部分類</SelectItem>
+                    <SelectItem value="未分類">未分類</SelectItem>
+                    <SelectItem value="TKW">TKW</SelectItem>
+                    <SelectItem value="夾鉗">夾鉗</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
-            <Label>排序:</Label>
-            <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
-              <SelectTrigger className="w-[180px] h-8 text-xs">
-                <SelectValue placeholder="選擇排序方式" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">預設排序</SelectItem>
-                <SelectItem value="asc">依物料品號 由小到大</SelectItem>
-                <SelectItem value="desc">依物料品號 由大到小</SelectItem>
-                <SelectItem value="cat_asc">依物料分類 由小到大</SelectItem>
-                <SelectItem value="cat_desc">依物料分類 由大到小</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
+                <Label>排序:</Label>
+                <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <SelectValue placeholder="選擇排序方式" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">預設排序</SelectItem>
+                    <SelectItem value="asc">依物料品號 由小到大</SelectItem>
+                    <SelectItem value="desc">依物料品號 由大到小</SelectItem>
+                    <SelectItem value="cat_asc">依物料分類 由小到大</SelectItem>
+                    <SelectItem value="cat_desc">依物料分類 由大到小</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 flex-wrap border-t pt-4 border-muted-foreground/20">
+              <div className="font-medium pr-4 border-r border-muted-foreground/20">總計: {totalItems} 筆資料</div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label>每頁顯示:</Label>
+                  <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
+                    <SelectTrigger className="w-[80px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 筆</SelectItem>
+                      <SelectItem value="20">20 筆</SelectItem>
+                      <SelectItem value="30">30 筆</SelectItem>
+                      <SelectItem value="50">50 筆</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
+                  <span className="text-sm">第 {page} / {totalPages} 頁</span>
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</Button>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div className="font-medium border-l pl-4 border-muted-foreground/20">總計: {totalItems} 筆資料</div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label>每頁顯示:</Label>
-            <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
-              <SelectTrigger className="w-[80px] h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10 筆</SelectItem>
-                <SelectItem value="20">20 筆</SelectItem>
-                <SelectItem value="30">30 筆</SelectItem>
-                <SelectItem value="50">50 筆</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
-            <span className="text-sm">第 {page} / {totalPages} 頁</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>下一頁</Button>
-          </div>
-        </div>
-      </div>
 
       <Card>
         <CardContent className="p-0">
