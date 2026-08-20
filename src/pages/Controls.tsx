@@ -754,7 +754,11 @@ export default function ControlsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
-                    <TableCell className="text-muted-foreground">{control.requisitionId}</TableCell>
+                    <TableCell>
+                      <span className="text-sm font-bold bg-blue-100 text-blue-700 border border-blue-200 px-2 py-1 rounded-md shadow-sm">
+                        {control.requisitionId}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-destructive font-black text-lg">{control.items.length}</TableCell>
                     <TableCell>
                       {control.items.filter(i => (i.missingQuantity || 0) > 0).length > 0 ? (

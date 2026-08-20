@@ -788,8 +788,26 @@ export default function RequisitionsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
-                    <TableCell>{req.category || '未分類'}</TableCell>
-                    <TableCell className="text-muted-foreground">{req.controlDisplayId || '-'}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold shadow-sm ${
+                        req.category === 'TKW' 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                          : req.category === '夾鉗' 
+                            ? 'bg-orange-100 text-orange-800 border border-orange-200' 
+                            : 'bg-gray-100 text-gray-800 border border-gray-200'
+                      }`}>
+                        {req.category || '未分類'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {req.controlDisplayId ? (
+                        <span className="text-sm font-bold bg-purple-100 text-purple-700 border border-purple-200 px-2 py-1 rounded-md shadow-sm">
+                          {req.controlDisplayId}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className={req.items.filter(i => i.missingQuantity > 0).length > 0 ? "font-bold text-destructive" : ""}>
                       {req.items.filter(i => i.missingQuantity > 0).length}
                     </TableCell>

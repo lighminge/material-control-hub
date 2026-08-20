@@ -25,6 +25,8 @@ export default function StatisticsPage() {
   const [category, setCategory] = useState('all');
   const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
   const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
+  const [listPage, setListPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState(10);
 
   useEffect(() => {
     const loadData = async () => {
@@ -146,6 +148,18 @@ export default function StatisticsPage() {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#8884d8', '#8dd1e1'];
 
+  const selectedControls = useMemo(() => {
+    if (!selectedPieSlice) return [];
+    return stats.filteredControls.filter(c => {
+      const d = calculateDays(c, requisitions, holidays);
+      const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
+      return dayLabel === selectedPieSlice;
+    });
+  }, [stats.filteredControls, selectedPieSlice, requisitions, holidays]);
+
+  const listTotalPages = Math.ceil(selectedControls.length / listPageSize) || 1;
+  const paginatedList = selectedControls.slice((listPage - 1) * listPageSize, listPage * listPageSize);
+
   const handleExportExcel = () => {
     // We want to export stats.daysData + basic stats
     const basicStats = [
@@ -160,6 +174,23 @@ export default function StatisticsPage() {
       '佔比': stats.ctrlCount > 0 ? ((d.數量 / stats.ctrlCount) * 100).toFixed(1) + '%' : '0%'
     }));
     
+    const detailsStats = stats.filteredControls.map((c, index) => {
+      const req = requisitions.find((r: any) => r.id === c.requisitionId || r.displayId === c.requisitionId);
+      const displayReqId = req ? (req.displayId || req.id) : c.requisitionId;
+      const d = calculateDays(c, requisitions, holidays);
+      const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
+      return {
+        '序號': index + 1,
+        '天數群組': dayLabel,
+        '管制單號': c.displayId || c.id?.slice(0, 8),
+        '關聯領料單': displayReqId,
+        '狀態': c.status,
+        '領料單繳回日': req?.returnDate || '-',
+        '完成日期': c.completionDate || '-',
+        '管制天數': d
+      };
+    });
+    
     const wb = XLSX.utils.book_new();
     
     const wsBasic = XLSX.utils.json_to_sheet(basicStats);
@@ -167,6 +198,9 @@ export default function StatisticsPage() {
     
     const wsDays = XLSX.utils.json_to_sheet(daysStats);
     XLSX.utils.book_append_sheet(wb, wsDays, "天數統計");
+
+    const wsDetails = XLSX.utils.json_to_sheet(detailsStats);
+    XLSX.utils.book_append_sheet(wb, wsDetails, "管制清單明細");
     
     XLSX.writeFile(wb, `統計資料_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
@@ -353,7 +387,7 @@ export default function StatisticsPage() {
                       <Cell 
                         key={`cell-${index}`} 
                         fill={COLORS[index % COLORS.length]} 
-                        onClick={() => setSelectedPieSlice(selectedPieSlice === entry.name ? null : entry.name)}
+                        onClick={() => { setSelectedPieSlice(selectedPieSlice === entry.name ? null : entry.name); setListPage(1); }}
                         style={{ cursor: 'pointer' }}
                       />
                     ))}
@@ -370,7 +404,7 @@ export default function StatisticsPage() {
                   <div 
                     key={d.name} 
                     className={`flex items-center gap-6 text-sm border-b pb-2 cursor-pointer hover:bg-muted/50 p-2 rounded ${selectedPieSlice === d.name ? 'bg-muted' : ''}`}
-                    onClick={() => setSelectedPieSlice(selectedPieSlice === d.name ? null : d.name)}
+                    onClick={() => { setSelectedPieSlice(selectedPieSlice === d.name ? null : d.name); setListPage(1); }}
                   >
                     <div className="flex items-center gap-2 w-20">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
@@ -389,15 +423,45 @@ export default function StatisticsPage() {
           {selectedPieSlice && (
             <div className="mt-8 border-t pt-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-primary">
-                  {selectedPieSlice} 管制單清單
-                </h3>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedPieSlice(null)}>關閉</Button>
+                <div>
+                  <h3 className="text-lg font-bold text-primary">
+                    {selectedPieSlice} 管制單清單
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">共 {selectedControls.length} 筆資料</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedPieSlice(null)}>關閉清單</Button>
+                </div>
               </div>
+              
+              <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md mb-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Label>每頁顯示:</Label>
+                  <Select value={listPageSize.toString()} onValueChange={(val) => { setListPageSize(parseInt(val)); setListPage(1); }}>
+                    <SelectTrigger className="w-[80px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 筆</SelectItem>
+                      <SelectItem value="20">20 筆</SelectItem>
+                      <SelectItem value="30">30 筆</SelectItem>
+                      <SelectItem value="40">40 筆</SelectItem>
+                      <SelectItem value="50">50 筆</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setListPage(p => Math.max(1, p - 1))} disabled={listPage === 1}>上一頁</Button>
+                  <span className="text-sm">第 {listPage} / {listTotalPages} 頁</span>
+                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setListPage(p => Math.min(listTotalPages, p + 1))} disabled={listPage === listTotalPages}>下一頁</Button>
+                </div>
+              </div>
+
               <div className="border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-16">序號</TableHead>
                       <TableHead>管制單號</TableHead>
                       <TableHead>關聯領料單</TableHead>
                       <TableHead>狀態</TableHead>
@@ -406,24 +470,17 @@ export default function StatisticsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {stats.filteredControls.filter(c => {
-                      const d = calculateDays(c, requisitions, holidays);
-                      const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
-                      return dayLabel === selectedPieSlice;
-                    }).length === 0 ? (
+                    {paginatedList.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">無管制單</TableCell>
+                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">無管制單</TableCell>
                       </TableRow>
                     ) : (
-                      stats.filteredControls.filter(c => {
-                        const d = calculateDays(c, requisitions, holidays);
-                        const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
-                        return dayLabel === selectedPieSlice;
-                      }).map(c => {
+                      paginatedList.map((c, index) => {
                         const req = requisitions.find((r: any) => r.id === c.requisitionId || r.displayId === c.requisitionId);
                         const displayReqId = req ? (req.displayId || req.id) : c.requisitionId;
                         return (
                           <TableRow key={c.id}>
+                            <TableCell>{(listPage - 1) * listPageSize + index + 1}</TableCell>
                             <TableCell className="font-bold">{c.displayId || c.id?.slice(0, 8)}</TableCell>
                             <TableCell className="text-muted-foreground">{displayReqId}</TableCell>
                             <TableCell>{c.status}</TableCell>
