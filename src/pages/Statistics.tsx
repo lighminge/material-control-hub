@@ -10,6 +10,7 @@ import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function StatisticsPage() {
   const [controls, setControls] = useState<any[]>([]);
@@ -23,6 +24,7 @@ export default function StatisticsPage() {
   const [returnDateEnd, setReturnDateEnd] = useState('');
   const [category, setCategory] = useState('all');
   const [chartType, setChartType] = useState<'bar' | 'line' | 'both'>('bar');
+  const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -137,7 +139,8 @@ export default function StatisticsPage() {
       ctrlCount: filteredControls.length,
       avgDays: filteredControls.length > 0 ? (totalDays / filteredControls.length).toFixed(2) : '0.00',
       daysData,
-      pieData: daysData.filter(d => d.數量 > 0).map(d => ({ name: d.name, value: d.數量 }))
+      pieData: daysData.filter(d => d.數量 > 0).map(d => ({ name: d.name, value: d.數量 })),
+      filteredControls
     };
   }, [controls, requisitions, materials, startDate, endDate, returnDateStart, returnDateEnd, category]);
 
@@ -346,8 +349,13 @@ export default function StatisticsPage() {
                     strokeWidth={1}
                     label={({ name, percent, value }) => `${name} ${((percent || 0) * 100).toFixed(0)}% (${value}筆)`}
                   >
-                    {stats.pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {stats.pieData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={COLORS[index % COLORS.length]} 
+                        onClick={() => setSelectedPieSlice(selectedPieSlice === entry.name ? null : entry.name)}
+                        style={{ cursor: 'pointer' }}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -359,7 +367,11 @@ export default function StatisticsPage() {
               <h3 className="font-bold text-lg mb-4">數據總覽</h3>
               <div className="space-y-2">
                 {stats.daysData.map((d, i) => (
-                  <div key={d.name} className="flex items-center gap-6 text-sm border-b pb-2">
+                  <div 
+                    key={d.name} 
+                    className={`flex items-center gap-6 text-sm border-b pb-2 cursor-pointer hover:bg-muted/50 p-2 rounded ${selectedPieSlice === d.name ? 'bg-muted' : ''}`}
+                    onClick={() => setSelectedPieSlice(selectedPieSlice === d.name ? null : d.name)}
+                  >
                     <div className="flex items-center gap-2 w-20">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
                       <span>{d.name}</span>
@@ -373,6 +385,59 @@ export default function StatisticsPage() {
               </div>
             </div>
           </div>
+          
+          {selectedPieSlice && (
+            <div className="mt-8 border-t pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-primary">
+                  {selectedPieSlice} 管制單清單
+                </h3>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedPieSlice(null)}>關閉</Button>
+              </div>
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>管制單號</TableHead>
+                      <TableHead>關聯領料單</TableHead>
+                      <TableHead>狀態</TableHead>
+                      <TableHead>管制開始日</TableHead>
+                      <TableHead>完成日期</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stats.filteredControls.filter(c => {
+                      const d = calculateDays(c, requisitions, holidays);
+                      const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
+                      return dayLabel === selectedPieSlice;
+                    }).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">無管制單</TableCell>
+                      </TableRow>
+                    ) : (
+                      stats.filteredControls.filter(c => {
+                        const d = calculateDays(c, requisitions, holidays);
+                        const dayLabel = d >= 7 ? '7天以上' : `${d}天`;
+                        return dayLabel === selectedPieSlice;
+                      }).map(c => {
+                        const req = requisitions.find((r: any) => r.id === c.requisitionId || r.displayId === c.requisitionId);
+                        const displayReqId = req ? (req.displayId || req.id) : c.requisitionId;
+                        return (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-bold">{c.displayId || c.id?.slice(0, 8)}</TableCell>
+                            <TableCell className="text-muted-foreground">{displayReqId}</TableCell>
+                            <TableCell>{c.status}</TableCell>
+                            <TableCell>{c.startDate}</TableCell>
+                            <TableCell>{c.completionDate || '-'}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -244,7 +244,7 @@ export default function Dashboard() {
                 <TableHead>關聯領料單</TableHead>
                 <TableHead>管制開始日</TableHead>
                 <TableHead>管制天數</TableHead>
-                <TableHead>涵蓋物料分類</TableHead>
+                <TableHead>缺料項目清單</TableHead>
                 <TableHead>狀態</TableHead>
               </TableRow>
             </TableHeader>
@@ -270,8 +270,8 @@ export default function Dashboard() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {c.categories?.map((cat: string) => (
-                            <span key={cat} className="text-xs bg-muted px-2 py-1 rounded-md">{cat}</span>
+                          {c.items?.filter((i: any) => i.missingQuantity > 0).map((i: any) => (
+                            <span key={i.materialId} className="text-xs bg-muted px-2 py-1 rounded-md">{i.materialName || i.materialId}</span>
                           ))}
                         </div>
                       </TableCell>

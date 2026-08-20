@@ -757,9 +757,17 @@ export default function ControlsPage() {
                     <TableCell className="text-muted-foreground">{control.requisitionId}</TableCell>
                     <TableCell className="text-destructive font-black text-lg">{control.items.length}</TableCell>
                     <TableCell>
-                      {control.items.reduce((sum, i) => sum + (i.missingQuantity || 0), 0) > 0 
-                        ? <span className="font-bold text-destructive">缺 {control.items.reduce((sum, i) => sum + (i.missingQuantity || 0), 0)} PCS</span>
-                        : <span className="font-bold text-green-700">已補完</span>}
+                      {control.items.filter(i => (i.missingQuantity || 0) > 0).length > 0 ? (
+                        <div className="flex flex-col gap-1 text-sm">
+                          {control.items.filter(i => (i.missingQuantity || 0) > 0).map((item, idx) => (
+                            <span key={idx} className="font-bold text-destructive">
+                              {item.materialName || item.materialId}: 缺 {item.missingQuantity} PCS
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="font-bold text-green-700">已補完</span>
+                      )}
                     </TableCell>
                     <TableCell>{control.completionDate || '-'}</TableCell>
                     <TableCell>
