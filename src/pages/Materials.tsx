@@ -408,7 +408,7 @@ export default function MaterialsPage() {
                 </TableRow>
               ) : (
                 paginatedData.map((mat, index) => (
-                  <TableRow key={mat.id} className={mat.stock === 0 ? 'bg-red-50 hover:bg-red-100' : ''}>
+                  <TableRow key={mat.id} className={mat.stock === 0 ? 'bg-red-100 hover:bg-red-200' : ''}>
                     <TableCell>
                       <div className="flex flex-row gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(mat)}>編輯</Button>

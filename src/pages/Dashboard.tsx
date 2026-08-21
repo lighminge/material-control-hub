@@ -191,9 +191,9 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalControlItems}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              已補完: <span className="font-bold text-green-600">{totalRestockedItems}</span> 項
-            </p>
+            <div className="text-sm font-bold text-muted-foreground mt-1">
+              已補完: <span className="text-lg font-black text-green-600">{totalRestockedItems}</span> 項
+            </div>
           </CardContent>
         </Card>
         <Card>
