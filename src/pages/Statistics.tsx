@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
@@ -27,6 +28,8 @@ export default function StatisticsPage() {
   const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
   const [listPage, setListPage] = useState(1);
   const [listPageSize, setListPageSize] = useState(10);
+  const [useYearFilter, setUseYearFilter] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
     const loadData = async () => {
@@ -60,6 +63,9 @@ export default function StatisticsPage() {
       if (!dateStr) return false;
       const d = parseISO(dateStr);
       if (isNaN(d.getTime())) return false;
+      if (useYearFilter && selectedYear) {
+        if (d.getFullYear().toString() !== selectedYear) return false;
+      }
       if (startDate && isBefore(d, startOfDay(parseISO(startDate)))) return false;
       if (endDate && isAfter(d, endOfDay(parseISO(endDate)))) return false;
       return true;
@@ -144,7 +150,7 @@ export default function StatisticsPage() {
       pieData: daysData.filter(d => d.數量 > 0).map(d => ({ name: d.name, value: d.數量 })),
       filteredControls
     };
-  }, [controls, requisitions, materials, startDate, endDate, returnDateStart, returnDateEnd, category]);
+  }, [controls, requisitions, materials, startDate, endDate, returnDateStart, returnDateEnd, category, useYearFilter, selectedYear]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#8884d8', '#8dd1e1'];
 
@@ -246,14 +252,40 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-muted/30 p-4 rounded-xl border border-border/50">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
         <div className="flex items-center gap-3">
           <PieChart className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
         </div>
-        <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold">
-          匯出 Excel
-        </Button>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-lg shadow-sm border border-border/50 h-[40px]">
+            <div className="flex items-center space-x-2">
+              <Checkbox id="filter-year" checked={useYearFilter} onCheckedChange={(c) => setUseYearFilter(!!c)} />
+              <label htmlFor="filter-year" className="text-sm font-medium leading-none cursor-pointer text-muted-foreground whitespace-nowrap">
+                以年度區分
+              </label>
+            </div>
+            {useYearFilter && (
+              <div className="border-l pl-3 ml-1">
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="w-[90px] h-7 text-sm">
+                    <SelectValue placeholder="年度" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024">2024</SelectItem>
+                    <SelectItem value="2025">2025</SelectItem>
+                    <SelectItem value="2026">2026</SelectItem>
+                    <SelectItem value="2027">2027</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold h-[40px]">
+            匯出 Excel
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 bg-muted/30">

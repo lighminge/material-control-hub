@@ -426,7 +426,7 @@ export default function MaterialsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                      <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
                         {mat.name}
                       </span>
                     </TableCell>
@@ -567,7 +567,7 @@ export default function MaterialsPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                            <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
                               {log.materialName}
                             </span>
                           </TableCell>
