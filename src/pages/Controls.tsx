@@ -58,6 +58,7 @@ export default function ControlsPage() {
 
   // Filters
   const [searchStatus, setSearchStatus] = useState('all');
+  const [searchDays, setSearchDays] = useState('all');
   const [searchMaterialId, setSearchMaterialId] = useState('');
   const [searchReqId, setSearchReqId] = useState('');
   const [sYear, setSYear] = useState('');
@@ -277,6 +278,14 @@ export default function ControlsPage() {
 
   const filteredControls = controls.filter(control => {
     if (searchStatus !== 'all' && control.status !== searchStatus) return false;
+    if (searchDays !== 'all') {
+      const days = calculateDays(control);
+      if (searchDays === '7+') {
+        if (days < 7) return false;
+      } else {
+        if (days.toString() !== searchDays) return false;
+      }
+    }
     if (searchMaterialId && !control.items.some(i => (i.materialId || '').includes(searchMaterialId) || (i.materialName || '').includes(searchMaterialId))) return false;
     if (searchReqId && !(control.requisitionId || '').includes(searchReqId)) {
       const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
@@ -591,6 +600,25 @@ export default function ControlsPage() {
                   <SelectItem value="all">全部狀態</SelectItem>
                   <SelectItem value="處理中">處理中</SelectItem>
                   <SelectItem value="已結案">已結案</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>查詢管制天數</Label>
+              <Select value={searchDays} onValueChange={setSearchDays}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部天數" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部天數</SelectItem>
+                  <SelectItem value="0">0天</SelectItem>
+                  <SelectItem value="1">1天</SelectItem>
+                  <SelectItem value="2">2天</SelectItem>
+                  <SelectItem value="3">3天</SelectItem>
+                  <SelectItem value="4">4天</SelectItem>
+                  <SelectItem value="5">5天</SelectItem>
+                  <SelectItem value="6">6天</SelectItem>
+                  <SelectItem value="7+">7天以上</SelectItem>
                 </SelectContent>
               </Select>
             </div>
