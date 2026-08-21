@@ -251,14 +251,9 @@ export default function StatisticsPage() {
           <PieChart className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleExportImage} variant="outline" className="font-bold border-primary text-primary">
-            匯出圖檔
-          </Button>
-          <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold">
-            匯出 Excel
-          </Button>
-        </div>
+        <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+          匯出 Excel
+        </Button>
       </div>
 
       <Card className="p-4 bg-muted/30">
@@ -407,9 +402,14 @@ export default function StatisticsPage() {
       </Card>
 
       <Card className="flex flex-col mb-10">
-        <CardHeader>
-          <CardTitle>管制天數佔比</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">各管制天數在總單量中的百分比</p>
+        <CardHeader className="flex flex-row items-start justify-between pb-2">
+          <div>
+            <CardTitle>管制天數佔比</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">各管制天數在總單量中的百分比</p>
+          </div>
+          <Button onClick={handleExportImage} variant="outline" className="font-bold border-primary text-primary">
+            匯出圖檔
+          </Button>
         </CardHeader>
         <CardContent>
           <div ref={pieChartRef} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center bg-card p-4 rounded-xl">

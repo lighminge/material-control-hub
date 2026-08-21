@@ -762,9 +762,9 @@ export default function ControlsPage() {
                     <TableCell className="text-destructive font-black text-lg">{control.items.length}</TableCell>
                     <TableCell>
                       {control.items.filter(i => (i.missingQuantity || 0) > 0).length > 0 ? (
-                        <div className="flex flex-col gap-1 text-sm">
+                        <div className="flex flex-wrap gap-1.5">
                           {control.items.filter(i => (i.missingQuantity || 0) > 0).map((item, idx) => (
-                            <span key={idx} className="font-bold text-destructive">
+                            <span key={idx} className="text-sm font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-md shadow-sm">
                               {item.materialName || item.materialId}: 缺 {item.missingQuantity} PCS
                             </span>
                           ))}

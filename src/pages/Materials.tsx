@@ -425,7 +425,11 @@ export default function MaterialsPage() {
                         <span className="text-muted-foreground">{mat.category || '未分類'}</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{mat.name}</TableCell>
+                    <TableCell>
+                      <span className="text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                        {mat.name}
+                      </span>
+                    </TableCell>
                     <TableCell>{mat.stock}</TableCell>
                     <TableCell>{mat.unit}</TableCell>
                   </TableRow>
@@ -562,7 +566,11 @@ export default function MaterialsPage() {
                               <span className="text-muted-foreground">{mat?.category || '未分類'}</span>
                             )}
                           </TableCell>
-                          <TableCell className="font-medium">{log.materialName}</TableCell>
+                          <TableCell>
+                            <span className="text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                              {log.materialName}
+                            </span>
+                          </TableCell>
                           <TableCell>{log.controlId}</TableCell>
                           <TableCell>{log.notes || '-'}</TableCell>
                         </TableRow>
