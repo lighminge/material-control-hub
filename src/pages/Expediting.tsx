@@ -345,7 +345,7 @@ export default function ExpeditingPage() {
                 <TableHead>狀態</TableHead>
                 <TableHead>涵蓋物料分類</TableHead>
                 <TableHead>管制天數</TableHead>
-                <TableHead>缺料項目總數</TableHead>
+                <TableHead>缺料項目清單</TableHead>
                 <TableHead>已補完數</TableHead>
               </TableRow>
             </TableHeader>
@@ -375,23 +375,31 @@ export default function ExpeditingPage() {
                           {control.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {cats.map((cat: any) => (
-                            cat === 'TKW' ? (
-                              <span key={cat} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
-                            ) : cat === '夾鉗' ? (
-                              <span key={cat} className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
-                            ) : (
-                              <span key={cat} className="text-muted-foreground">{cat}</span>
-                            )
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-bold">{days} 天</span>
-                      </TableCell>
-                      <TableCell>{control.items.length}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {cats.map((cat: any) => (
+                        cat === 'TKW' ? (
+                          <span key={cat} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
+                        ) : cat === '夾鉗' ? (
+                          <span key={cat} className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
+                        ) : (
+                          <span key={cat} className="text-muted-foreground">{cat}</span>
+                        )
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-bold">{days} 天</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(activeTab === 'active' ? control.items.filter((i: any) => i.missingQuantity > 0) : control.items).map((i: any) => (
+                        <span key={i.materialId} className="text-sm font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-md shadow-sm">
+                          {i.materialName || i.materialId}
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
                       <TableCell className="text-green-700 font-bold">{control.items.filter((i: any) => i.missingQuantity === 0).length}</TableCell>
                     </TableRow>
                   );

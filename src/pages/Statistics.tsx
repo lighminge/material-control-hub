@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getCollection } from '@/lib/firebase/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
+import html2canvas from 'html2canvas';
 export default function StatisticsPage() {
   const [controls, setControls] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
@@ -160,6 +160,23 @@ export default function StatisticsPage() {
   const listTotalPages = Math.ceil(selectedControls.length / listPageSize) || 1;
   const paginatedList = selectedControls.slice((listPage - 1) * listPageSize, listPage * listPageSize);
 
+  const pieChartRef = useRef<HTMLDivElement>(null);
+
+  const handleExportImage = async () => {
+    if (pieChartRef.current) {
+      try {
+        const canvas = await html2canvas(pieChartRef.current, { backgroundColor: '#ffffff' });
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `管制天數佔比_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('Failed to export image', err);
+      }
+    }
+  };
+
   const handleExportExcel = () => {
     // We want to export stats.daysData + basic stats
     const basicStats = [
@@ -234,9 +251,14 @@ export default function StatisticsPage() {
           <PieChart className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
         </div>
-        <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold">
-          匯出 Excel
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleExportImage} variant="outline" className="font-bold border-primary text-primary">
+            匯出圖檔
+          </Button>
+          <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+            匯出 Excel
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 bg-muted/30">
@@ -390,7 +412,7 @@ export default function StatisticsPage() {
           <p className="text-sm text-muted-foreground mt-1">各管制天數在總單量中的百分比</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+          <div ref={pieChartRef} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center bg-card p-4 rounded-xl">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>

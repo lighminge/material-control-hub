@@ -271,7 +271,11 @@ export default function Dashboard() {
                     <TableRow key={c.id}>
                       <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
                       <TableCell className="font-medium">{c.id}</TableCell>
-                      <TableCell>{c.requisitionId}</TableCell>
+                      <TableCell>
+                        <span className="text-sm font-bold bg-purple-100 text-purple-700 border border-purple-200 px-2 py-1 rounded-md shadow-sm">
+                          {c.requisitionId}
+                        </span>
+                      </TableCell>
                       <TableCell>{c.startDate}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center justify-center min-w-[2.5rem] py-1 rounded-md border ${getDaysBadgeColor(c.calculatedDays)}`}>
