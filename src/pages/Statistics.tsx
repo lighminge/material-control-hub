@@ -252,7 +252,7 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
         <div className="flex items-center gap-3">
           <PieChart className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
