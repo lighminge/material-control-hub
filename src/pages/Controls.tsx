@@ -588,75 +588,61 @@ export default function ControlsPage() {
       </Dialog>
 
       <Card className="mb-6 p-4 bg-muted/30">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>查詢狀態</Label>
-              <Select value={searchStatus} onValueChange={setSearchStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部狀態" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部狀態</SelectItem>
-                  <SelectItem value="處理中">處理中</SelectItem>
-                  <SelectItem value="已結案">已結案</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>查詢管制天數</Label>
-              <Select value={searchDays} onValueChange={setSearchDays}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部天數" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部天數</SelectItem>
-                  <SelectItem value="0">0天</SelectItem>
-                  <SelectItem value="1">1天</SelectItem>
-                  <SelectItem value="2">2天</SelectItem>
-                  <SelectItem value="3">3天</SelectItem>
-                  <SelectItem value="4">4天</SelectItem>
-                  <SelectItem value="5">5天</SelectItem>
-                  <SelectItem value="6">6天</SelectItem>
-                  <SelectItem value="7+">7天以上</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>查詢物料品號</Label>
-              <Input placeholder="輸入物料品號" value={searchMaterialId} onChange={(e) => setSearchMaterialId(e.target.value)} />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="col-span-12 md:col-span-2 space-y-2">
+            <Label>查詢狀態</Label>
+            <Select value={searchStatus} onValueChange={setSearchStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部狀態" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="處理中">處理中</SelectItem>
+                <SelectItem value="已結案">已結案</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-12 md:col-span-3 space-y-2">
+            <Label>排序方式</Label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="預設排序" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">預設排序</SelectItem>
+                <SelectItem value="status_asc">狀態 (處理中 - 已結案)</SelectItem>
+                <SelectItem value="status_desc">狀態 (已結案 - 處理中)</SelectItem>
+                <SelectItem value="id_asc">管制單號 (由小到大)</SelectItem>
+                <SelectItem value="id_desc">管制單號 (由大到小)</SelectItem>
+                <SelectItem value="date_asc">管制開始日期 (舊到新)</SelectItem>
+                <SelectItem value="date_desc">管制開始日期 (新到舊)</SelectItem>
+                <SelectItem value="req_asc">關聯領料單 (由小到大)</SelectItem>
+                <SelectItem value="req_desc">關聯領料單 (由大到小)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-12 md:col-span-2 space-y-2">
+            <Label>查詢管制天數</Label>
+            <Select value={searchDays} onValueChange={setSearchDays}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部天數" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部天數</SelectItem>
+                <SelectItem value="0">0天</SelectItem>
+                <SelectItem value="1">1天</SelectItem>
+                <SelectItem value="2">2天</SelectItem>
+                <SelectItem value="3">3天</SelectItem>
+                <SelectItem value="4">4天</SelectItem>
+                <SelectItem value="5">5天</SelectItem>
+                <SelectItem value="6">6天</SelectItem>
+                <SelectItem value="7+">7天以上</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>排序方式</Label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="預設排序" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">預設排序</SelectItem>
-                  <SelectItem value="status_asc">狀態 (處理中 - 已結案)</SelectItem>
-                  <SelectItem value="status_desc">狀態 (已結案 - 處理中)</SelectItem>
-                  <SelectItem value="id_asc">管制單號 (由小到大)</SelectItem>
-                  <SelectItem value="id_desc">管制單號 (由大到小)</SelectItem>
-                  <SelectItem value="date_asc">管制開始日期 (舊到新)</SelectItem>
-                  <SelectItem value="date_desc">管制開始日期 (新到舊)</SelectItem>
-                  <SelectItem value="req_asc">關聯領料單 (由小到大)</SelectItem>
-                  <SelectItem value="req_desc">關聯領料單 (由大到小)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>查詢關聯領料單號</Label>
-              <Input placeholder="輸入領料單號" value={searchReqId} onChange={(e) => setSearchReqId(e.target.value)} />
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>完成日期 (起)</Label>
+          <div className="col-span-12 md:col-span-5 space-y-2">
+            <Label>完成日期 (起)</Label>
             <div className="flex gap-2">
               <Select value={sYear} onValueChange={(v) => { setSYear(v); setEYear(v); }}>
                 <SelectTrigger><SelectValue placeholder="年" /></SelectTrigger>
@@ -682,7 +668,16 @@ export default function ControlsPage() {
               <Button variant="ghost" size="icon" onClick={() => { setSYear(''); setSMonth(''); setSDay(''); setEYear(''); setEMonth(''); setEDay(''); }}>×</Button>
             </div>
           </div>
-          <div className="space-y-2">
+
+          <div className="col-span-12 md:col-span-3 space-y-2">
+            <Label>查詢物料品號</Label>
+            <Input placeholder="輸入物料品號" value={searchMaterialId} onChange={(e) => setSearchMaterialId(e.target.value)} />
+          </div>
+          <div className="col-span-12 md:col-span-4 space-y-2">
+            <Label>查詢關聯領料單號</Label>
+            <Input placeholder="輸入領料單號" value={searchReqId} onChange={(e) => setSearchReqId(e.target.value)} />
+          </div>
+          <div className="col-span-12 md:col-span-5 space-y-2">
             <Label>完成日期 (迄)</Label>
             <div className="flex gap-2">
               <Select value={eYear} onValueChange={setEYear}>
@@ -708,7 +703,6 @@ export default function ControlsPage() {
               </Select>
               <Button variant="ghost" size="icon" onClick={() => { setEYear(''); setEMonth(''); setEDay(''); }}>×</Button>
             </div>
-          </div>
           </div>
         </div>
       </Card>
