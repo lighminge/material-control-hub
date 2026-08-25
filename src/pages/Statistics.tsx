@@ -31,7 +31,7 @@ export default function StatisticsPage() {
   const [useYearFilter, setUseYearFilter] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
-  const [users, setUsers] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterUser, setFilterUser] = useState('all');
 
@@ -43,13 +43,13 @@ export default function StatisticsPage() {
           getCollection('requisitions'),
           getCollection('materials'),
           getCollection('holidays'),
-          getCollection('users')
+          getCollection('staff')
         ]);
         setControls(ctrls);
         setRequisitions(reqs);
         setMaterials(mats);
         setHolidays(holsData);
-        setUsers(usersData);
+        setStaffList(usersData);
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -410,7 +410,7 @@ export default function StatisticsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部人員</SelectItem>
-                {users.map(u => (
+                {staffList.map(u => (
                   <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                 ))}
               </SelectContent>
