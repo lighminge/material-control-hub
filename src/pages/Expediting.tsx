@@ -148,12 +148,18 @@ export default function ExpeditingPage() {
       const cats = Array.from(new Set(control.items.map((i: any) => materials.find(m => m.id === i.materialId)?.category || '未分類')));
       const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
       const displayReqId = req ? (req.displayId || req.id) : control.requisitionId;
+      
+      const missingItemsList = control.items.map((i: any) => 
+        `${i.materialName} ${i.missingQuantity > 0 ? `(缺${i.missingQuantity})` : '(已補完)'}${i.notes ? ` [備註: ${i.notes}]` : ''}`
+      ).join('\n');
+
       return {
         '序號': index + 1,
         '管制單號': control.displayId || control.id?.slice(0, 8),
         '關聯領料單': displayReqId,
         '涵蓋物料分類': cats.join(', '),
         '管制天數': days,
+        '缺料項目清單': missingItemsList,
         '缺料項目總數': control.items.length,
         '已補完數': control.items.filter((i: any) => i.missingQuantity === 0).length,
         '狀態': control.status
