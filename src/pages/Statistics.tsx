@@ -31,19 +31,25 @@ export default function StatisticsPage() {
   const [useYearFilter, setUseYearFilter] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
+  const [users, setUsers] = useState<any[]>([]);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterUser, setFilterUser] = useState('all');
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [ctrls, reqs, mats, holsData] = await Promise.all([
+        const [ctrls, reqs, mats, holsData, usersData] = await Promise.all([
           getCollection('controls'),
           getCollection('requisitions'),
           getCollection('materials'),
-          getCollection('holidays')
+          getCollection('holidays'),
+          getCollection('users')
         ]);
         setControls(ctrls);
         setRequisitions(reqs);
         setMaterials(mats);
         setHolidays(holsData);
+        setUsers(usersData);
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -123,6 +129,17 @@ export default function StatisticsPage() {
         if (!hasCategory) return false;
       }
       
+      if (filterStatus !== 'all' && ctrl.status !== filterStatus) {
+        return false;
+      }
+
+      if (filterUser !== 'all') {
+        const req = requisitions.find((r: any) => r.id === ctrl.requisitionId || r.displayId === ctrl.requisitionId);
+        if (!req || req.staffId !== filterUser) {
+          return false;
+        }
+      }
+      
       return true;
     });
 
@@ -150,7 +167,7 @@ export default function StatisticsPage() {
       pieData: daysData.filter(d => d.數量 > 0).map(d => ({ name: d.name, value: d.數量 })),
       filteredControls
     };
-  }, [controls, requisitions, materials, startDate, endDate, returnDateStart, returnDateEnd, category, useYearFilter, selectedYear]);
+  }, [controls, requisitions, materials, startDate, endDate, returnDateStart, returnDateEnd, category, useYearFilter, selectedYear, filterStatus, filterUser]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#8884d8', '#8dd1e1'];
 
@@ -167,6 +184,7 @@ export default function StatisticsPage() {
   const paginatedList = selectedControls.slice((listPage - 1) * listPageSize, listPage * listPageSize);
 
   const pieChartRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
 
   const handleExportImage = async () => {
     if (pieChartRef.current) {
@@ -179,6 +197,21 @@ export default function StatisticsPage() {
         link.click();
       } catch (err) {
         console.error('Failed to export image', err);
+      }
+    }
+  };
+
+  const handleExportBarImage = async () => {
+    if (barChartRef.current) {
+      try {
+        const canvas = await html2canvas(barChartRef.current, { backgroundColor: '#ffffff' });
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `管制天數分佈圖_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('Failed to export bar chart image', err);
       }
     }
   };
@@ -289,7 +322,7 @@ export default function StatisticsPage() {
       </div>
 
       <Card className="p-4 bg-muted/30">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <div className="space-y-2">
             <Label>管制開始日期 (起)</Label>
             <Input 
@@ -356,6 +389,33 @@ export default function StatisticsPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>狀態</Label>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部狀態" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="處理中">處理中</SelectItem>
+                <SelectItem value="已結案">已結案</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>備料人員</Label>
+            <Select value={filterUser} onValueChange={setFilterUser}>
+              <SelectTrigger>
+                <SelectValue placeholder="全部人員" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部人員</SelectItem>
+                {users.map(u => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </Card>
 
@@ -392,22 +452,27 @@ export default function StatisticsPage() {
         </Card>
       </div>
       
-      <Card className="flex flex-col">
+      <Card className="flex flex-col" ref={barChartRef}>
         <CardHeader className="flex flex-row items-start justify-between pb-2">
           <div>
             <CardTitle>管制天數分佈圖</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">符合查詢條件之管制單處理時長</p>
           </div>
-          <Select value={chartType} onValueChange={(val: 'bar'|'line'|'both') => setChartType(val)}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
-              <SelectValue placeholder="切換圖表" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bar">長條圖</SelectItem>
-              <SelectItem value="line">折線圖</SelectItem>
-              <SelectItem value="both">二者並存</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={chartType} onValueChange={(val: 'bar'|'line'|'both') => setChartType(val)}>
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue placeholder="切換圖表" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">長條圖</SelectItem>
+                <SelectItem value="line">折線圖</SelectItem>
+                <SelectItem value="both">二者並存</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={handleExportBarImage} variant="outline" className="h-8 text-xs font-bold border-primary text-primary">
+              匯出圖檔
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="flex-1 pb-4">
           <div className="h-[300px]">

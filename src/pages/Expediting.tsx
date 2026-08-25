@@ -375,7 +375,11 @@ export default function ExpeditingPage() {
                     <TableRow key={control.id} className={rowClass}>
                       <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                       <TableCell className="font-bold">{control.displayId || control.id?.slice(0, 8)}</TableCell>
-                      <TableCell className="text-muted-foreground">{displayReqId}</TableCell>
+                      <TableCell>
+                        <span className="bg-purple-100 text-purple-800 border-purple-300 font-bold px-3 py-1.5 rounded-full border text-sm">
+                          {displayReqId}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={control.status === '已結案' ? '' : 'bg-amber-500 hover:bg-amber-600 text-white border-0'}>
                           {control.status}
