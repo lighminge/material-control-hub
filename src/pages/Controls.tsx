@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getCollection, updateDocument, deleteDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ export type Control = {
 };
 
 export default function ControlsPage() {
+  const location = useLocation();
   const [controls, setControls] = useState<Control[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
@@ -110,8 +112,25 @@ export default function ControlsPage() {
   };
 
   useEffect(() => {
-    loadData();
+    loadData().then(() => {
+      if (location.state?.editControlId) {
+        // Find the control by ID after loading data
+        // We do this in a separate effect because controls state might not be updated synchronously here
+      }
+    });
   }, []);
+
+  useEffect(() => {
+    if (location.state?.editControlId && controls.length > 0 && !isOpen) {
+      const c = controls.find(ctrl => ctrl.id === location.state.editControlId);
+      if (c) {
+        setFormData(c);
+        setIsOpen(true);
+      }
+      // Clear the state so it doesn't reopen if the user navigates back
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, controls]);
 
   const handleItemNoteChange = (index: number, value: string) => {
     if (!formData) return;

@@ -8,8 +8,10 @@ import { ClipboardList, ShieldAlert, Package, TrendingUp, ChevronLeft, ChevronRi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     activeControls: 0,
@@ -249,6 +251,7 @@ export default function Dashboard() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-16">序號</TableHead>
+                <TableHead className="w-24">操作</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
                 <TableHead>管制開始日</TableHead>
@@ -260,7 +263,7 @@ export default function Dashboard() {
             <TableBody>
               {enrichedActiveControls.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     太棒了！目前沒有未結案的管制單。
                   </TableCell>
                 </TableRow>
@@ -270,6 +273,16 @@ export default function Dashboard() {
                   .map((c, index) => (
                     <TableRow key={c.id}>
                       <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8"
+                          onClick={() => navigate('/controls', { state: { editControlId: c.id } })}
+                        >
+                          處理檢視
+                        </Button>
+                      </TableCell>
                       <TableCell className="font-medium">{c.id}</TableCell>
                       <TableCell>
                         <span className="text-sm font-bold bg-purple-100 text-purple-700 border border-purple-200 px-2 py-1 rounded-md shadow-sm">
