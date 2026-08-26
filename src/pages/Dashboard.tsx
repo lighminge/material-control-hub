@@ -8,10 +8,10 @@ import { ClipboardList, ShieldAlert, Package, TrendingUp, ChevronLeft, ChevronRi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import ControlEditModal, { type Control } from '@/components/ControlEditModal';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const [editingControl, setEditingControl] = useState<Control | null>(null);
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     activeControls: 0,
@@ -54,6 +54,8 @@ export default function Dashboard() {
     if (days === 6) return 'bg-orange-200 text-orange-800 border-orange-400 dark:bg-orange-900/60 dark:text-orange-300';
     return 'bg-red-500 text-white border-red-600 dark:bg-red-700 dark:text-white font-bold';
   };
+
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -144,9 +146,8 @@ export default function Dashboard() {
         console.error("Error loading dashboard data:", error);
       }
     };
-
     loadData();
-  }, [selectedYear]);
+  }, [selectedYear, refreshKey]);
 
   return (
     <div className="space-y-6">
@@ -278,7 +279,7 @@ export default function Dashboard() {
                           variant="outline" 
                           size="sm" 
                           className="h-8"
-                          onClick={() => navigate('/controls', { state: { editControlId: c.id } })}
+                          onClick={() => setEditingControl(c)}
                         >
                           處理檢視
                         </Button>
@@ -431,8 +432,13 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
-
+      
+      <ControlEditModal 
+        isOpen={!!editingControl} 
+        control={editingControl} 
+        onClose={() => setEditingControl(null)} 
+        onSaved={() => { setEditingControl(null); setRefreshKey(prev => prev + 1); }} 
+      />
     </div>
   );
 }
