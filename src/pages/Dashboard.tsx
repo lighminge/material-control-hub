@@ -22,6 +22,19 @@ export default function Dashboard() {
   const [enrichedActiveControls, setEnrichedActiveControls] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [sortBy, setSortBy] = useState('days');
+
+  const sortedControls = useMemo(() => {
+    const list = [...enrichedActiveControls];
+    if (sortBy === 'days') {
+      list.sort((a, b) => b.calculatedDays - a.calculatedDays);
+    } else if (sortBy === 'requisition') {
+      list.sort((a, b) => (a.requisitionId || '').localeCompare(b.requisitionId || ''));
+    } else if (sortBy === 'startDate') {
+      list.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    }
+    return list;
+  }, [enrichedActiveControls, sortBy]);
   
   const [controlTrendData, setControlTrendData] = useState<any[]>([]);
   const [controlDaysData, setControlDaysData] = useState<any[]>([]);
@@ -219,20 +232,35 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">每頁筆數</span>
-              <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}>
-                <SelectTrigger className="w-[80px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="15">15</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">排序方式</span>
+                <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="days">依管制天數</SelectItem>
+                    <SelectItem value="requisition">依關聯領料單</SelectItem>
+                    <SelectItem value="startDate">依管制開始日</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">每頁筆數</span>
+                <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-2 bg-muted/20 p-2 rounded-lg border border-border/50 flex-wrap justify-end">
               <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-sm text-slate-800 border border-slate-300">0天</span>
@@ -269,7 +297,7 @@ export default function Dashboard() {
                   </TableCell>
                 </TableRow>
               ) : (
-                enrichedActiveControls
+                sortedControls
                   .slice((currentPage - 1) * pageSize, currentPage * pageSize)
                   .map((c, index) => (
                     <TableRow key={c.id}>
