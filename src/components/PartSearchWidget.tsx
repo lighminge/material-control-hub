@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { getCollection, updateDocument, addDocument } from '@/lib/firebase/api';
+import { useState, useEffect, useRef } from 'react';
+import { getCollection, updateDocument, addDocument, getDocument } from '@/lib/firebase/api';
 import type { Material } from '@/pages/Materials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Search, Copy, Check, Move, X } from 'lucide-react';
+import { Search, Copy, Check, Move, X, ListPlus } from 'lucide-react';
 
 export default function PartSearchWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const widgetRef = useRef<HTMLDivElement>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [searchName, setSearchName] = useState('');
   const [results, setResults] = useState<Material[]>([]);
@@ -20,15 +21,37 @@ export default function PartSearchWidget() {
 
   // Import to Defective Form state
   const [formId, setFormId] = useState('');
-  const [formDate, setFormDate] = useState('');
+  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  
+  const [condition, setCondition] = useState('');
+  const [phrases, setPhrases] = useState<string[]>([]);
+  const [showPhrases, setShowPhrases] = useState(false);
+  const [existingDefects, setExistingDefects] = useState<any[]>([]);
 
   useEffect(() => {
     // Load materials
     getCollection('materials').then((data) => {
       setMaterials(data as Material[]);
     });
+    getDocument('settings', 'defectivePhrases').then(doc => {
+      if (doc && (doc as any).phrases) setPhrases((doc as any).phrases);
+    });
   }, []);
+
+  useEffect(() => {
+    getCollection('defects').then(d => setExistingDefects(d as any[]));
+  }, [isOpen, importStatus]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (isOpen && widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!searchName.trim()) {
@@ -88,7 +111,8 @@ export default function PartSearchWidget() {
         await updateDocument('defects', existing.id, {
           materialId: mat.name,
           materialName: mat.partName || '',
-          date: formDate
+          date: formDate,
+          condition: condition
         });
         setImportStatus(`已成功覆蓋單號 ${formId} 的品號！`);
       } else {
@@ -97,18 +121,23 @@ export default function PartSearchWidget() {
           date: formDate,
           materialId: mat.name,
           materialName: mat.partName || '',
-          condition: '',
+          category: mat.category || '未分類',
+          condition: condition,
           discoverer: '',
           createdAt: new Date().toISOString()
         });
         setImportStatus(`已建立新單號 ${formId}！`);
       }
+      setCondition('');
+      window.dispatchEvent(new Event('defectsUpdated'));
       setTimeout(() => setImportStatus(null), 3000);
     } catch (error) {
       console.error(error);
       setImportStatus('匯入失敗！');
     }
   };
+
+  const matchedDefects = existingDefects.filter(d => d.formId === formId.trim());
 
   if (!isOpen) {
     return (
@@ -140,6 +169,7 @@ export default function PartSearchWidget() {
 
   return (
     <Card 
+      ref={widgetRef}
       className="fixed z-50 w-80 shadow-2xl flex flex-col max-h-[80vh]"
       style={{ left: pos.x, top: pos.y }}
     >
@@ -184,8 +214,43 @@ export default function PartSearchWidget() {
               value={formDate} 
               onChange={e => setFormDate(e.target.value)} 
               className="h-8 text-sm"
+              onClick={(e: any) => e.target.showPicker?.()}
             />
           </div>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2 space-y-1 relative">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-bold text-muted-foreground">不良情況</label>
+                <Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setShowPhrases(!showPhrases)}>
+                  <ListPlus className="w-3 h-3 mr-1" /> 常用內容
+                </Button>
+              </div>
+              <Input 
+                value={condition} 
+                onChange={e => setCondition(e.target.value)} 
+                className="h-8 text-sm"
+              />
+              {showPhrases && (
+                <div className="absolute right-0 top-10 z-10 w-48 bg-white border rounded-md shadow-lg p-1 max-h-32 overflow-y-auto">
+                  {phrases.map((p, i) => (
+                    <div key={i} className="text-xs p-1 hover:bg-slate-100 cursor-pointer" onClick={() => {
+                      setCondition(condition ? condition + '，' + p : p);
+                      setShowPhrases(false);
+                    }}>
+                      {i + 1}. {p}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {matchedDefects.length > 0 && (
+              <div className="text-[10px] text-blue-600 font-bold bg-blue-50 p-1 rounded col-span-2">
+                系統已存在單號 {formId} ({matchedDefects.length} 筆項目)
+              </div>
+            )}
+          </div>
+          
           {importStatus && (
             <div className="text-xs font-bold text-green-600 bg-green-50 p-1 rounded text-center">
               {importStatus}
@@ -201,7 +266,10 @@ export default function PartSearchWidget() {
               <div key={mat.id} className="bg-white border rounded p-2 text-xs shadow-sm space-y-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-bold text-indigo-700">{mat.partName}</div>
+                    <div className="font-bold text-indigo-700">
+                      {mat.partName} 
+                      {mat.headType && <span className="ml-2 text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-1 py-0.5 rounded font-normal">{mat.headType}</span>}
+                    </div>
                     <div className="text-muted-foreground flex items-center gap-1">
                       品號: <span className="font-mono text-slate-800">{mat.name}</span>
                     </div>

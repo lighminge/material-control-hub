@@ -27,6 +27,7 @@ export default function DefectivePage() {
   const [staffList, setStaffList] = useState<any[]>([]);
   
   const [isOpen, setIsOpen] = useState(false);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<Defect | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [formData, setFormData] = useState<Defect>({
     formId: '',
@@ -86,6 +87,9 @@ export default function DefectivePage() {
 
   useEffect(() => {
     loadData();
+    const handleUpdate = () => loadData();
+    window.addEventListener('defectsUpdated', handleUpdate);
+    return () => window.removeEventListener('defectsUpdated', handleUpdate);
   }, []);
 
   const savePhrases = async (newPhrases: string[]) => {
@@ -141,10 +145,9 @@ export default function DefectivePage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('確定要刪除這筆不良品單嗎？')) {
-      await deleteDocument('defects', id);
-      loadData();
-    }
+    await deleteDocument('defects', id);
+    setDeleteConfirmItem(null);
+    loadData();
   };
   
   const openNewForm = () => {
@@ -184,6 +187,20 @@ export default function DefectivePage() {
 
   return (
     <div className="container mx-auto p-4 max-w-7xl relative">
+      <Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            確定要刪除不良品單號 [{deleteConfirmItem?.formId}] 嗎？此動作無法復原。
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmItem(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmItem?.id) handleDelete(deleteConfirmItem.id); }}>確認刪除</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {systemAlert && (
         <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-md shadow-lg z-50 flex justify-between items-center min-w-[300px]">
           <span>{systemAlert}</span>
@@ -208,7 +225,7 @@ export default function DefectivePage() {
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
                 <Label>不良品單號</Label>
-                <Input value={formData.formId} onChange={e => setFormData({...formData, formId: e.target.value})} />
+                <Input value={formData.formId} disabled={!!editingId} onChange={e => setFormData({...formData, formId: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <Label>日期</Label>
@@ -227,25 +244,39 @@ export default function DefectivePage() {
               </div>
               <div className="space-y-2">
                 <Label>物料品號</Label>
-                <Select value={formData.materialId} onValueChange={(val) => { const mat = materials.find(m => m.id === val); if (mat) setFormData({...formData, materialId: mat.id, materialName: mat.partName || mat.name}); }}>
-                  <SelectTrigger><SelectValue placeholder="選擇品號" /></SelectTrigger>
-                  <SelectContent>
-                    {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input 
+                  list="material-id-list"
+                  value={formData.materialId}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const mat = materials.find(m => m.name === val);
+                    setFormData({...formData, materialId: val, materialName: mat ? (mat.partName || mat.name) : formData.materialName});
+                  }}
+                  placeholder="輸入或選擇品號"
+                />
+                <datalist id="material-id-list">
+                  {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
+                    <option key={m.id} value={m.name} />
+                  ))}
+                </datalist>
               </div>
               <div className="space-y-2">
                 <Label>物料品名</Label>
-                <Select value={formData.materialId} onValueChange={(val) => { const mat = materials.find(m => m.id === val); if (mat) setFormData({...formData, materialId: mat.id, materialName: mat.partName || mat.name}); }}>
-                  <SelectTrigger><SelectValue placeholder="選擇品名" /></SelectTrigger>
-                  <SelectContent>
-                    {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.partName || m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input 
+                  list="material-name-list"
+                  value={formData.materialName}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const mat = materials.find(m => m.partName === val || m.name === val);
+                    setFormData({...formData, materialName: val, materialId: mat ? mat.name : formData.materialId});
+                  }}
+                  placeholder="輸入或選擇品名"
+                />
+                <datalist id="material-name-list">
+                  {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
+                    <option key={m.id} value={m.partName || m.name} />
+                  ))}
+                </datalist>
               </div>
               <div className="space-y-2">
                 <Label>發現人員</Label>
@@ -422,7 +453,7 @@ export default function DefectivePage() {
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(defect)}>編輯</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(defect.id!)}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmItem(defect)}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>

@@ -37,7 +37,7 @@ export default function MaterialsPage() {
   const [formData, setFormData] = useState<Material>({
     name: '',
     partName: '',
-    headType: 'A型',
+    headType: '',
     stock: 0,
     unit: 'PCS',
     category: '未分類'
@@ -112,7 +112,7 @@ export default function MaterialsPage() {
       }
       setIsOpen(false);
       loadData();
-      setFormData({ name: '', partName: '', headType: 'A型', stock: 0, unit: 'PCS', category: '未分類' });
+      setFormData({ name: '', partName: '', headType: '', stock: 0, unit: 'PCS', category: '未分類' });
       setEditingId(null);
     } catch (error) {
       console.error("Error saving material:", error);
@@ -120,7 +120,7 @@ export default function MaterialsPage() {
   };
 
   const handleEdit = (mat: Material) => {
-    setFormData({ ...mat, category: mat.category || '未分類', headType: mat.headType || 'A型' });
+    setFormData({ ...mat, category: mat.category || '未分類', headType: mat.headType || '' });
     setEditingId(mat.id || null);
     setIsOpen(true);
   };
@@ -132,7 +132,7 @@ export default function MaterialsPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ name: '', partName: '', headType: 'A型', stock: 0, unit: 'PCS', category: '未分類' });
+    setFormData({ name: '', partName: '', headType: '', stock: 0, unit: 'PCS', category: '未分類' });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -284,11 +284,12 @@ export default function MaterialsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>頭型</Label>
-                  <Select value={formData.headType || 'A型'} onValueChange={(val) => setFormData({...formData, headType: val})}>
+                  <Select value={formData.headType || 'none'} onValueChange={(val) => setFormData({...formData, headType: val === 'none' ? '' : val})}>
                     <SelectTrigger>
-                      <SelectValue placeholder="選擇頭型" />
+                      <SelectValue placeholder="選擇頭型 (選填)" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">無 (空白)</SelectItem>
                       <SelectItem value="A型">A型</SelectItem>
                       <SelectItem value="B型">B型</SelectItem>
                       <SelectItem value="C型">C型</SelectItem>
@@ -467,9 +468,11 @@ export default function MaterialsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                        {mat.headType || 'A型'}
-                      </span>
+                      {mat.headType ? (
+                        <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                          {mat.headType}
+                        </span>
+                      ) : <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell>{mat.stock}</TableCell>
                     <TableCell>{mat.unit}</TableCell>
@@ -574,14 +577,14 @@ export default function MaterialsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-16">序號</TableHead>
-                    <TableHead>補完日期</TableHead>
-                    <TableHead>物料分類</TableHead>
-                    <TableHead>物料品號</TableHead>
-                    <TableHead>物料品名</TableHead>
-                    <TableHead>頭型</TableHead>
-                    <TableHead>來源管制單號</TableHead>
-                    <TableHead>補完/進貨備註</TableHead>
+                    <TableHead className="w-16 whitespace-nowrap">序號</TableHead>
+                    <TableHead className="min-w-[120px] whitespace-nowrap">補完日期</TableHead>
+                    <TableHead className="whitespace-nowrap">物料分類</TableHead>
+                    <TableHead className="whitespace-nowrap">物料品號</TableHead>
+                    <TableHead className="min-w-[150px] whitespace-nowrap">物料品名</TableHead>
+                    <TableHead className="min-w-[100px] whitespace-nowrap">頭型</TableHead>
+                    <TableHead className="min-w-[150px] whitespace-nowrap">來源管制單號</TableHead>
+                    <TableHead className="max-w-[200px]">補完/進貨備註</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -624,9 +627,11 @@ export default function MaterialsPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat?.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat?.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat?.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                              {mat?.headType || 'A型'}
-                            </span>
+                            {mat?.headType ? (
+                              <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                {mat.headType}
+                              </span>
+                            ) : <span className="text-muted-foreground">-</span>}
                           </TableCell>
                           <TableCell>{log.controlId}</TableCell>
                           <TableCell>{log.notes || '-'}</TableCell>
