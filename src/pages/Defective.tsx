@@ -249,14 +249,17 @@ export default function DefectivePage() {
                   value={formData.materialId}
                   onChange={e => {
                     const val = e.target.value;
-                    const mat = materials.find(m => m.name === val);
-                    setFormData({...formData, materialId: val, materialName: mat ? (mat.partName || mat.name) : formData.materialName});
+                    const mat = materials.find(m => {
+                      const compositeId = `${m.name}${m.headType ? ` (${m.headType})` : ''}`;
+                      return compositeId === val || m.name === val;
+                    });
+                    setFormData({...formData, materialId: mat ? mat.name : val, materialName: mat ? (mat.partName || mat.name) : formData.materialName});
                   }}
                   placeholder="輸入或選擇品號"
                 />
                 <datalist id="material-id-list">
                   {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
-                    <option key={m.id} value={m.name} />
+                    <option key={m.id} value={`${m.name}${m.headType ? ` (${m.headType})` : ''}`} />
                   ))}
                 </datalist>
               </div>
@@ -267,14 +270,17 @@ export default function DefectivePage() {
                   value={formData.materialName}
                   onChange={e => {
                     const val = e.target.value;
-                    const mat = materials.find(m => m.partName === val || m.name === val);
-                    setFormData({...formData, materialName: val, materialId: mat ? mat.name : formData.materialId});
+                    const mat = materials.find(m => {
+                      const compositeName = `${m.partName || m.name}${m.headType ? ` (${m.headType})` : ''}`;
+                      return compositeName === val || m.partName === val || m.name === val;
+                    });
+                    setFormData({...formData, materialName: mat ? (mat.partName || mat.name) : val, materialId: mat ? mat.name : formData.materialId});
                   }}
                   placeholder="輸入或選擇品名"
                 />
                 <datalist id="material-name-list">
                   {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
-                    <option key={m.id} value={m.partName || m.name} />
+                    <option key={m.id} value={`${m.partName || m.name}${m.headType ? ` (${m.headType})` : ''}`} />
                   ))}
                 </datalist>
               </div>

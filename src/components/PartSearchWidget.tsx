@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCollection, updateDocument, addDocument, getDocument } from '@/lib/firebase/api';
+import { getCollection, updateDocument, addDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import type { Material } from '@/pages/Materials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Search, Copy, Check, Move, X, ListPlus } from 'lucide-react';
+import { Search, Copy, Check, Move, X, ListPlus, Trash2, Pencil } from 'lucide-react';
 
 export default function PartSearchWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +27,41 @@ export default function PartSearchWidget() {
   const [condition, setCondition] = useState('');
   const [phrases, setPhrases] = useState<string[]>([]);
   const [showPhrases, setShowPhrases] = useState(false);
+  const [newPhrase, setNewPhrase] = useState('');
+  const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
+  const [editPhraseText, setEditPhraseText] = useState('');
   const [existingDefects, setExistingDefects] = useState<any[]>([]);
+
+  const savePhrases = async (newPhrases: string[]) => {
+    setPhrases(newPhrases);
+    await setDocumentWithId('settings', 'defectivePhrases', { phrases: newPhrases });
+  };
+
+  const addPhrase = () => {
+    if (newPhrase.trim() && !phrases.includes(newPhrase.trim())) {
+      savePhrases([...phrases, newPhrase.trim()]);
+      setNewPhrase('');
+    }
+  };
+
+  const handleSaveEditPhrase = async () => {
+    if (editingPhraseIndex === null || !editPhraseText.trim()) return;
+    if (phrases[editingPhraseIndex] === editPhraseText.trim()) {
+      setEditingPhraseIndex(null);
+      return;
+    }
+    const updated = [...phrases];
+    updated[editingPhraseIndex] = editPhraseText.trim();
+    await savePhrases(updated);
+    setEditingPhraseIndex(null);
+  };
+
+  const handleDeletePhrase = async (index: number) => {
+    if (confirm('確定要刪除這筆常用內容嗎？')) {
+      const updated = phrases.filter((_, i) => i !== index);
+      await savePhrases(updated);
+    }
+  };
 
   useEffect(() => {
     // Load materials
@@ -60,7 +94,7 @@ export default function PartSearchWidget() {
     }
     const term = searchName.trim().toLowerCase();
     const filtered = materials.filter(m => 
-      m.partName?.toLowerCase().includes(term)
+      m.partName?.toLowerCase().includes(term) || m.name.toLowerCase().includes(term)
     );
     setResults(filtered);
   }, [searchName, materials]);
@@ -232,15 +266,52 @@ export default function PartSearchWidget() {
                 className="h-8 text-sm"
               />
               {showPhrases && (
-                <div className="absolute right-0 top-10 z-10 w-48 bg-white border rounded-md shadow-lg p-1 max-h-32 overflow-y-auto">
-                  {phrases.map((p, i) => (
-                    <div key={i} className="text-xs p-1 hover:bg-slate-100 cursor-pointer" onClick={() => {
-                      setCondition(condition ? condition + '，' + p : p);
-                      setShowPhrases(false);
-                    }}>
-                      {i + 1}. {p}
-                    </div>
-                  ))}
+                <div className="absolute right-0 top-10 z-10 w-64 bg-white border rounded-md shadow-lg p-2 max-h-48 overflow-y-auto">
+                  <div className="flex gap-2 mb-2">
+                    <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用內容..." className="h-7 text-xs" />
+                    <Button size="sm" onClick={addPhrase} className="h-7 px-2 shrink-0">新增</Button>
+                  </div>
+                  <div className="space-y-1">
+                    {phrases.map((p, i) => (
+                      <div key={i} className="flex justify-between items-center bg-slate-50 p-1 rounded group">
+                        {editingPhraseIndex === i ? (
+                          <Input 
+                            value={editPhraseText} 
+                            onChange={e => setEditPhraseText(e.target.value)} 
+                            onKeyDown={e => { if (e.key === 'Enter') handleSaveEditPhrase(); }} 
+                            autoFocus
+                            className="h-7 text-xs flex-1"
+                          />
+                        ) : (
+                          <span className="text-xs cursor-pointer flex-1" onClick={() => {
+                            setCondition(condition ? condition + '，' + p : p);
+                            setShowPhrases(false);
+                          }}>{i + 1}. {p}</span>
+                        )}
+                        <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {editingPhraseIndex === i ? (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600" onClick={handleSaveEditPhrase}>
+                                <Check className="w-3 h-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingPhraseIndex(null)}>
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-600" onClick={(e) => { e.stopPropagation(); setEditPhraseText(p); setEditingPhraseIndex(i); }}>
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeletePhrase(i); }}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -259,16 +330,24 @@ export default function PartSearchWidget() {
         </div>
 
         <div className="border rounded-md min-h-[150px] max-h-[300px] overflow-y-auto bg-slate-50 p-2 space-y-2">
+          {results.length > 0 && (
+            <div className="text-[10px] text-muted-foreground text-right">總共 {results.length} 筆資料</div>
+          )}
           {results.length === 0 ? (
-            <div className="text-xs text-center text-muted-foreground mt-4">無符合的物料品名</div>
+            <div className="text-xs text-center text-muted-foreground mt-4">無符合的物料</div>
           ) : (
-            results.map(mat => (
-              <div key={mat.id} className="bg-white border rounded p-2 text-xs shadow-sm space-y-2">
-                <div className="flex justify-between items-start">
+            results.map((mat, index) => (
+              <div key={mat.id} className="bg-white border rounded p-2 text-xs shadow-sm space-y-2 relative">
+                <div className="absolute top-2 left-2 text-[10px] text-slate-400 font-mono">{index + 1}.</div>
+                <div className="flex justify-between items-start pl-4">
                   <div>
                     <div className="font-bold text-indigo-700">
                       {mat.partName} 
-                      {mat.headType && <span className="ml-2 text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-1 py-0.5 rounded font-normal">{mat.headType}</span>}
+                      {mat.headType && (
+                        <span className={`ml-2 text-[10px] px-1 py-0.5 rounded font-normal border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                          {mat.headType}
+                        </span>
+                      )}
                     </div>
                     <div className="text-muted-foreground flex items-center gap-1">
                       品號: <span className="font-mono text-slate-800">{mat.name}</span>
