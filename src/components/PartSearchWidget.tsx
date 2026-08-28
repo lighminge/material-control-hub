@@ -147,6 +147,11 @@ export default function PartSearchWidget() {
       setImportStatus('請輸入日期！');
       return;
     }
+    if (quantity === '' || quantity <= 0) {
+      setImportStatus('請輸入不良品數量！');
+      return;
+    }
+
 
     try {
       const defects = await getCollection('defects') as any[];
@@ -162,7 +167,7 @@ export default function PartSearchWidget() {
           headType: mat.headType || '',
           category: mat.category || '未分類',
           condition: condition,
-          quantity: quantity === '' ? 0 : Number(quantity),
+          quantity: quantity,
           workOrder: '',
           workOrderQuantity: 0,
           createdAt: new Date().toISOString()
@@ -177,7 +182,7 @@ export default function PartSearchWidget() {
           headType: mat.headType || '',
           category: mat.category || '未分類',
           condition: condition,
-          quantity: quantity === '' ? 0 : Number(quantity),
+          quantity: quantity,
           workOrder: '',
           workOrderQuantity: 0,
           discoverer: '',
@@ -262,8 +267,9 @@ export default function PartSearchWidget() {
               type="date"
               value={formDate} 
               onChange={e => setFormDate(e.target.value)} 
-              className="h-8 text-sm"
-              onClick={(e: any) => e.target.showPicker?.()}
+              className="h-8 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
+              disabled={matchedDefects.length > 0}
+              onClick={(e: any) => { if (matchedDefects.length === 0) e.target.showPicker?.(); }}
             />
             <div className="col-span-2">
               <Input 
@@ -408,6 +414,7 @@ export default function PartSearchWidget() {
                   variant="outline" 
                   size="sm" 
                   className="w-full h-6 text-[10px]"
+                  disabled={isExisting}
                   onClick={() => handleImport(mat)}
                 >
                   匯入此品號與品名

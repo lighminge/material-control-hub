@@ -315,6 +315,47 @@ export default function DefectivePage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!systemAlert} onOpenChange={(open) => !open && setSystemAlert(null)}>
+        <DialogContent className="max-w-sm sm:max-w-sm [&>button]:hidden">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <DialogTitle className="text-lg font-bold text-slate-900 m-0">系統提示</DialogTitle>
+            </div>
+            <p className="text-slate-600 mb-6 pl-13">{systemAlert}</p>
+            <div className="flex justify-end">
+              <Button onClick={() => setSystemAlert(null)} className="bg-blue-600 hover:bg-blue-700">我知道了</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={itemToDelete !== null} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <DialogContent className="max-w-sm sm:max-w-sm [&>button]:hidden">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+              <DialogTitle className="text-lg font-bold text-slate-900 m-0">確認刪除</DialogTitle>
+            </div>
+            <p className="text-slate-600 mb-6 pl-13">確定要刪除此不良品項目嗎？(項目 #{itemToDelete !== null ? itemToDelete + 1 : ''})</p>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setItemToDelete(null)}>取消</Button>
+              <Button variant="destructive" onClick={() => {
+                if (itemToDelete === null) return;
+                const newItems = [...formData.items];
+                newItems.splice(itemToDelete, 1);
+                setFormData({...formData, items: newItems});
+                setItemToDelete(null);
+              }}>確定刪除</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-primary">不良品管理</h1>
         <Dialog open={isOpen} onOpenChange={(open) => {
@@ -326,45 +367,6 @@ export default function DefectivePage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
-            {systemAlert && (
-              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-auto">
-                <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6 text-red-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900">系統提示</h3>
-                  </div>
-                  <p className="text-slate-600 mb-6 pl-13">{systemAlert}</p>
-                  <div className="flex justify-end">
-                    <Button onClick={() => setSystemAlert(null)} className="bg-blue-600 hover:bg-blue-700">我知道了</Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {itemToDelete !== null && (
-              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-auto">
-                <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6 text-amber-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900">確認刪除</h3>
-                  </div>
-                  <p className="text-slate-600 mb-6 pl-13">確定要刪除此不良品項目嗎？(項目 #{itemToDelete + 1})</p>
-                  <div className="flex justify-end gap-3">
-                    <Button variant="outline" onClick={() => setItemToDelete(null)}>取消</Button>
-                    <Button variant="destructive" onClick={() => {
-                      const newItems = [...formData.items];
-                      newItems.splice(itemToDelete, 1);
-                      setFormData({...formData, items: newItems});
-                      setItemToDelete(null);
-                    }}>確定刪除</Button>
-                  </div>
-                </div>
-              </div>
-            )}
             <DialogHeader>
               <DialogTitle>{editingId ? '編輯不良品單' : '新增不良品單'}</DialogTitle>
             </DialogHeader>
