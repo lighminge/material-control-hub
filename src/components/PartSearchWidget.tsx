@@ -145,6 +145,7 @@ export default function PartSearchWidget() {
         await updateDocument('defects', existing.id, {
           materialId: mat.name,
           materialName: mat.partName || '',
+          category: mat.category || '未分類',
           date: formDate,
           condition: condition
         });

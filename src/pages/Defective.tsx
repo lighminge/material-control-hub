@@ -60,6 +60,10 @@ export default function DefectivePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   
+  // Sorting
+  const [sortField, setSortField] = useState<'formId'|'date'|'materialId'|'materialName'>('formId');
+  const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc');
+  
   const loadData = async () => {
     setLoading(true);
     try {
@@ -180,6 +184,11 @@ export default function DefectivePage() {
     if (filterDiscoverer !== 'all' && d.discoverer !== filterDiscoverer) return false;
     if (filterCondition && !d.condition.toLowerCase().includes(filterCondition.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    let comparison = 0;
+    if (a[sortField] > b[sortField]) comparison = 1;
+    if (a[sortField] < b[sortField]) comparison = -1;
+    return sortOrder === 'asc' ? comparison : -comparison;
   });
 
   const totalPages = Math.ceil(filteredDefects.length / pageSize) || 1;
@@ -420,6 +429,29 @@ export default function DefectivePage() {
                 <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8">下一頁</Button>
               </div>
               <div className="flex items-center gap-2 border-l pl-4">
+                <Label>排序:</Label>
+                <Select value={sortField} onValueChange={(val: any) => { setSortField(val); setPage(1); }}>
+                  <SelectTrigger className="w-24 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="formId">依單號</SelectItem>
+                    <SelectItem value="date">依日期</SelectItem>
+                    <SelectItem value="materialId">依品號</SelectItem>
+                    <SelectItem value="materialName">依品名</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortOrder} onValueChange={(val: any) => { setSortOrder(val); setPage(1); }}>
+                  <SelectTrigger className="w-24 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">由小到大</SelectItem>
+                    <SelectItem value="desc">由大到小</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 border-l pl-4">
                 <Label>每頁筆數:</Label>
                 <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
                   <SelectTrigger className="w-[80px] h-8">
@@ -444,33 +476,44 @@ export default function DefectivePage() {
                 <TableHead>日期</TableHead>
                 <TableHead>物料品號</TableHead>
                 <TableHead>物料品名</TableHead>
+                <TableHead>頭型</TableHead>
                 <TableHead>發現人員</TableHead>
                 <TableHead>不良情況</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} className="text-center h-24">載入中...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center h-24">載入中...</TableCell></TableRow>
               ) : paginatedData.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
               ) : (
-                paginatedData.map((defect, index) => (
-                  <TableRow key={defect.id}>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(defect)}>編輯</Button>
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmItem(defect)}>刪除</Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell className="font-bold">{defect.formId}</TableCell>
-                    <TableCell>{defect.date}</TableCell>
-                    <TableCell><span className="font-mono bg-slate-100 px-2 py-1 rounded">{defect.materialId}</span></TableCell>
-                    <TableCell><span className="font-bold text-indigo-700">{defect.materialName}</span></TableCell>
-                    <TableCell>{defect.discoverer}</TableCell>
-                    <TableCell>{defect.condition}</TableCell>
-                  </TableRow>
-                ))
+                paginatedData.map((defect, index) => {
+                  const mat = materials.find(m => m.name === defect.materialId);
+                  return (
+                    <TableRow key={defect.id}>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(defect)}>編輯</Button>
+                          <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmItem(defect)}>刪除</Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                      <TableCell className="font-bold">{defect.formId}</TableCell>
+                      <TableCell>{defect.date}</TableCell>
+                      <TableCell><span className="font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">{defect.materialId}</span></TableCell>
+                      <TableCell><span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded shadow-sm">{defect.materialName}</span></TableCell>
+                      <TableCell>
+                        {mat?.headType ? (
+                          <span className={`px-2 py-1 text-xs rounded font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                            {mat.headType}
+                          </span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>{defect.discoverer}</TableCell>
+                      <TableCell>{defect.condition}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
