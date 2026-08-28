@@ -3,229 +3,143 @@ import re
 with open('src/pages/Defective.tsx', 'r', encoding='utf-8') as f:
     content = f.read()
 
-# We need to replace the content inside <DialogContent className="max-w-xl"...> up to the Save/Cancel buttons.
-dialog_start = content.find('<DialogContent className="max-w-xl" onPointerDownOutside={(e) => e.preventDefault()}>')
+# 1. Fix the phrases popup
+phrase_button = '''<Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setShowPhrases(!showPhrases)}>
+                          <ListPlus className="w-3 h-3 mr-1" /> 常用內容
+                        </Button>'''
+new_phrase_button = '''<Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setActivePhraseIndex(activePhraseIndex === index ? null : index)}>
+                          <ListPlus className="w-3 h-3 mr-1" /> 常用內容
+                        </Button>'''
+content = content.replace(phrase_button, new_phrase_button)
 
-# Find the end of the form elements (the Save/Cancel buttons are at the end of the form)
-dialog_buttons_start = content.find('<div className="flex justify-end gap-2 mt-4">', dialog_start)
+phrase_popup = '''{showPhrases && ('''
+new_phrase_popup = '''{activePhraseIndex === index && ('''
+content = content.replace(phrase_popup, new_phrase_popup)
 
-replacement = '''<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>{editingId ? '編輯不良品單' : '新增不良品單'}</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-3 gap-4 py-4 border-b">
-              <div className="space-y-2">
-                <Label>不良品單號</Label>
-                <Input value={formData.formId} disabled={!!editingId} onChange={e => setFormData({...formData, formId: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <Label>日期</Label>
-                <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} onClick={(e: any) => e.target.showPicker?.()} />
-              </div>
-              <div className="space-y-2">
-                <Label>發現人員</Label>
-                <Select value={formData.discoverer} onValueChange={val => setFormData({...formData, discoverer: val})}>
-                  <SelectTrigger><SelectValue placeholder="選擇發現人員" /></SelectTrigger>
-                  <SelectContent>
-                    {staffList.filter(s => s.permissions?.includes('移印') || s.permissions?.includes('品檢')).map(s => (
-                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="space-y-4 py-2">
-              <div className="flex justify-between items-center">
-                <h3 className="font-bold text-lg">不良品項目</h3>
-                <Button variant="outline" size="sm" onClick={() => setFormData({...formData, items: [...formData.items, { materialId: '', materialName: '', condition: '', quantity: '', workOrder: '', workOrderQuantity: '', category: '' }]})}>
-                  <Plus className="w-4 h-4 mr-1" /> 新增項目
-                </Button>
-              </div>
-              
-              {formData.items.map((item, index) => (
-                <Card key={index} className="relative">
-                  {formData.items.length > 1 && (
-                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => {
-                      const newItems = [...formData.items];
-                      newItems.splice(index, 1);
-                      setFormData({...formData, items: newItems});
-                    }}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  )}
-                  <CardContent className="p-4 grid grid-cols-12 gap-3">
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">物料分類</Label>
-                      <Select value={item.category} onValueChange={(val) => {
+# 2. Add headType select
+head_type_col = '''<div className="col-span-2 space-y-1">
+                      <Label className="text-xs">物料分類</Label>'''
+new_head_type_col = '''<div className="col-span-2 space-y-1">
+                      <Label className="text-xs">頭型</Label>
+                      <Select value={item.headType} onValueChange={(val) => {
                         const newItems = [...formData.items];
-                        newItems[index].category = val;
-                        newItems[index].materialId = '';
-                        newItems[index].materialName = '';
+                        newItems[index].headType = val;
                         setFormData({...formData, items: newItems});
                       }}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="分類" /></SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="未分類">未分類</SelectItem>
-                          <SelectItem value="TKW">TKW</SelectItem>
-                          <SelectItem value="夾鉗">夾鉗</SelectItem>
+                          <SelectItem value="A型">A型</SelectItem>
+                          <SelectItem value="B型">B型</SelectItem>
+                          <SelectItem value="其他">其他</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">物料品號</Label>
-                      <Input 
-                        list={mat-id-}
-                        value={item.materialId}
-                        className="h-8 text-xs"
-                        onChange={e => {
-                          const val = e.target.value;
-                          const mat = materials.find(m => {
-                            const compositeId = ${m.name};
-                            return compositeId === val || m.name === val;
-                          });
-                          const newItems = [...formData.items];
-                          newItems[index].materialId = mat ? mat.name : val;
-                          newItems[index].materialName = mat ? (mat.partName || mat.name) : newItems[index].materialName;
-                          setFormData({...formData, items: newItems});
-                        }}
-                        placeholder="輸入/選擇品號"
-                      />
-                      <datalist id={mat-id-}>
-                        {materials.filter(m => !item.category || m.category === item.category).map(m => (
-                          <option key={m.id} value={${m.name}} />
-                        ))}
-                      </datalist>
-                    </div>
-                    
-                    <div className="col-span-4 space-y-1">
-                      <Label className="text-xs">物料品名</Label>
-                      <Input 
-                        list={mat-name-}
-                        value={item.materialName}
-                        className="h-8 text-xs"
-                        onChange={e => {
-                          const val = e.target.value;
-                          const mat = materials.find(m => {
-                            const compositeName = ${m.partName || m.name};
-                            return compositeName === val || m.partName === val || m.name === val;
-                          });
-                          const newItems = [...formData.items];
-                          newItems[index].materialName = mat ? (mat.partName || mat.name) : val;
-                          newItems[index].materialId = mat ? mat.name : newItems[index].materialId;
-                          setFormData({...formData, items: newItems});
-                        }}
-                        placeholder="輸入/選擇品名"
-                      />
-                      <datalist id={mat-name-}>
-                        {materials.filter(m => !item.category || m.category === item.category).map(m => (
-                          <option key={m.id} value={${m.partName || m.name}} />
-                        ))}
-                      </datalist>
-                    </div>
-                    
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">不良品數量</Label>
-                      <Input type="number" min="0" value={item.quantity} onChange={e => {
-                        const newItems = [...formData.items];
-                        newItems[index].quantity = e.target.value ? Number(e.target.value) : '';
-                        setFormData({...formData, items: newItems});
-                      }} className="h-8 text-xs" placeholder="數量" />
-                    </div>
-                    
-                    <div className="col-span-6 space-y-1 relative">
-                      <div className="flex justify-between items-center">
-                        <Label className="text-xs">不良情況</Label>
-                        <Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setShowPhrases(!showPhrases)}>
-                          <ListPlus className="w-3 h-3 mr-1" /> 常用內容
-                        </Button>
-                      </div>
-                      <Input value={item.condition} onChange={e => {
-                        const newItems = [...formData.items];
-                        newItems[index].condition = e.target.value;
-                        setFormData({...formData, items: newItems});
-                      }} className="h-8 text-xs" placeholder="描述不良情況" />
-                      
-                      {showPhrases && (
-                        <div className="absolute right-0 top-12 z-20 w-64 bg-white border rounded-md shadow-lg p-2">
-                          <div className="flex gap-2 mb-2">
-                            <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用內容..." className="h-7 text-xs" />
-                            <Button size="sm" onClick={addPhrase} className="h-7 px-2">新增</Button>
-                          </div>
-                          <div className="max-h-40 overflow-y-auto space-y-1">
-                            {phrases.map((p, i) => (
-                              <div key={i} className="flex justify-between items-center bg-slate-50 p-1 rounded group">
-                                {editingPhraseIndex === i ? (
-                                  <Input 
-                                    value={editPhraseText} 
-                                    onChange={e => setEditPhraseText(e.target.value)} 
-                                    onKeyDown={e => { if (e.key === "Enter") handleSaveEditPhrase(); }} 
-                                    autoFocus
-                                    className="h-7 text-xs flex-1"
-                                  />
-                                ) : (
-                                  <span className="text-xs cursor-pointer flex-1" onClick={() => {
-                                    const newItems = [...formData.items];
-                                    newItems[index].condition = newItems[index].condition ? newItems[index].condition + '，' + p : p;
-                                    setFormData({...formData, items: newItems});
-                                    setShowPhrases(false);
-                                  }}>{i + 1}. {p}</span>
-                                )}
-                                <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {editingPhraseIndex === i ? (
-                                    <>
-                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600" onClick={handleSaveEditPhrase}>
-                                        <Check className="w-3 h-3" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingPhraseIndex(null)}>
-                                        <X className="w-3 h-3" />
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-600" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(p); }}>
-                                        <Pencil className="w-3 h-3" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500" onClick={() => removePhrase(p)}>
-                                        <Trash2 className="w-3 h-3" />
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">製令編號</Label>
-                      <Input value={item.workOrder} onChange={e => {
-                        const newItems = [...formData.items];
-                        newItems[index].workOrder = e.target.value;
-                        setFormData({...formData, items: newItems});
-                      }} className="h-8 text-xs" placeholder="製令編號" />
-                    </div>
-                    
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">製令數量</Label>
-                      <Input type="number" min="0" value={item.workOrderQuantity} onChange={e => {
-                        const newItems = [...formData.items];
-                        newItems[index].workOrderQuantity = e.target.value ? Number(e.target.value) : '';
-                        setFormData({...formData, items: newItems});
-                      }} className="h-8 text-xs" placeholder="製令數量" />
-                    </div>
-                    
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            
-'''
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">物料分類</Label>'''
+content = content.replace(head_type_col, new_head_type_col)
 
-new_content = content[:dialog_start] + replacement + content[dialog_buttons_start:]
+# Fix col spans to fit headType (added col-span-2, so we need to reduce something else. 
+# Currently: category(2) + id(3) + name(4) + qty(3) = 12. 
+# We need to make room. 
+# New: headType(2) + category(2) + id(3) + name(3) + qty(2) = 12.
+col_id = '''<div className="col-span-3 space-y-1">
+                      <Label className="text-xs">物料品號</Label>'''
+col_name = '''<div className="col-span-4 space-y-1">
+                      <Label className="text-xs">物料品名</Label>'''
+col_qty = '''<div className="col-span-3 space-y-1">
+                      <Label className="text-xs">不良品數量</Label>'''
+
+content = content.replace(col_name, col_name.replace("col-span-4", "col-span-3"))
+content = content.replace(col_qty, col_qty.replace("col-span-3", "col-span-2"))
+
+# 3. Add total items count in modal
+item_title = '''<h3 className="font-bold text-lg">不良品項目</h3>'''
+new_item_title = '''<h3 className="font-bold text-lg">不良品項目 <span className="text-sm font-normal text-muted-foreground">(共 {formData.items.length} 項)</span></h3>'''
+content = content.replace(item_title, new_item_title)
+
+# 4. Fix table to show forms
+table_start = content.find('<Table>')
+table_end = content.find('</Table>') + len('</Table>')
+new_table = '''<Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-24">操作</TableHead>
+                <TableHead className="w-16">序號</TableHead>
+                <TableHead className="w-32">單號</TableHead>
+                <TableHead className="w-32">日期</TableHead>
+                <TableHead className="w-24">發現人員</TableHead>
+                <TableHead className="w-24 text-center">項目總數</TableHead>
+                <TableHead>不良品內容</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={7} className="text-center h-24">載入中...</TableCell></TableRow>
+              ) : paginatedData.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
+              ) : (
+                paginatedData.map((form, index) => {
+                  return (
+                    <TableRow key={form.formId}>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(form)}>編輯</Button>
+                          <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmFormId(form.formId)}>刪除</Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                      <TableCell className="font-bold">{form.formId}</TableCell>
+                      <TableCell>{form.date}</TableCell>
+                      <TableCell>{form.discoverer}</TableCell>
+                      <TableCell className="text-center font-bold text-red-600">{form.items.length}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1.5 py-1">
+                          {form.items.map((item, idx) => (
+                            <div key={idx} className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
+                              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
+                              {item.headType && (
+                                <span className={px-1.5 py-0.5 text-[10px] rounded font-bold border }>
+                                  {item.headType}
+                                </span>
+                              )}
+                              <span className="text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 border border-red-100 rounded">缺 {item.quantity || 0} PCS</span>
+                              {item.condition && <span className="text-xs text-muted-foreground">({item.condition})</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>'''
+
+content = content[:table_start] + new_table + content[table_end:]
+
+# Replace setDeleteConfirmItem(defect) with setDeleteConfirmFormId(defect.formId) if it exists.
+# We already did it in the new table. Wait, we also need to fix the delete dialog logic!
+dialog_delete = '''<Button variant="destructive" onClick={() => { if(deleteConfirmItem?.id) handleDelete(deleteConfirmItem.id); }}>確認刪除</Button>'''
+new_dialog_delete = '''<Button variant="destructive" onClick={() => { if(deleteConfirmFormId) handleDelete(deleteConfirmFormId); }}>確認刪除</Button>'''
+content = content.replace(dialog_delete, new_dialog_delete)
+
+dialog_delete_text = '''確定要刪除不良品單號 [{deleteConfirmItem?.formId}] 嗎？此動作無法復原。'''
+new_dialog_delete_text = '''確定要刪除不良品單號 [{deleteConfirmFormId}] 嗎？此動作無法復原。'''
+content = content.replace(dialog_delete_text, new_dialog_delete_text)
+
+dialog_open = '''<Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>'''
+new_dialog_open = '''<Dialog open={!!deleteConfirmFormId} onOpenChange={(open) => !open && setDeleteConfirmFormId(null)}>'''
+content = content.replace(dialog_open, new_dialog_open)
+
+dialog_cancel = '''<Button variant="outline" onClick={() => setDeleteConfirmItem(null)}>取消</Button>'''
+new_dialog_cancel = '''<Button variant="outline" onClick={() => setDeleteConfirmFormId(null)}>取消</Button>'''
+content = content.replace(dialog_cancel, new_dialog_cancel)
+
+filtered_defects_count = '''符合條件共 {filteredDefects.length} 筆資料'''
+new_filtered_defects_count = '''符合條件共 {filteredForms.length} 筆資料'''
+content = content.replace(filtered_defects_count, new_filtered_defects_count)
 
 with open('src/pages/Defective.tsx', 'w', encoding='utf-8') as f:
-    f.write(new_content)
+    f.write(content)
+

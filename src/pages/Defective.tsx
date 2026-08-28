@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getCollection, addDocument, deleteDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ export type Defect = {
   workOrder?: string;
   workOrderQuantity?: number;
   category?: string;
+  headType?: string;
   createdAt?: string;
 };
 
@@ -33,9 +34,11 @@ export type DefectItemState = {
   workOrder: string;
   workOrderQuantity: number | '';
   category: string;
+  headType: string;
 };
 
 export type DefectFormState = {
+  id?: string; // We don't strictly need a single id for a form in a flat DB, but good to have
   formId: string;
   date: string;
   discoverer: string;
@@ -49,7 +52,7 @@ export default function DefectivePage() {
   const [staffList, setStaffList] = useState<any[]>([]);
   
   const [isOpen, setIsOpen] = useState(false);
-  const [deleteConfirmItem, setDeleteConfirmItem] = useState<Defect | null>(null);
+  const [deleteConfirmFormId, setDeleteConfirmFormId] = useState<string | null>(null);
   
   const defaultItem: DefectItemState = {
     materialId: '',
@@ -58,7 +61,8 @@ export default function DefectivePage() {
     quantity: '',
     workOrder: '',
     workOrderQuantity: '',
-    category: ''
+    category: '',
+    headType: ''
   };
 
   const [formData, setFormData] = useState<DefectFormState>({
@@ -70,8 +74,8 @@ export default function DefectivePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   
   // Quick Phrases
+  const [activePhraseIndex, setActivePhraseIndex] = useState<number | null>(null);
   const [phrases, setPhrases] = useState<string[]>([]);
-  const [showPhrases, setShowPhrases] = useState(false);
   const [newPhrase, setNewPhrase] = useState('');
   const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
   const [editPhraseText, setEditPhraseText] = useState('');
@@ -184,6 +188,7 @@ export default function DefectivePage() {
           materialId: item.materialId,
           materialName: item.materialName,
           category: item.category || '未分類',
+          headType: item.headType || '',
           condition: item.condition,
           quantity: item.quantity === '' ? 0 : Number(item.quantity),
           workOrder: item.workOrder,
@@ -198,9 +203,12 @@ export default function DefectivePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteDocument('defects', id);
-    setDeleteConfirmItem(null);
+  const handleDelete = async (formId: string) => {
+    const existingItems = defects.filter(d => d.formId === formId);
+    for (const item of existingItems) {
+      if (item.id) await deleteDocument('defects', item.id);
+    }
+    setDeleteConfirmFormId(null);
     loadData();
   };
   
@@ -215,64 +223,93 @@ export default function DefectivePage() {
     setIsOpen(true);
   };
   
-  const handleEdit = (defect: Defect) => {
-    // Find all defects that share the same formId
-    const group = defects.filter(d => d.formId === defect.formId);
-    
-    setFormData({
-      formId: defect.formId,
-      date: defect.date,
-      discoverer: defect.discoverer,
-      items: group.map(d => {
-        const mat = materials.find(m => m.name === d.materialId);
-        return {
-          id: d.id,
-          materialId: d.materialId,
-          materialName: d.materialName,
-          category: d.category || mat?.category || '',
-          condition: d.condition,
-          quantity: d.quantity ?? '',
-          workOrder: d.workOrder || '',
-          workOrderQuantity: d.workOrderQuantity ?? ''
-        };
-      })
-    });
+  const handleEdit = (defectGroup: DefectFormState) => {
+    setFormData(defectGroup);
     // Use formId as the editingId to indicate we are in edit mode
-    setEditingId(defect.formId);
+    setEditingId(defectGroup.formId);
     setIsOpen(true);
   };
 
-  const filteredDefects = defects.filter(d => {
-    if (filterStartDate && d.date < filterStartDate) return false;
-    if (filterEndDate && d.date > filterEndDate) return false;
-    if (filterMaterialId && !d.materialId.toLowerCase().includes(filterMaterialId.toLowerCase())) return false;
-    if (filterMaterialName && !d.materialName.toLowerCase().includes(filterMaterialName.toLowerCase())) return false;
-    if (filterDiscoverer !== 'all' && d.discoverer !== filterDiscoverer) return false;
-    if (filterCondition && !d.condition.toLowerCase().includes(filterCondition.toLowerCase())) return false;
+  const groupedForms = useMemo(() => {
+    const formsMap = new Map<string, DefectFormState>();
+    
+    defects.forEach(d => {
+      if (!formsMap.has(d.formId)) {
+        formsMap.set(d.formId, {
+          formId: d.formId,
+          date: d.date,
+          discoverer: d.discoverer,
+          items: []
+        });
+      }
+      const form = formsMap.get(d.formId)!;
+      const mat = materials.find(m => m.name === d.materialId);
+      form.items.push({
+        id: d.id,
+        materialId: d.materialId,
+        materialName: d.materialName,
+        category: d.category || mat?.category || '',
+        headType: d.headType || mat?.headType || '',
+        condition: d.condition,
+        quantity: d.quantity ?? '',
+        workOrder: d.workOrder || '',
+        workOrderQuantity: d.workOrderQuantity ?? ''
+      });
+    });
+
+    return Array.from(formsMap.values());
+  }, [defects, materials]);
+
+  const filteredForms = groupedForms.filter(f => {
+    if (filterStartDate && f.date < filterStartDate) return false;
+    if (filterEndDate && f.date > filterEndDate) return false;
+    if (filterDiscoverer !== 'all' && f.discoverer !== filterDiscoverer) return false;
+    
+    // Check items for material/condition filters
+    if (filterMaterialId || filterMaterialName || filterCondition) {
+      const hasMatchingItem = f.items.some(item => {
+        let match = true;
+        if (filterMaterialId && !item.materialId.toLowerCase().includes(filterMaterialId.toLowerCase())) match = false;
+        if (filterMaterialName && !item.materialName.toLowerCase().includes(filterMaterialName.toLowerCase())) match = false;
+        if (filterCondition && !item.condition.toLowerCase().includes(filterCondition.toLowerCase())) match = false;
+        return match;
+      });
+      if (!hasMatchingItem) return false;
+    }
+    
     return true;
   }).sort((a, b) => {
     let comparison = 0;
-    if (a[sortField] > b[sortField]) comparison = 1;
-    if (a[sortField] < b[sortField]) comparison = -1;
+    // For materialId and materialName, we sort by the first item's properties
+    const valA = sortField === 'materialId' || sortField === 'materialName' 
+      ? (a.items[0]?.[sortField as keyof DefectItemState] || '') 
+      : (a[sortField as keyof DefectFormState] || '');
+      
+    const valB = sortField === 'materialId' || sortField === 'materialName' 
+      ? (b.items[0]?.[sortField as keyof DefectItemState] || '') 
+      : (b[sortField as keyof DefectFormState] || '');
+
+    if (valA > valB) comparison = 1;
+    if (valA < valB) comparison = -1;
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
-  const totalPages = Math.ceil(filteredDefects.length / pageSize) || 1;
-  const paginatedData = filteredDefects.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(filteredForms.length / pageSize) || 1;
+  const paginatedData = filteredForms.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="container mx-auto p-4 max-w-7xl relative">
-      <Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>
+      <Dialog open={!!deleteConfirmFormId} onOpenChange={(open) => !open && setDeleteConfirmFormId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            確定要刪除不良品單號 [{deleteConfirmItem?.formId}] 嗎？此動作無法復原。
+            確定要刪除不良品單號 [{deleteConfirmFormId}] 嗎？此動作無法復原。
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirmItem(null)}>取消</Button>
-            <Button variant="destructive" onClick={() => { if(deleteConfirmItem?.id) handleDelete(deleteConfirmItem.id); }}>確認刪除</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirmFormId(null)}>取消</Button>
+            <Button variant="destructive" onClick={() => { if(deleteConfirmFormId) handleDelete(deleteConfirmFormId); }}>確認刪除</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -321,7 +358,7 @@ export default function DefectivePage() {
             
             <div className="space-y-4 py-2">
               <div className="flex justify-between items-center">
-                <h3 className="font-bold text-lg">不良品項目</h3>
+                <h3 className="font-bold text-lg">不良品項目 <span className="text-sm font-normal text-muted-foreground">(共 {formData.items.length} 項)</span></h3>
                 <Button variant="outline" size="sm" onClick={() => setFormData({...formData, items: [...formData.items, { ...defaultItem }]})}>
                   <Plus className="w-4 h-4 mr-1" /> 新增項目
                 </Button>
@@ -339,6 +376,21 @@ export default function DefectivePage() {
                     </Button>
                   )}
                   <CardContent className="p-4 grid grid-cols-12 gap-3">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">頭型</Label>
+                      <Select value={item.headType} onValueChange={(val) => {
+                        const newItems = [...formData.items];
+                        newItems[index].headType = val;
+                        setFormData({...formData, items: newItems});
+                      }}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A型">A型</SelectItem>
+                          <SelectItem value="B型">B型</SelectItem>
+                          <SelectItem value="其他">其他</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">物料分類</Label>
                       <Select value={item.category} onValueChange={(val) => {
@@ -371,18 +423,19 @@ export default function DefectivePage() {
                           const newItems = [...formData.items];
                           newItems[index].materialId = mat ? mat.name : val;
                           newItems[index].materialName = mat ? (mat.partName || mat.name) : newItems[index].materialName;
+                          if (mat?.headType) newItems[index].headType = mat.headType;
                           setFormData({...formData, items: newItems});
                         }}
                         placeholder="輸入/選擇品號"
                       />
                       <datalist id={`mat-id-${index}`}>
-                        {materials.filter(m => !item.category || m.category === item.category).map(m => (
+                        {materials.filter(m => (!item.category || m.category === item.category) && (!item.headType || item.headType === '其他' || m.headType === item.headType)).map(m => (
                           <option key={m.id} value={`${m.name}${m.headType ? " (" + m.headType + ")" : ""}`} />
                         ))}
                       </datalist>
                     </div>
                     
-                    <div className="col-span-4 space-y-1">
+                    <div className="col-span-3 space-y-1">
                       <Label className="text-xs">物料品名</Label>
                       <Input 
                         list={`mat-name-${index}`}
@@ -397,18 +450,19 @@ export default function DefectivePage() {
                           const newItems = [...formData.items];
                           newItems[index].materialName = mat ? (mat.partName || mat.name) : val;
                           newItems[index].materialId = mat ? mat.name : newItems[index].materialId;
+                          if (mat?.headType) newItems[index].headType = mat.headType;
                           setFormData({...formData, items: newItems});
                         }}
                         placeholder="輸入/選擇品名"
                       />
                       <datalist id={`mat-name-${index}`}>
-                        {materials.filter(m => !item.category || m.category === item.category).map(m => (
+                        {materials.filter(m => (!item.category || m.category === item.category) && (!item.headType || item.headType === '其他' || m.headType === item.headType)).map(m => (
                           <option key={m.id} value={`${m.partName || m.name}${m.headType ? " (" + m.headType + ")" : ""}`} />
                         ))}
                       </datalist>
                     </div>
                     
-                    <div className="col-span-3 space-y-1">
+                    <div className="col-span-2 space-y-1">
                       <Label className="text-xs">不良品數量</Label>
                       <Input type="number" min="0" value={item.quantity} onChange={e => {
                         const newItems = [...formData.items];
@@ -420,7 +474,7 @@ export default function DefectivePage() {
                     <div className="col-span-6 space-y-1 relative">
                       <div className="flex justify-between items-center">
                         <Label className="text-xs">不良情況</Label>
-                        <Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setShowPhrases(!showPhrases)}>
+                        <Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setActivePhraseIndex(activePhraseIndex === index ? null : index)}>
                           <ListPlus className="w-3 h-3 mr-1" /> 常用內容
                         </Button>
                       </div>
@@ -430,7 +484,7 @@ export default function DefectivePage() {
                         setFormData({...formData, items: newItems});
                       }} className="h-8 text-xs" placeholder="描述不良情況" />
                       
-                      {showPhrases && (
+                      {activePhraseIndex === index && (
                         <div className="absolute right-0 top-12 z-20 w-64 bg-white border rounded-md shadow-lg p-2">
                           <div className="flex gap-2 mb-2">
                             <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用內容..." className="h-7 text-xs" />
@@ -452,7 +506,7 @@ export default function DefectivePage() {
                                     const newItems = [...formData.items];
                                     newItems[index].condition = newItems[index].condition ? newItems[index].condition + '，' + p : p;
                                     setFormData({...formData, items: newItems});
-                                    setShowPhrases(false);
+                                    setActivePhraseIndex(null);
                                   }}>{i + 1}. {p}</span>
                                 )}
                                 <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -558,7 +612,7 @@ export default function DefectivePage() {
           <div className="flex justify-between items-center p-4 border-b bg-muted/20">
             <div className="font-bold flex items-center gap-4">
               不良品單列表
-              <div className="text-sm font-normal text-muted-foreground">符合條件共 {filteredDefects.length} 筆資料</div>
+              <div className="text-sm font-normal text-muted-foreground">符合條件共 {filteredForms.length} 筆資料</div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -610,51 +664,51 @@ export default function DefectivePage() {
               <TableRow>
                 <TableHead className="w-24">操作</TableHead>
                 <TableHead className="w-16">序號</TableHead>
-                <TableHead>單號</TableHead>
-                <TableHead>日期</TableHead>
-                <TableHead>物料品號</TableHead>
-                <TableHead>物料品名</TableHead>
-                <TableHead>頭型</TableHead>
-                <TableHead>數量</TableHead>
-                <TableHead>製令編號</TableHead>
-                <TableHead>製令數量</TableHead>
-                <TableHead>發現人員</TableHead>
-                <TableHead>不良情況</TableHead>
+                <TableHead className="w-32">單號</TableHead>
+                <TableHead className="w-32">日期</TableHead>
+                <TableHead className="w-24">發現人員</TableHead>
+                <TableHead className="w-24 text-center">項目總數</TableHead>
+                <TableHead>不良品內容</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={12} className="text-center h-24">載入中...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">載入中...</TableCell></TableRow>
               ) : paginatedData.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
               ) : (
-                paginatedData.map((defect, index) => {
-                  const mat = materials.find(m => m.name === defect.materialId);
+                paginatedData.map((form, index) => {
                   return (
-                    <TableRow key={defect.id}>
+                    <TableRow key={form.formId}>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(defect)}>編輯</Button>
-                          <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmItem(defect)}>刪除</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(form)}>編輯</Button>
+                          <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmFormId(form.formId)}>刪除</Button>
                         </div>
                       </TableCell>
                       <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
-                      <TableCell className="font-bold">{defect.formId}</TableCell>
-                      <TableCell>{defect.date}</TableCell>
-                      <TableCell><span className="font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">{defect.materialId}</span></TableCell>
-                      <TableCell><span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded shadow-sm">{defect.materialName}</span></TableCell>
+                      <TableCell className="font-bold">{form.formId}</TableCell>
+                      <TableCell>{form.date}</TableCell>
+                      <TableCell>{form.discoverer}</TableCell>
+                      <TableCell className="text-center font-bold text-red-600 text-lg">{form.items.length}</TableCell>
                       <TableCell>
-                        {mat?.headType ? (
-                          <span className={`px-2 py-1 text-xs rounded font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                            {mat.headType}
-                          </span>
-                        ) : '-'}
+                        <div className="flex flex-col gap-1.5 py-1">
+                          {form.items.map((item, idx) => (
+                            <div key={idx} className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
+                              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
+                              {item.headType && (
+                                <span className={`px-1.5 py-0.5 text-[10px] rounded font-bold border ${item.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : item.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                  {item.headType}
+                                </span>
+                              )}
+                              <span className="text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 border border-red-100 rounded">不良 {item.quantity || 0} PCS</span>
+                              {item.workOrder && <span className="text-xs text-slate-600 bg-slate-100 px-1.5 py-0.5 border border-slate-200 rounded">製令: {item.workOrder} ({item.workOrderQuantity})</span>}
+                              {item.condition && <span className="text-xs text-muted-foreground">({item.condition})</span>}
+                            </div>
+                          ))}
+                        </div>
                       </TableCell>
-                      <TableCell>{defect.quantity || '-'}</TableCell>
-                      <TableCell>{defect.workOrder || '-'}</TableCell>
-                      <TableCell>{defect.workOrderQuantity || '-'}</TableCell>
-                      <TableCell>{defect.discoverer}</TableCell>
-                      <TableCell>{defect.condition}</TableCell>
                     </TableRow>
                   );
                 })
@@ -662,7 +716,7 @@ export default function DefectivePage() {
             </TableBody>
           </Table>
           <div className="flex justify-between items-center p-4 border-t">
-            <div className="text-sm text-muted-foreground">符合條件共 {filteredDefects.length} 筆資料</div>
+            <div className="text-sm text-muted-foreground">符合條件共 {filteredForms.length} 筆資料</div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
               <span className="text-sm">第 {page} / {totalPages} 頁</span>
