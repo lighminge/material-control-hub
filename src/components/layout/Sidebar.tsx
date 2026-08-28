@@ -14,7 +14,7 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="w-64 bg-background flex flex-col h-full shadow-[6px_0_12px_#e0dcd1]">
+    <aside className="w-72 bg-background flex flex-col h-full shadow-[6px_0_12px_#e0dcd1] pl-10">
       <div className="h-16 flex items-center justify-center px-4 font-bold text-xl text-primary">
         Material Hub
       </div>

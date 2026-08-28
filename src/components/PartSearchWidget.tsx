@@ -112,14 +112,29 @@ export default function PartSearchWidget() {
 
   if (!isOpen) {
     return (
-      <Button 
-        onClick={() => setIsOpen(true)}
-        className="fixed z-50 rounded-full w-12 h-12 shadow-lg flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white"
-        style={{ left: pos.x, top: pos.y }}
+      <div 
+        className="fixed z-50 flex flex-col items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white shadow-[2px_0_12px_rgba(0,0,0,0.2)] rounded-r-xl cursor-move transition-colors"
+        style={{ left: 0, top: pos.y, width: '40px', padding: '12px 4px' }}
         title="開啟品號查詢小工具"
+        onMouseDown={(e) => {
+          if ((e.target as HTMLElement).closest('.no-drag')) return;
+          setIsDragging(true);
+          setRel({ x: 0, y: e.pageY - pos.y }); // only drag Y when closed? Or let it drag both? If they want it on the edge, we can just track Y, but let's just track both so it doesn't jump.
+        }}
+        onClick={() => {
+          // If we are just clicking (not dragging), open it
+          if (!isDragging) setIsOpen(true);
+        }}
       >
-        <Search className="w-5 h-5" />
-      </Button>
+        <Search className="w-5 h-5 mb-2 no-drag" onClick={() => setIsOpen(true)} />
+        <span 
+          className="font-bold text-sm tracking-widest no-drag" 
+          style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}
+          onClick={() => setIsOpen(true)}
+        >
+          品號查詢
+        </span>
+      </div>
     );
   }
 
