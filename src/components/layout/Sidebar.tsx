@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, ClipboardList, ShieldAlert, PieChart, AlarmClock, FileWarning } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardList, ShieldAlert, PieChart, AlarmClock, FileWarning, Package } from 'lucide-react';
 
 const navItems = [
   { name: '儀表板', path: '/', icon: LayoutDashboard },
   { name: '領料單管理', path: '/requisitions', icon: ClipboardList },
   { name: '物料管制', path: '/controls', icon: ShieldAlert },
-  { name: '物料庫存', path: '/materials', icon: ClipboardList },
+  { name: '物料庫存', path: '/materials', icon: Package },
   { name: '不良品管理', path: '/defective', icon: FileWarning },
   { name: '稽催作業', path: '/expediting', icon: AlarmClock },
   { name: '統計作業', path: '/statistics', icon: PieChart },

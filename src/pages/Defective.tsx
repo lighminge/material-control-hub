@@ -23,8 +23,11 @@ export type Defect = {
 export default function DefectivePage() {
   const [defects, setDefects] = useState<Defect[]>([]);
   const [loading, setLoading] = useState(true);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<any[]>([]);
   
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [formData, setFormData] = useState<Defect>({
     formId: '',
     date: new Date().toISOString().split('T')[0],
@@ -44,6 +47,14 @@ export default function DefectivePage() {
   
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
   
+  // Filters
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterMaterialId, setFilterMaterialId] = useState('');
+  const [filterMaterialName, setFilterMaterialName] = useState('');
+  const [filterDiscoverer, setFilterDiscoverer] = useState('all');
+  const [filterCondition, setFilterCondition] = useState('');
+  
   // Pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -51,7 +62,13 @@ export default function DefectivePage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getCollection('defects');
+      const [data, matsData, staffsData] = await Promise.all([
+        getCollection('defects'),
+        getCollection('materials'),
+        getCollection('staff')
+      ]);
+      setMaterials(matsData);
+      setStaffList(staffsData);
       const sorted = (data as Defect[]).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setDefects(sorted);
       
@@ -100,7 +117,9 @@ export default function DefectivePage() {
   };
 
   const removePhrase = (phrase: string) => {
-    savePhrases(phrases.filter(p => p !== phrase));
+    if (confirm('確定要刪除這筆常用內容嗎？')) {
+      savePhrases(phrases.filter(p => p !== phrase));
+    }
   };
 
   const handleSave = async () => {
@@ -129,6 +148,7 @@ export default function DefectivePage() {
   };
   
   const openNewForm = () => {
+    setSelectedCategory('');
     setFormData({
       formId: '',
       date: new Date().toISOString().split('T')[0],
@@ -142,13 +162,25 @@ export default function DefectivePage() {
   };
   
   const handleEdit = (defect: Defect) => {
+    const mat = materials.find(m => m.id === defect.materialId);
+    setSelectedCategory(mat?.category || '');
     setFormData(defect);
     setEditingId(defect.id!);
     setIsOpen(true);
   };
 
-  const totalPages = Math.ceil(defects.length / pageSize) || 1;
-  const paginatedData = defects.slice((page - 1) * pageSize, page * pageSize);
+  const filteredDefects = defects.filter(d => {
+    if (filterStartDate && d.date < filterStartDate) return false;
+    if (filterEndDate && d.date > filterEndDate) return false;
+    if (filterMaterialId && !d.materialId.toLowerCase().includes(filterMaterialId.toLowerCase())) return false;
+    if (filterMaterialName && !d.materialName.toLowerCase().includes(filterMaterialName.toLowerCase())) return false;
+    if (filterDiscoverer !== 'all' && d.discoverer !== filterDiscoverer) return false;
+    if (filterCondition && !d.condition.toLowerCase().includes(filterCondition.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredDefects.length / pageSize) || 1;
+  const paginatedData = filteredDefects.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="container mx-auto p-4 max-w-7xl relative">
@@ -180,19 +212,51 @@ export default function DefectivePage() {
               </div>
               <div className="space-y-2">
                 <Label>日期</Label>
-                <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} onClick={(e: any) => e.target.showPicker?.()} />
+              </div>
+              <div className="space-y-2">
+                <Label>物料分類</Label>
+                <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setFormData({...formData, materialId: '', materialName: ''}); }}>
+                  <SelectTrigger><SelectValue placeholder="選擇分類" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="未分類">未分類</SelectItem>
+                    <SelectItem value="TKW">TKW</SelectItem>
+                    <SelectItem value="夾鉗">夾鉗</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>物料品號</Label>
-                <Input value={formData.materialId} onChange={e => setFormData({...formData, materialId: e.target.value})} />
+                <Select value={formData.materialId} onValueChange={(val) => { const mat = materials.find(m => m.id === val); if (mat) setFormData({...formData, materialId: mat.id, materialName: mat.partName || mat.name}); }}>
+                  <SelectTrigger><SelectValue placeholder="選擇品號" /></SelectTrigger>
+                  <SelectContent>
+                    {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>物料品名</Label>
-                <Input value={formData.materialName} onChange={e => setFormData({...formData, materialName: e.target.value})} />
+                <Select value={formData.materialId} onValueChange={(val) => { const mat = materials.find(m => m.id === val); if (mat) setFormData({...formData, materialId: mat.id, materialName: mat.partName || mat.name}); }}>
+                  <SelectTrigger><SelectValue placeholder="選擇品名" /></SelectTrigger>
+                  <SelectContent>
+                    {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
+                      <SelectItem key={m.id} value={m.id}>{m.partName || m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>發現人員</Label>
-                <Input value={formData.discoverer} onChange={e => setFormData({...formData, discoverer: e.target.value})} />
+                <Select value={formData.discoverer} onValueChange={val => setFormData({...formData, discoverer: val})}>
+                  <SelectTrigger><SelectValue placeholder="選擇發現人員" /></SelectTrigger>
+                  <SelectContent>
+                    {staffList.filter(s => s.permissions?.includes('移印') || s.permissions?.includes('品檢')).map(s => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="col-span-2 space-y-2 relative">
                 <div className="flex justify-between items-center">
@@ -222,7 +286,7 @@ export default function DefectivePage() {
                             <span className="text-xs cursor-pointer flex-1" onClick={() => {
                               setFormData({...formData, condition: formData.condition ? formData.condition + '，' + p : p});
                               setShowPhrases(false);
-                            }}>{p}</span>
+                            }}>{i + 1}. {p}</span>
                           )}
                           <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {editingPhraseIndex === i ? (
@@ -266,10 +330,51 @@ export default function DefectivePage() {
       
       <Card>
         <CardContent className="p-0">
+          <div className="flex flex-col gap-4 p-4 border-b bg-muted/10">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label>日期(起):</Label>
+                <Input type="date" value={filterStartDate} onChange={e => {setFilterStartDate(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>日期(迄):</Label>
+                <Input type="date" value={filterEndDate} onChange={e => {setFilterEndDate(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>品號:</Label>
+                <Input value={filterMaterialId} onChange={e => {setFilterMaterialId(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" placeholder="關鍵字..." />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>品名:</Label>
+                <Input value={filterMaterialName} onChange={e => {setFilterMaterialName(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" placeholder="關鍵字..." />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>不良情況:</Label>
+                <Input value={filterCondition} onChange={e => {setFilterCondition(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" placeholder="關鍵字..." />
+              </div>
+              <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
+                <Label>發現人員:</Label>
+                <Select value={filterDiscoverer} onValueChange={val => {setFilterDiscoverer(val); setPage(1);}}>
+                  <SelectTrigger className="w-32 h-8 text-xs">
+                    <SelectValue placeholder="全部" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    {staffList.filter(s => s.permissions?.includes('移印') || s.permissions?.includes('品檢')).map(s => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => {
+                setFilterStartDate(''); setFilterEndDate(''); setFilterMaterialId(''); setFilterMaterialName(''); setFilterDiscoverer('all'); setFilterCondition(''); setPage(1);
+              }}>清除</Button>
+            </div>
+          </div>
           <div className="flex justify-between items-center p-4 border-b bg-muted/20">
             <div className="font-bold flex items-center gap-4">
               不良品單列表
-              <div className="text-sm font-normal text-muted-foreground">總共 {defects.length} 筆資料</div>
+              <div className="text-sm font-normal text-muted-foreground">符合條件共 {filteredDefects.length} 筆資料</div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -297,6 +402,7 @@ export default function DefectivePage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-24">操作</TableHead>
+                <TableHead className="w-16">序號</TableHead>
                 <TableHead>單號</TableHead>
                 <TableHead>日期</TableHead>
                 <TableHead>物料品號</TableHead>
@@ -307,11 +413,11 @@ export default function DefectivePage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">載入中...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center h-24">載入中...</TableCell></TableRow>
               ) : paginatedData.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
               ) : (
-                paginatedData.map(defect => (
+                paginatedData.map((defect, index) => (
                   <TableRow key={defect.id}>
                     <TableCell>
                       <div className="flex gap-2">
@@ -319,6 +425,7 @@ export default function DefectivePage() {
                         <Button variant="destructive" size="sm" onClick={() => handleDelete(defect.id!)}>刪除</Button>
                       </div>
                     </TableCell>
+                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="font-bold">{defect.formId}</TableCell>
                     <TableCell>{defect.date}</TableCell>
                     <TableCell><span className="font-mono bg-slate-100 px-2 py-1 rounded">{defect.materialId}</span></TableCell>
@@ -331,7 +438,7 @@ export default function DefectivePage() {
             </TableBody>
           </Table>
           <div className="flex justify-between items-center p-4 border-t">
-            <div className="text-sm text-muted-foreground">總共 {defects.length} 筆資料</div>
+            <div className="text-sm text-muted-foreground">符合條件共 {filteredDefects.length} 筆資料</div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
               <span className="text-sm">第 {page} / {totalPages} 頁</span>

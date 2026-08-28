@@ -13,6 +13,7 @@ export type Material = {
   id?: string;
   name: string; // Part Number (品號)
   partName?: string; // Part Name (品名)
+  headType?: string; // Head Type (頭型)
   stock: number;
   unit: string;
   category?: string;
@@ -36,6 +37,7 @@ export default function MaterialsPage() {
   const [formData, setFormData] = useState<Material>({
     name: '',
     partName: '',
+    headType: 'A型',
     stock: 0,
     unit: 'PCS',
     category: '未分類'
@@ -110,7 +112,7 @@ export default function MaterialsPage() {
       }
       setIsOpen(false);
       loadData();
-      setFormData({ name: '', partName: '', stock: 0, unit: 'PCS', category: '未分類' });
+      setFormData({ name: '', partName: '', headType: 'A型', stock: 0, unit: 'PCS', category: '未分類' });
       setEditingId(null);
     } catch (error) {
       console.error("Error saving material:", error);
@@ -118,7 +120,7 @@ export default function MaterialsPage() {
   };
 
   const handleEdit = (mat: Material) => {
-    setFormData({ ...mat, category: mat.category || '未分類' });
+    setFormData({ ...mat, category: mat.category || '未分類', headType: mat.headType || 'A型' });
     setEditingId(mat.id || null);
     setIsOpen(true);
   };
@@ -130,7 +132,7 @@ export default function MaterialsPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ name: '', partName: '', stock: 0, unit: 'PCS', category: '未分類' });
+    setFormData({ name: '', partName: '', headType: 'A型', stock: 0, unit: 'PCS', category: '未分類' });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -281,6 +283,19 @@ export default function MaterialsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>頭型</Label>
+                  <Select value={formData.headType || 'A型'} onValueChange={(val) => setFormData({...formData, headType: val})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇頭型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A型">A型</SelectItem>
+                      <SelectItem value="B型">B型</SelectItem>
+                      <SelectItem value="C型">C型</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>庫存數量</Label>
                   <Input 
                     type="number"
@@ -404,6 +419,7 @@ export default function MaterialsPage() {
                 <TableHead>物料分類</TableHead>
                 <TableHead>物料品號</TableHead>
                 <TableHead>物料品名</TableHead>
+                <TableHead>頭型</TableHead>
                 <TableHead>庫存數量</TableHead>
                 <TableHead>單位</TableHead>
               </TableRow>
@@ -411,11 +427,11 @@ export default function MaterialsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">尚無物料資料</TableCell>
+                  <TableCell colSpan={8} className="text-center h-24">尚無物料資料</TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((mat, index) => (
@@ -449,6 +465,11 @@ export default function MaterialsPage() {
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                        {mat.headType || 'A型'}
+                      </span>
                     </TableCell>
                     <TableCell>{mat.stock}</TableCell>
                     <TableCell>{mat.unit}</TableCell>
@@ -558,6 +579,7 @@ export default function MaterialsPage() {
                     <TableHead>物料分類</TableHead>
                     <TableHead>物料品號</TableHead>
                     <TableHead>物料品名</TableHead>
+                    <TableHead>頭型</TableHead>
                     <TableHead>來源管制單號</TableHead>
                     <TableHead>補完/進貨備註</TableHead>
                   </TableRow>
@@ -565,11 +587,11 @@ export default function MaterialsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center h-24">載入中...</TableCell>
+                      <TableCell colSpan={8} className="text-center h-24">載入中...</TableCell>
                     </TableRow>
                   ) : histPaginatedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center h-24">無符合條件的歷程記錄</TableCell>
+                      <TableCell colSpan={8} className="text-center h-24">無符合條件的歷程記錄</TableCell>
                     </TableRow>
                   ) : (
                     histPaginatedData.map((log, index) => {
@@ -600,6 +622,11 @@ export default function MaterialsPage() {
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat?.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat?.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat?.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                              {mat?.headType || 'A型'}
+                            </span>
                           </TableCell>
                           <TableCell>{log.controlId}</TableCell>
                           <TableCell>{log.notes || '-'}</TableCell>

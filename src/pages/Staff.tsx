@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type Staff = {
   id?: string;
@@ -14,6 +15,7 @@ type Staff = {
   gender: string;
   title: string;
   notes: string;
+  permissions?: string[];
 };
 
 export default function StaffPage() {
@@ -29,7 +31,8 @@ export default function StaffPage() {
     name: '',
     gender: '男',
     title: '',
-    notes: ''
+    notes: '',
+    permissions: []
   });
 
   const loadStaff = async () => {
@@ -57,7 +60,7 @@ export default function StaffPage() {
       }
       setIsOpen(false);
       loadStaff();
-      setFormData({ name: '', gender: '男', title: '', notes: '' });
+      setFormData({ name: '', gender: '男', title: '', notes: '', permissions: [] });
       setEditingId(null);
     } catch (error) {
       console.error("Error saving staff:", error);
@@ -79,7 +82,7 @@ export default function StaffPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ name: '', gender: '男', title: '', notes: '' });
+    setFormData({ name: '', gender: '男', title: '', notes: '', permissions: [] });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -152,6 +155,30 @@ export default function StaffPage() {
                     placeholder="其他備註"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>權限</Label>
+                  <div className="flex gap-4 pt-1">
+                    {['備料', '移印', '品檢'].map(perm => (
+                      <div key={perm} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`perm-${perm}`} 
+                          checked={formData.permissions?.includes(perm) || false}
+                          onCheckedChange={(checked) => {
+                            const current = formData.permissions || [];
+                            if (checked) {
+                              setFormData({...formData, permissions: [...current, perm]});
+                            } else {
+                              setFormData({...formData, permissions: current.filter(p => p !== perm)});
+                            }
+                          }}
+                        />
+                        <label htmlFor={`perm-${perm}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                          {perm}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <Button className="w-full" onClick={handleSave}>儲存</Button>
               </div>
             </DialogContent>
@@ -194,17 +221,18 @@ export default function StaffPage() {
                 <TableHead>姓名</TableHead>
                 <TableHead>性別</TableHead>
                 <TableHead>職稱</TableHead>
+                <TableHead>權限</TableHead>
                 <TableHead>備註</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={7} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">尚無人員資料</TableCell>
+                  <TableCell colSpan={7} className="text-center h-24">尚無人員資料</TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((staff, index) => (
@@ -219,6 +247,13 @@ export default function StaffPage() {
                     <TableCell className="font-medium">{staff.name}</TableCell>
                     <TableCell>{staff.gender}</TableCell>
                     <TableCell>{staff.title}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {staff.permissions?.map(p => (
+                          <span key={p} className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">{p}</span>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>{staff.notes}</TableCell>
                   </TableRow>
                 ))

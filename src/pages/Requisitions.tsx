@@ -431,7 +431,7 @@ export default function RequisitionsPage() {
                       <SelectValue placeholder="選擇備料人員" />
                     </SelectTrigger>
                     <SelectContent>
-                      {staffList.map(staff => (
+                      {staffList.filter(s => s.permissions?.includes('備料')).map(staff => (
                         <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
                       ))}
                     </SelectContent>
