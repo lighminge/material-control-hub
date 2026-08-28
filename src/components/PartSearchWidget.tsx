@@ -79,6 +79,16 @@ export default function PartSearchWidget() {
   }, [isOpen, importStatus]);
 
   useEffect(() => {
+    const trimmed = formId.trim();
+    if (trimmed && existingDefects.length > 0) {
+      const matched = existingDefects.find(d => d.formId === trimmed);
+      if (matched && matched.date) {
+        setFormDate(matched.date);
+      }
+    }
+  }, [formId, existingDefects]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (isOpen && widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
         setIsOpen(false);
@@ -149,6 +159,7 @@ export default function PartSearchWidget() {
           discoverer: existing.discoverer,
           materialId: mat.name,
           materialName: mat.partName || '',
+          headType: mat.headType || '',
           category: mat.category || '未分類',
           condition: condition,
           quantity: quantity === '' ? 0 : Number(quantity),
@@ -163,6 +174,7 @@ export default function PartSearchWidget() {
           date: formDate,
           materialId: mat.name,
           materialName: mat.partName || '',
+          headType: mat.headType || '',
           category: mat.category || '未分類',
           condition: condition,
           quantity: quantity === '' ? 0 : Number(quantity),
@@ -359,32 +371,39 @@ export default function PartSearchWidget() {
           {results.length === 0 ? (
             <div className="text-xs text-center text-muted-foreground mt-4">無符合的物料</div>
           ) : (
-            results.map((mat, index) => (
-              <div key={mat.id} className="bg-white border rounded p-2 text-xs shadow-sm space-y-2 relative">
-                <div className="absolute top-2 left-2 text-[10px] text-slate-400 font-mono">{index + 1}.</div>
-                <div className="flex justify-between items-start pl-4">
-                  <div>
-                    <div className="font-bold text-indigo-700">
-                      {mat.partName} 
-                      {mat.headType && (
-                        <span className={`ml-2 text-[10px] px-1 py-0.5 rounded font-normal border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                          {mat.headType}
-                        </span>
-                      )}
+            results.map((mat, index) => {
+              const isExisting = matchedDefects.some(d => d.materialId === mat.name && (d.headType || '') === (mat.headType || ''));
+              return (
+                <div key={mat.id} className={`border rounded p-2 text-xs shadow-sm space-y-2 relative ${isExisting ? 'bg-amber-50 border-amber-300' : 'bg-white'}`}>
+                  <div className={`absolute top-2 left-2 text-[10px] font-mono ${isExisting ? 'text-amber-500' : 'text-slate-400'}`}>{index + 1}.</div>
+                  <div className="flex justify-between items-start pl-4">
+                    <div>
+                      <div className={`font-bold ${isExisting ? 'text-amber-800' : 'text-indigo-700'}`}>
+                        {mat.partName} 
+                        {mat.headType && (
+                          <span className={`ml-2 text-[10px] px-1 py-0.5 rounded font-normal border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                            {mat.headType}
+                          </span>
+                        )}
+                        {isExisting && (
+                          <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-200 text-amber-800 border border-amber-300">
+                            已存在此單
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground flex items-center gap-1">
+                        品號: <span className="font-mono text-slate-800">{mat.name}</span>
+                      </div>
                     </div>
-                    <div className="text-muted-foreground flex items-center gap-1">
-                      品號: <span className="font-mono text-slate-800">{mat.name}</span>
-                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`h-6 px-2 shrink-0 ${isExisting ? 'hover:bg-amber-200 text-amber-700' : ''}`} 
+                      onClick={() => handleCopy(mat.name)}
+                    >
+                      {copiedId === mat.name ? <Check className={`w-3 h-3 ${isExisting ? 'text-amber-600' : 'text-green-500'}`} /> : <Copy className="w-3 h-3" />}
+                    </Button>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2 shrink-0" 
-                    onClick={() => handleCopy(mat.name)}
-                  >
-                    {copiedId === mat.name ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                  </Button>
-                </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -394,7 +413,8 @@ export default function PartSearchWidget() {
                   匯入此品號與品名
                 </Button>
               </div>
-            ))
+            );
+          })
           )}
         </div>
       </CardContent>

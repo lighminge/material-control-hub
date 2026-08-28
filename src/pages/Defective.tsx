@@ -81,6 +81,7 @@ export default function DefectivePage() {
   const [editPhraseText, setEditPhraseText] = useState('');
   
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
   
   // Filters
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -330,6 +331,29 @@ export default function DefectivePage() {
         </div>
       )}
 
+      {itemToDelete !== null && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">確認刪除</h3>
+            </div>
+            <p className="text-slate-600 mb-6 pl-13">確定要刪除此不良品項目嗎？(項目 #{itemToDelete + 1})</p>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setItemToDelete(null)}>取消</Button>
+              <Button variant="destructive" onClick={() => {
+                const newItems = [...formData.items];
+                newItems.splice(itemToDelete, 1);
+                setFormData({...formData, items: newItems});
+                setItemToDelete(null);
+              }}>確定刪除</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-primary">不良品管理</h1>
         <Dialog open={isOpen} onOpenChange={(open) => {
@@ -380,13 +404,7 @@ export default function DefectivePage() {
                       #{index + 1}
                     </div>
                     {formData.items.length > 1 && (
-                      <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-md shadow-sm z-20" onClick={() => {
-                        if (confirm('確定要刪除此不良品項目嗎？')) {
-                          const newItems = [...formData.items];
-                          newItems.splice(index, 1);
-                          setFormData({...formData, items: newItems});
-                        }
-                      }}>
+                      <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-md shadow-sm z-20" onClick={() => setItemToDelete(index)}>
                         <X className="w-5 h-5 stroke-[3px]" />
                       </Button>
                     )}
