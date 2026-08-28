@@ -1,145 +1,93 @@
 import re
 
-with open('src/pages/Defective.tsx', 'r', encoding='utf-8') as f:
+with open('src/pages/Statistics.tsx', 'r', encoding='utf-8') as f:
     content = f.read()
 
-# 1. Fix the phrases popup
-phrase_button = '''<Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setShowPhrases(!showPhrases)}>
-                          <ListPlus className="w-3 h-3 mr-1" /> 常用內容
-                        </Button>'''
-new_phrase_button = '''<Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setActivePhraseIndex(activePhraseIndex === index ? null : index)}>
-                          <ListPlus className="w-3 h-3 mr-1" /> 常用內容
-                        </Button>'''
-content = content.replace(phrase_button, new_phrase_button)
+# Replace return block
+return_block = '''  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
+        <div className="flex items-center gap-3">
+          <PieChart className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">'''
 
-phrase_popup = '''{showPhrases && ('''
-new_phrase_popup = '''{activePhraseIndex === index && ('''
-content = content.replace(phrase_popup, new_phrase_popup)
+new_return_block = '''  return (
+    <Tabs defaultValue="material" className="space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <PieChart className="w-8 h-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
+          </div>
+          <TabsList className="self-start">
+            <TabsTrigger value="material">物料管制統計</TabsTrigger>
+            <TabsTrigger value="defective">不良品統計</TabsTrigger>
+          </TabsList>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3 ml-auto">'''
 
-# 2. Add headType select
-head_type_col = '''<div className="col-span-2 space-y-1">
-                      <Label className="text-xs">物料分類</Label>'''
-new_head_type_col = '''<div className="col-span-2 space-y-1">
-                      <Label className="text-xs">頭型</Label>
-                      <Select value={item.headType} onValueChange={(val) => {
-                        const newItems = [...formData.items];
-                        newItems[index].headType = val;
-                        setFormData({...formData, items: newItems});
-                      }}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A型">A型</SelectItem>
-                          <SelectItem value="B型">B型</SelectItem>
-                          <SelectItem value="其他">其他</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">物料分類</Label>'''
-content = content.replace(head_type_col, new_head_type_col)
+content = content.replace(return_block, new_return_block)
 
-# Fix col spans to fit headType (added col-span-2, so we need to reduce something else. 
-# Currently: category(2) + id(3) + name(4) + qty(3) = 12. 
-# We need to make room. 
-# New: headType(2) + category(2) + id(3) + name(3) + qty(2) = 12.
-col_id = '''<div className="col-span-3 space-y-1">
-                      <Label className="text-xs">物料品號</Label>'''
-col_name = '''<div className="col-span-4 space-y-1">
-                      <Label className="text-xs">物料品名</Label>'''
-col_qty = '''<div className="col-span-3 space-y-1">
-                      <Label className="text-xs">不良品數量</Label>'''
+# We need to wrap the material content in TabsContent
+old_card = '''<Card className="mb-6 shadow-sm border-t-4 border-t-blue-500">'''
+new_card = '''<TabsContent value="material" className="space-y-6">\n      <Card className="mb-6 shadow-sm border-t-4 border-t-blue-500">'''
+content = content.replace(old_card, new_card)
 
-content = content.replace(col_name, col_name.replace("col-span-4", "col-span-3"))
-content = content.replace(col_qty, col_qty.replace("col-span-3", "col-span-2"))
+# And add the defective TabsContent at the very end
+old_end = '''    </div>
+  );
+}'''
+new_end = '''      </TabsContent>
+      
+      <TabsContent value="defective" className="space-y-6">
+        <Card className="shadow-sm border-t-4 border-t-red-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold">查詢條件設定</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label>建單日期(起)</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+            </div>
+            <div className="space-y-2">
+              <Label>建單日期(迄)</Label>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">符合條件的不良品單數量</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-primary">{defectiveStats.formsCount}</div>
+              <p className="text-xs text-muted-foreground mt-2">表單總數</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">符合條件的不良品項目數量</CardTitle>
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-destructive">{defectiveStats.itemsCount}</div>
+              <p className="text-xs text-muted-foreground mt-2">各項不良物料加總</p>
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+    </Tabs>
+  );
+}'''
+content = content.replace(old_end, new_end)
 
-# 3. Add total items count in modal
-item_title = '''<h3 className="font-bold text-lg">不良品項目</h3>'''
-new_item_title = '''<h3 className="font-bold text-lg">不良品項目 <span className="text-sm font-normal text-muted-foreground">(共 {formData.items.length} 項)</span></h3>'''
-content = content.replace(item_title, new_item_title)
-
-# 4. Fix table to show forms
-table_start = content.find('<Table>')
-table_end = content.find('</Table>') + len('</Table>')
-new_table = '''<Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-24">操作</TableHead>
-                <TableHead className="w-16">序號</TableHead>
-                <TableHead className="w-32">單號</TableHead>
-                <TableHead className="w-32">日期</TableHead>
-                <TableHead className="w-24">發現人員</TableHead>
-                <TableHead className="w-24 text-center">項目總數</TableHead>
-                <TableHead>不良品內容</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">載入中...</TableCell></TableRow>
-              ) : paginatedData.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
-              ) : (
-                paginatedData.map((form, index) => {
-                  return (
-                    <TableRow key={form.formId}>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(form)}>編輯</Button>
-                          <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmFormId(form.formId)}>刪除</Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
-                      <TableCell className="font-bold">{form.formId}</TableCell>
-                      <TableCell>{form.date}</TableCell>
-                      <TableCell>{form.discoverer}</TableCell>
-                      <TableCell className="text-center font-bold text-red-600">{form.items.length}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1.5 py-1">
-                          {form.items.map((item, idx) => (
-                            <div key={idx} className="flex flex-wrap items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
-                              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
-                              {item.headType && (
-                                <span className={px-1.5 py-0.5 text-[10px] rounded font-bold border }>
-                                  {item.headType}
-                                </span>
-                              )}
-                              <span className="text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 border border-red-100 rounded">缺 {item.quantity || 0} PCS</span>
-                              {item.condition && <span className="text-xs text-muted-foreground">({item.condition})</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>'''
-
-content = content[:table_start] + new_table + content[table_end:]
-
-# Replace setDeleteConfirmItem(defect) with setDeleteConfirmFormId(defect.formId) if it exists.
-# We already did it in the new table. Wait, we also need to fix the delete dialog logic!
-dialog_delete = '''<Button variant="destructive" onClick={() => { if(deleteConfirmItem?.id) handleDelete(deleteConfirmItem.id); }}>確認刪除</Button>'''
-new_dialog_delete = '''<Button variant="destructive" onClick={() => { if(deleteConfirmFormId) handleDelete(deleteConfirmFormId); }}>確認刪除</Button>'''
-content = content.replace(dialog_delete, new_dialog_delete)
-
-dialog_delete_text = '''確定要刪除不良品單號 [{deleteConfirmItem?.formId}] 嗎？此動作無法復原。'''
-new_dialog_delete_text = '''確定要刪除不良品單號 [{deleteConfirmFormId}] 嗎？此動作無法復原。'''
-content = content.replace(dialog_delete_text, new_dialog_delete_text)
-
-dialog_open = '''<Dialog open={!!deleteConfirmItem} onOpenChange={(open) => !open && setDeleteConfirmItem(null)}>'''
-new_dialog_open = '''<Dialog open={!!deleteConfirmFormId} onOpenChange={(open) => !open && setDeleteConfirmFormId(null)}>'''
-content = content.replace(dialog_open, new_dialog_open)
-
-dialog_cancel = '''<Button variant="outline" onClick={() => setDeleteConfirmItem(null)}>取消</Button>'''
-new_dialog_cancel = '''<Button variant="outline" onClick={() => setDeleteConfirmFormId(null)}>取消</Button>'''
-content = content.replace(dialog_cancel, new_dialog_cancel)
-
-filtered_defects_count = '''符合條件共 {filteredDefects.length} 筆資料'''
-new_filtered_defects_count = '''符合條件共 {filteredForms.length} 筆資料'''
-content = content.replace(filtered_defects_count, new_filtered_defects_count)
-
-with open('src/pages/Defective.tsx', 'w', encoding='utf-8') as f:
+with open('src/pages/Statistics.tsx', 'w', encoding='utf-8') as f:
     f.write(content)
-

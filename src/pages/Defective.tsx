@@ -314,7 +314,7 @@ export default function DefectivePage() {
         </DialogContent>
       </Dialog>
       {systemAlert && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-md shadow-lg z-50 flex justify-between items-center min-w-[300px]">
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-md shadow-lg z-[9999] flex justify-between items-center min-w-[300px]">
           <span>{systemAlert}</span>
           <button onClick={() => setSystemAlert(null)} className="ml-4 hover:bg-red-600 rounded-full p-1"><X size={16} /></button>
         </div>
@@ -365,9 +365,12 @@ export default function DefectivePage() {
               </div>
               
               {formData.items.map((item, index) => (
-                <Card key={index} className="relative">
+                <Card key={index} className="relative overflow-hidden">
+                  <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg z-10 border-b border-r border-slate-300">
+                    #{index + 1}
+                  </div>
                   {formData.items.length > 1 && (
-                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => {
+                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-20" onClick={() => {
                       const newItems = [...formData.items];
                       newItems.splice(index, 1);
                       setFormData({...formData, items: newItems});
@@ -375,22 +378,7 @@ export default function DefectivePage() {
                       <X className="w-3 h-3" />
                     </Button>
                   )}
-                  <CardContent className="p-4 grid grid-cols-12 gap-3">
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">頭型</Label>
-                      <Select value={item.headType} onValueChange={(val) => {
-                        const newItems = [...formData.items];
-                        newItems[index].headType = val;
-                        setFormData({...formData, items: newItems});
-                      }}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A型">A型</SelectItem>
-                          <SelectItem value="B型">B型</SelectItem>
-                          <SelectItem value="其他">其他</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <CardContent className="p-4 pt-6 grid grid-cols-12 gap-3">
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">物料分類</Label>
                       <Select value={item.category} onValueChange={(val) => {
@@ -460,6 +448,23 @@ export default function DefectivePage() {
                           <option key={m.id} value={`${m.partName || m.name}${m.headType ? " (" + m.headType + ")" : ""}`} />
                         ))}
                       </datalist>
+                    </div>
+
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">頭型</Label>
+                      <Select value={item.headType} onValueChange={(val) => {
+                        const newItems = [...formData.items];
+                        newItems[index].headType = val;
+                        setFormData({...formData, items: newItems});
+                      }}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A型">A型</SelectItem>
+                          <SelectItem value="B型">B型</SelectItem>
+                          <SelectItem value="C型">C型</SelectItem>
+                          <SelectItem value="其他">其他</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     <div className="col-span-2 space-y-1">
@@ -558,9 +563,19 @@ export default function DefectivePage() {
                 </Card>
               ))}
             </div>
-            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
-              <Button onClick={handleSave}>儲存</Button>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+              <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50 text-sm" onClick={() => {
+                setFormData({
+                  formId: '',
+                  date: new Date().toISOString().split('T')[0],
+                  discoverer: '',
+                  items: [{ ...defaultItem }]
+                });
+              }}>清除所有欄位資料</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
+                <Button onClick={handleSave}>儲存</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

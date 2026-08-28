@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
@@ -32,24 +33,27 @@ export default function StatisticsPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
   const [staffList, setStaffList] = useState<any[]>([]);
+  const [defects, setDefects] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterUser, setFilterUser] = useState('all');
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [ctrls, reqs, mats, holsData, usersData] = await Promise.all([
+        const [ctrls, reqs, mats, holsData, usersData, defectsData] = await Promise.all([
           getCollection('controls'),
           getCollection('requisitions'),
           getCollection('materials'),
           getCollection('holidays'),
-          getCollection('staff')
+          getCollection('staff'),
+          getCollection('defects')
         ]);
         setControls(ctrls);
         setRequisitions(reqs);
         setMaterials(mats);
         setHolidays(holsData);
         setStaffList(usersData);
+        setDefects(defectsData);
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -62,6 +66,32 @@ export default function StatisticsPage() {
     if (!req || !req.returnDate) return 0;
     return calculateWorkingDays(req.returnDate, control.completionDate, hols);
   };
+
+  const defectiveStats = useMemo(() => {
+    const isWithinRange = (dateStr: string) => {
+      if (!dateStr) return false;
+      const d = parseISO(dateStr);
+      if (isNaN(d.getTime())) return false;
+      if (useYearFilter && selectedYear) {
+        if (d.getFullYear().toString() !== selectedYear) return false;
+      }
+      if (startDate && isBefore(d, startOfDay(parseISO(startDate)))) return false;
+      if (endDate && isAfter(d, endOfDay(parseISO(endDate)))) return false;
+      return true;
+    };
+
+    const filteredDefects = defects.filter(d => {
+      if (d.date && !isWithinRange(d.date)) return false;
+      return true;
+    });
+
+    const uniqueForms = new Set(filteredDefects.map(d => d.formId));
+
+    return {
+      formsCount: uniqueForms.size,
+      itemsCount: filteredDefects.length
+    };
+  }, [defects, startDate, endDate, useYearFilter, selectedYear]);
 
   const stats = useMemo(() => {
     // Helper to check date range
@@ -284,14 +314,20 @@ export default function StatisticsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="material" className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
-        <div className="flex items-center gap-3">
-          <PieChart className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <PieChart className="w-8 h-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
+          </div>
+          <TabsList className="self-start">
+            <TabsTrigger value="material">物料管制統計</TabsTrigger>
+            <TabsTrigger value="defective">不良品統計</TabsTrigger>
+          </TabsList>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 ml-auto">
           <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-lg shadow-sm border border-border/50 h-[40px]">
             <div className="flex items-center space-x-2">
               <Checkbox id="filter-year" checked={useYearFilter} onCheckedChange={(c) => setUseYearFilter(!!c)} />
@@ -320,8 +356,8 @@ export default function StatisticsPage() {
           </Button>
         </div>
       </div>
-
-      <Card className="p-4 bg-muted/30">
+      <TabsContent value="material" className="space-y-6">
+      <Card className="mb-6 shadow-sm border-t-4 border-t-blue-500">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <div className="space-y-2">
             <Label>管制開始日期 (起)</Label>
@@ -648,6 +684,49 @@ export default function StatisticsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+      
+      <TabsContent value="defective" className="space-y-6">
+        <Card className="mb-6 shadow-sm border-t-4 border-t-red-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold">查詢條件設定</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label>建單日期(起)</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+            </div>
+            <div className="space-y-2">
+              <Label>建單日期(迄)</Label>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">符合條件的不良品單數量</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-primary">{defectiveStats.formsCount}</div>
+              <p className="text-xs text-muted-foreground mt-2">表單總數</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">符合條件的不良品項目數量</CardTitle>
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-destructive">{defectiveStats.itemsCount}</div>
+              <p className="text-xs text-muted-foreground mt-2">各項不良物料加總</p>
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }
