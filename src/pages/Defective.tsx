@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, X, ListPlus, Pencil, Check, Trash2 } from 'lucide-react';
+import { Plus, X, ListPlus, Pencil, Check, Trash2, AlertCircle } from 'lucide-react';
 
 export type Defect = {
   id?: string;
@@ -314,9 +314,19 @@ export default function DefectivePage() {
         </DialogContent>
       </Dialog>
       {systemAlert && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-md shadow-lg z-[9999] flex justify-between items-center min-w-[300px]">
-          <span>{systemAlert}</span>
-          <button onClick={() => setSystemAlert(null)} className="ml-4 hover:bg-red-600 rounded-full p-1"><X size={16} /></button>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">系統提示</h3>
+            </div>
+            <p className="text-slate-600 mb-6 pl-13">{systemAlert}</p>
+            <div className="flex justify-end">
+              <Button onClick={() => setSystemAlert(null)} className="bg-blue-600 hover:bg-blue-700">我知道了</Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -365,20 +375,22 @@ export default function DefectivePage() {
               </div>
               
               {formData.items.map((item, index) => (
-                <Card key={index} className="relative overflow-hidden">
-                  <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg z-10 border-b border-r border-slate-300">
-                    #{index + 1}
-                  </div>
-                  {formData.items.length > 1 && (
-                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-20" onClick={() => {
-                      const newItems = [...formData.items];
-                      newItems.splice(index, 1);
-                      setFormData({...formData, items: newItems});
-                    }}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  )}
-                  <CardContent className="p-4 pt-6 grid grid-cols-12 gap-3">
+                  <Card key={index} className="relative overflow-hidden">
+                    <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg z-10 border-b border-r border-slate-300">
+                      #{index + 1}
+                    </div>
+                    {formData.items.length > 1 && (
+                      <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-md text-red-500 hover:text-red-700 hover:bg-red-100 z-20" onClick={() => {
+                        if (confirm('確定要刪除此不良品項目嗎？')) {
+                          const newItems = [...formData.items];
+                          newItems.splice(index, 1);
+                          setFormData({...formData, items: newItems});
+                        }
+                      }}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <CardContent className="p-4 pt-8 grid grid-cols-12 gap-3">
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">物料分類</Label>
                       <Select value={item.category} onValueChange={(val) => {
@@ -559,23 +571,23 @@ export default function DefectivePage() {
                         setFormData({...formData, items: newItems});
                       }} className="h-8 text-xs" placeholder="製令數量" />
                     </div>
+
+                    <div className="col-span-12 flex justify-end mt-1 pt-3 border-t border-slate-100">
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2" onClick={() => {
+                        const newItems = [...formData.items];
+                        newItems[index] = { ...defaultItem };
+                        setFormData({ ...formData, items: newItems });
+                      }}>
+                        清除此項目資料
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-            <div className="flex justify-between items-center mt-4 pt-4 border-t">
-              <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50 text-sm" onClick={() => {
-                setFormData({
-                  formId: '',
-                  date: new Date().toISOString().split('T')[0],
-                  discoverer: '',
-                  items: [{ ...defaultItem }]
-                });
-              }}>清除所有欄位資料</Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
-                <Button onClick={handleSave}>儲存</Button>
-              </div>
+            <div className="flex justify-end items-center mt-4 pt-4 border-t gap-2">
+              <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
+              <Button onClick={handleSave}>儲存</Button>
             </div>
           </DialogContent>
         </Dialog>
