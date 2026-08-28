@@ -235,15 +235,7 @@ export default function PartSearchWidget() {
         </Button>
       </CardHeader>
       <CardContent className="p-4 flex flex-col gap-4 overflow-y-auto no-drag">
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-muted-foreground">物料品名 (忽略大小寫)</label>
-          <Input 
-            value={searchName} 
-            onChange={e => setSearchName(e.target.value)} 
-            placeholder="輸入物料品名搜尋..."
-            className="h-8 text-sm"
-          />
-        </div>
+
 
         <div className="space-y-2 border-t pt-2">
           <label className="text-xs font-bold text-muted-foreground">匯入至不良品單 (選填)</label>
@@ -348,6 +340,16 @@ export default function PartSearchWidget() {
               {importStatus}
             </div>
           )}
+        </div>
+
+        <div className="space-y-2 border-t pt-2">
+          <label className="text-xs font-bold text-muted-foreground">物料品名 (忽略大小寫)</label>
+          <Input 
+            value={searchName} 
+            onChange={e => setSearchName(e.target.value)} 
+            placeholder="輸入物料品名搜尋..."
+            className="h-8 text-sm"
+          />
         </div>
 
         <div className="border rounded-md min-h-[150px] max-h-[300px] overflow-y-auto bg-slate-50 p-2 space-y-2">

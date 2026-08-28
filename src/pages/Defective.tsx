@@ -380,14 +380,14 @@ export default function DefectivePage() {
                       #{index + 1}
                     </div>
                     {formData.items.length > 1 && (
-                      <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-md text-red-500 hover:text-red-700 hover:bg-red-100 z-20" onClick={() => {
+                      <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-md shadow-sm z-20" onClick={() => {
                         if (confirm('確定要刪除此不良品項目嗎？')) {
                           const newItems = [...formData.items];
                           newItems.splice(index, 1);
                           setFormData({...formData, items: newItems});
                         }
                       }}>
-                        <X className="w-4 h-4" />
+                        <X className="w-5 h-5 stroke-[3px]" />
                       </Button>
                     )}
                     <CardContent className="p-4 pt-8 grid grid-cols-12 gap-3">
