@@ -22,19 +22,26 @@ export default function Dashboard() {
   const [enrichedActiveControls, setEnrichedActiveControls] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
-  const [sortBy, setSortBy] = useState('days');
+  const [sortBy, setSortBy] = useState('requisition');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const sortedControls = useMemo(() => {
     const list = [...enrichedActiveControls];
     if (sortBy === 'days') {
-      list.sort((a, b) => b.calculatedDays - a.calculatedDays);
+      list.sort((a, b) => sortDirection === 'asc' ? a.calculatedDays - b.calculatedDays : b.calculatedDays - a.calculatedDays);
     } else if (sortBy === 'requisition') {
-      list.sort((a, b) => (a.requisitionId || '').localeCompare(b.requisitionId || ''));
+      list.sort((a, b) => sortDirection === 'asc' 
+        ? (a.requisitionId || '').localeCompare(b.requisitionId || '')
+        : (b.requisitionId || '').localeCompare(a.requisitionId || '')
+      );
     } else if (sortBy === 'startDate') {
-      list.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      list.sort((a, b) => sortDirection === 'asc'
+        ? new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+        : new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+      );
     }
     return list;
-  }, [enrichedActiveControls, sortBy]);
+  }, [enrichedActiveControls, sortBy, sortDirection]);
   
   const [controlTrendData, setControlTrendData] = useState<any[]>([]);
   const [controlDaysData, setControlDaysData] = useState<any[]>([]);
@@ -243,6 +250,15 @@ export default function Dashboard() {
                     <SelectItem value="days">依管制天數</SelectItem>
                     <SelectItem value="requisition">依關聯領料單</SelectItem>
                     <SelectItem value="startDate">依管制開始日</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortDirection} onValueChange={(val: 'asc'|'desc') => { setSortDirection(val); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">由小到大</SelectItem>
+                    <SelectItem value="desc">由大到小</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -470,5 +486,4 @@ export default function Dashboard() {
     </div>
   );
 }
- 
- 
+

@@ -12,6 +12,8 @@ import Controls from '@/pages/Controls';
 import Dashboard from '@/pages/Dashboard';
 import Statistics from '@/pages/Statistics';
 import Expediting from '@/pages/Expediting';
+import Defective from '@/pages/Defective';
+import PartSearchWidget from '@/components/PartSearchWidget';
 
 function App() {
   useEffect(() => {
@@ -23,6 +25,7 @@ function App() {
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <PartSearchWidget />
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
@@ -32,6 +35,7 @@ function App() {
           <Route path="requisitions" element={<Requisitions />} />
           <Route path="controls" element={<Controls />} />
           <Route path="expediting" element={<Expediting />} />
+          <Route path="defective" element={<Defective />} />
         </Route>
       </Routes>
     </BrowserRouter>

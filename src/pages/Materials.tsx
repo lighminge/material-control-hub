@@ -11,7 +11,8 @@ import * as XLSX from 'xlsx';
 
 export type Material = {
   id?: string;
-  name: string;
+  name: string; // Part Number (品號)
+  partName?: string; // Part Name (品名)
   stock: number;
   unit: string;
   category?: string;
@@ -34,6 +35,7 @@ export default function MaterialsPage() {
 
   const [formData, setFormData] = useState<Material>({
     name: '',
+    partName: '',
     stock: 0,
     unit: 'PCS',
     category: '未分類'
@@ -108,7 +110,7 @@ export default function MaterialsPage() {
       }
       setIsOpen(false);
       loadData();
-      setFormData({ name: '', stock: 0, unit: 'PCS', category: '未分類' });
+      setFormData({ name: '', partName: '', stock: 0, unit: 'PCS', category: '未分類' });
       setEditingId(null);
     } catch (error) {
       console.error("Error saving material:", error);
@@ -128,7 +130,7 @@ export default function MaterialsPage() {
   };
 
   const openNewForm = () => {
-    setFormData({ name: '', stock: 0, unit: 'PCS', category: '未分類' });
+    setFormData({ name: '', partName: '', stock: 0, unit: 'PCS', category: '未分類' });
     setEditingId(null);
     setIsOpen(true);
   };
@@ -255,6 +257,14 @@ export default function MaterialsPage() {
                       }
                     }}
                     placeholder="輸入物料品號"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>物料品名</Label>
+                  <Input 
+                    value={formData.partName || ''} 
+                    onChange={(e) => setFormData({...formData, partName: e.target.value})} 
+                    placeholder="輸入物料品名 (選填)"
                   />
                 </div>
                 <div className="space-y-2">
@@ -393,6 +403,7 @@ export default function MaterialsPage() {
                 <TableHead className="w-16">序號</TableHead>
                 <TableHead>物料分類</TableHead>
                 <TableHead>物料品號</TableHead>
+                <TableHead>物料品名</TableHead>
                 <TableHead>庫存數量</TableHead>
                 <TableHead>單位</TableHead>
               </TableRow>
@@ -429,6 +440,15 @@ export default function MaterialsPage() {
                       <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
                         {mat.name}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {mat.partName ? (
+                        <span className="text-base font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-md shadow-sm">
+                          {mat.partName}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>{mat.stock}</TableCell>
                     <TableCell>{mat.unit}</TableCell>
@@ -537,6 +557,7 @@ export default function MaterialsPage() {
                     <TableHead>補完日期</TableHead>
                     <TableHead>物料分類</TableHead>
                     <TableHead>物料品號</TableHead>
+                    <TableHead>物料品名</TableHead>
                     <TableHead>來源管制單號</TableHead>
                     <TableHead>補完/進貨備註</TableHead>
                   </TableRow>
@@ -544,11 +565,11 @@ export default function MaterialsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">載入中...</TableCell>
+                      <TableCell colSpan={7} className="text-center h-24">載入中...</TableCell>
                     </TableRow>
                   ) : histPaginatedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">無符合條件的歷程記錄</TableCell>
+                      <TableCell colSpan={7} className="text-center h-24">無符合條件的歷程記錄</TableCell>
                     </TableRow>
                   ) : (
                     histPaginatedData.map((log, index) => {
@@ -570,6 +591,15 @@ export default function MaterialsPage() {
                             <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
                               {log.materialName}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            {mat?.partName ? (
+                              <span className="text-base font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-md shadow-sm">
+                                {mat.partName}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
                           </TableCell>
                           <TableCell>{log.controlId}</TableCell>
                           <TableCell>{log.notes || '-'}</TableCell>

@@ -9,6 +9,7 @@ const navItems = [
   { name: '稽催作業', path: '/expediting', icon: AlarmClock },
   { name: '統計作業', path: '/statistics', icon: PieChart },
   { name: '人員管理', path: '/staff', icon: Users },
+  { name: '不良品管理', path: '/defective', icon: ShieldAlert },
 ];
 
 export function Sidebar() {
