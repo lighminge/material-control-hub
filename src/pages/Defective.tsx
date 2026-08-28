@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, X, ListPlus } from 'lucide-react';
+import { Plus, X, ListPlus, Pencil, Check, Trash2 } from 'lucide-react';
 
 export type Defect = {
   id?: string;
@@ -39,6 +39,8 @@ export default function DefectivePage() {
   const [phrases, setPhrases] = useState<string[]>([]);
   const [showPhrases, setShowPhrases] = useState(false);
   const [newPhrase, setNewPhrase] = useState('');
+  const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
+  const [editPhraseText, setEditPhraseText] = useState('');
   
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
   
@@ -79,6 +81,22 @@ export default function DefectivePage() {
       savePhrases([...phrases, newPhrase.trim()]);
       setNewPhrase('');
     }
+  };
+
+  const handleSaveEditPhrase = async () => {
+    if (editingPhraseIndex === null || !editPhraseText.trim()) return;
+    if (phrases[editingPhraseIndex] === editPhraseText.trim()) {
+      setEditingPhraseIndex(null);
+      return;
+    }
+    if (phrases.includes(editPhraseText.trim())) {
+      setSystemAlert("此常用內容已經存在！");
+      return;
+    }
+    const updated = [...phrases];
+    updated[editingPhraseIndex] = editPhraseText.trim();
+    savePhrases(updated);
+    setEditingPhraseIndex(null);
   };
 
   const removePhrase = (phrase: string) => {
@@ -141,8 +159,8 @@ export default function DefectivePage() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">不良品管理</h1>
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-primary">不良品管理</h1>
         <Dialog open={isOpen} onOpenChange={(open) => {
           if (!open) setIsOpen(false);
         }}>
@@ -151,7 +169,7 @@ export default function DefectivePage() {
               <Plus className="mr-2 h-4 w-4" /> 新增不良品單
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-xl" onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{editingId ? '編輯不良品單' : '新增不良品單'}</DialogTitle>
             </DialogHeader>
@@ -190,15 +208,46 @@ export default function DefectivePage() {
                       <Button size="sm" onClick={addPhrase} className="h-7 px-2">新增</Button>
                     </div>
                     <div className="max-h-40 overflow-y-auto space-y-1">
-                      {phrases.map(p => (
-                        <div key={p} className="flex justify-between items-center bg-slate-50 p-1 rounded group">
-                          <span className="text-xs cursor-pointer flex-1" onClick={() => {
-                            setFormData({...formData, condition: formData.condition ? formData.condition + '，' + p : p});
-                            setShowPhrases(false);
-                          }}>{p}</span>
-                          <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500 opacity-0 group-hover:opacity-100" onClick={() => removePhrase(p)}>
-                            <X className="w-3 h-3" />
-                          </Button>
+                      {phrases.map((p, i) => (
+                        <div key={i} className="flex justify-between items-center bg-slate-50 p-1 rounded group">
+                          {editingPhraseIndex === i ? (
+                            <Input 
+                              value={editPhraseText} 
+                              onChange={e => setEditPhraseText(e.target.value)} 
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveEditPhrase(); }} 
+                              autoFocus
+                              className="h-7 text-xs flex-1"
+                            />
+                          ) : (
+                            <span className="text-xs cursor-pointer flex-1" onClick={() => {
+                              setFormData({...formData, condition: formData.condition ? formData.condition + '，' + p : p});
+                              setShowPhrases(false);
+                            }}>{p}</span>
+                          )}
+                          <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {editingPhraseIndex === i ? (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600" onClick={handleSaveEditPhrase}>
+                                  <Check className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingPhraseIndex(null)}>
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-600" onClick={() => {
+                                  setEditingPhraseIndex(i);
+                                  setEditPhraseText(p);
+                                }}>
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500" onClick={() => removePhrase(p)}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -218,20 +267,30 @@ export default function DefectivePage() {
       <Card>
         <CardContent className="p-0">
           <div className="flex justify-between items-center p-4 border-b bg-muted/20">
-            <div className="font-bold">不良品單列表</div>
-            <div className="flex items-center gap-2">
-              <Label>每頁筆數:</Label>
-              <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
-                <SelectTrigger className="w-[80px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="font-bold flex items-center gap-4">
+              不良品單列表
+              <div className="text-sm font-normal text-muted-foreground">總共 {defects.length} 筆資料</div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="h-8">上一頁</Button>
+                <span className="text-sm">第 {page} / {totalPages} 頁</span>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8">下一頁</Button>
+              </div>
+              <div className="flex items-center gap-2 border-l pl-4">
+                <Label>每頁筆數:</Label>
+                <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setPage(1); }}>
+                  <SelectTrigger className="w-[80px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <Table>
