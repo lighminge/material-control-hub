@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, addDocument, updateDocument, deleteDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
+import { getCollection, addDocument, deleteDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,7 +17,29 @@ export type Defect = {
   materialName: string;
   condition: string;
   discoverer: string;
+  quantity?: number;
+  workOrder?: string;
+  workOrderQuantity?: number;
+  category?: string;
   createdAt?: string;
+};
+
+export type DefectItemState = {
+  id?: string;
+  materialId: string;
+  materialName: string;
+  condition: string;
+  quantity: number | '';
+  workOrder: string;
+  workOrderQuantity: number | '';
+  category: string;
+};
+
+export type DefectFormState = {
+  formId: string;
+  date: string;
+  discoverer: string;
+  items: DefectItemState[];
 };
 
 export default function DefectivePage() {
@@ -28,14 +50,22 @@ export default function DefectivePage() {
   
   const [isOpen, setIsOpen] = useState(false);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<Defect | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [formData, setFormData] = useState<Defect>({
-    formId: '',
-    date: new Date().toISOString().split('T')[0],
+  
+  const defaultItem: DefectItemState = {
     materialId: '',
     materialName: '',
     condition: '',
-    discoverer: ''
+    quantity: '',
+    workOrder: '',
+    workOrderQuantity: '',
+    category: ''
+  };
+
+  const [formData, setFormData] = useState<DefectFormState>({
+    formId: '',
+    date: new Date().toISOString().split('T')[0],
+    discoverer: '',
+    items: [{ ...defaultItem }]
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -136,10 +166,30 @@ export default function DefectivePage() {
       return;
     }
     try {
+      // If editing, first delete all existing items with this formId
       if (editingId) {
-        await updateDocument('defects', editingId, formData);
-      } else {
-        await addDocument('defects', { ...formData, createdAt: new Date().toISOString() });
+        const existingItems = defects.filter(d => d.formId === formData.formId);
+        for (const item of existingItems) {
+          if (item.id) await deleteDocument('defects', item.id);
+        }
+      }
+      
+      // Add all items as new documents
+      for (const item of formData.items) {
+        if (!item.materialId.trim()) continue; // Skip empty items
+        await addDocument('defects', {
+          formId: formData.formId.trim(),
+          date: formData.date,
+          discoverer: formData.discoverer,
+          materialId: item.materialId,
+          materialName: item.materialName,
+          category: item.category || '未分類',
+          condition: item.condition,
+          quantity: item.quantity === '' ? 0 : Number(item.quantity),
+          workOrder: item.workOrder,
+          workOrderQuantity: item.workOrderQuantity === '' ? 0 : Number(item.workOrderQuantity),
+          createdAt: new Date().toISOString()
+        });
       }
       setIsOpen(false);
       loadData();
@@ -155,24 +205,40 @@ export default function DefectivePage() {
   };
   
   const openNewForm = () => {
-    setSelectedCategory('');
     setFormData({
       formId: '',
       date: new Date().toISOString().split('T')[0],
-      materialId: '',
-      materialName: '',
-      condition: '',
-      discoverer: ''
+      discoverer: '',
+      items: [{ ...defaultItem }]
     });
     setEditingId(null);
     setIsOpen(true);
   };
   
   const handleEdit = (defect: Defect) => {
-    const mat = materials.find(m => m.id === defect.materialId);
-    setSelectedCategory(mat?.category || '');
-    setFormData(defect);
-    setEditingId(defect.id!);
+    // Find all defects that share the same formId
+    const group = defects.filter(d => d.formId === defect.formId);
+    
+    setFormData({
+      formId: defect.formId,
+      date: defect.date,
+      discoverer: defect.discoverer,
+      items: group.map(d => {
+        const mat = materials.find(m => m.name === d.materialId);
+        return {
+          id: d.id,
+          materialId: d.materialId,
+          materialName: d.materialName,
+          category: d.category || mat?.category || '',
+          condition: d.condition,
+          quantity: d.quantity ?? '',
+          workOrder: d.workOrder || '',
+          workOrderQuantity: d.workOrderQuantity ?? ''
+        };
+      })
+    });
+    // Use formId as the editingId to indicate we are in edit mode
+    setEditingId(defect.formId);
     setIsOpen(true);
   };
 
@@ -227,11 +293,11 @@ export default function DefectivePage() {
               <Plus className="mr-2 h-4 w-4" /> 新增不良品單
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{editingId ? '編輯不良品單' : '新增不良品單'}</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="grid grid-cols-3 gap-4 py-4 border-b">
               <div className="space-y-2">
                 <Label>不良品單號</Label>
                 <Input value={formData.formId} disabled={!!editingId} onChange={e => setFormData({...formData, formId: e.target.value})} />
@@ -239,59 +305,6 @@ export default function DefectivePage() {
               <div className="space-y-2">
                 <Label>日期</Label>
                 <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} onClick={(e: any) => e.target.showPicker?.()} />
-              </div>
-              <div className="space-y-2">
-                <Label>物料分類</Label>
-                <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setFormData({...formData, materialId: '', materialName: ''}); }}>
-                  <SelectTrigger><SelectValue placeholder="選擇分類" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="未分類">未分類</SelectItem>
-                    <SelectItem value="TKW">TKW</SelectItem>
-                    <SelectItem value="夾鉗">夾鉗</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>物料品號</Label>
-                <Input 
-                  list="material-id-list"
-                  value={formData.materialId}
-                  onChange={e => {
-                    const val = e.target.value;
-                    const mat = materials.find(m => {
-                      const compositeId = `${m.name}${m.headType ? ` (${m.headType})` : ''}`;
-                      return compositeId === val || m.name === val;
-                    });
-                    setFormData({...formData, materialId: mat ? mat.name : val, materialName: mat ? (mat.partName || mat.name) : formData.materialName});
-                  }}
-                  placeholder="輸入或選擇品號"
-                />
-                <datalist id="material-id-list">
-                  {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
-                    <option key={m.id} value={`${m.name}${m.headType ? ` (${m.headType})` : ''}`} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="space-y-2">
-                <Label>物料品名</Label>
-                <Input 
-                  list="material-name-list"
-                  value={formData.materialName}
-                  onChange={e => {
-                    const val = e.target.value;
-                    const mat = materials.find(m => {
-                      const compositeName = `${m.partName || m.name}${m.headType ? ` (${m.headType})` : ''}`;
-                      return compositeName === val || m.partName === val || m.name === val;
-                    });
-                    setFormData({...formData, materialName: mat ? (mat.partName || mat.name) : val, materialId: mat ? mat.name : formData.materialId});
-                  }}
-                  placeholder="輸入或選擇品名"
-                />
-                <datalist id="material-name-list">
-                  {materials.filter(m => !selectedCategory || m.category === selectedCategory).map(m => (
-                    <option key={m.id} value={`${m.partName || m.name}${m.headType ? ` (${m.headType})` : ''}`} />
-                  ))}
-                </datalist>
               </div>
               <div className="space-y-2">
                 <Label>發現人員</Label>
@@ -304,69 +317,194 @@ export default function DefectivePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2 space-y-2 relative">
-                <div className="flex justify-between items-center">
-                  <Label>不良情況</Label>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setShowPhrases(!showPhrases)}>
-                    <ListPlus className="w-3 h-3 mr-1" /> 常用內容
-                  </Button>
-                </div>
-                {showPhrases && (
-                  <div className="absolute right-0 top-6 z-10 w-64 bg-white border rounded-md shadow-lg p-2">
-                    <div className="flex gap-2 mb-2">
-                      <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用內容..." className="h-7 text-xs" />
-                      <Button size="sm" onClick={addPhrase} className="h-7 px-2">新增</Button>
+            </div>
+            
+            <div className="space-y-4 py-2">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-lg">不良品項目</h3>
+                <Button variant="outline" size="sm" onClick={() => setFormData({...formData, items: [...formData.items, { ...defaultItem }]})}>
+                  <Plus className="w-4 h-4 mr-1" /> 新增項目
+                </Button>
+              </div>
+              
+              {formData.items.map((item, index) => (
+                <Card key={index} className="relative">
+                  {formData.items.length > 1 && (
+                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => {
+                      const newItems = [...formData.items];
+                      newItems.splice(index, 1);
+                      setFormData({...formData, items: newItems});
+                    }}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  )}
+                  <CardContent className="p-4 grid grid-cols-12 gap-3">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">物料分類</Label>
+                      <Select value={item.category} onValueChange={(val) => {
+                        const newItems = [...formData.items];
+                        newItems[index].category = val;
+                        newItems[index].materialId = '';
+                        newItems[index].materialName = '';
+                        setFormData({...formData, items: newItems});
+                      }}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="分類" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="未分類">未分類</SelectItem>
+                          <SelectItem value="TKW">TKW</SelectItem>
+                          <SelectItem value="夾鉗">夾鉗</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="max-h-40 overflow-y-auto space-y-1">
-                      {phrases.map((p, i) => (
-                        <div key={i} className="flex justify-between items-center bg-slate-50 p-1 rounded group">
-                          {editingPhraseIndex === i ? (
-                            <Input 
-                              value={editPhraseText} 
-                              onChange={e => setEditPhraseText(e.target.value)} 
-                              onKeyDown={e => { if (e.key === 'Enter') handleSaveEditPhrase(); }} 
-                              autoFocus
-                              className="h-7 text-xs flex-1"
-                            />
-                          ) : (
-                            <span className="text-xs cursor-pointer flex-1" onClick={() => {
-                              setFormData({...formData, condition: formData.condition ? formData.condition + '，' + p : p});
-                              setShowPhrases(false);
-                            }}>{i + 1}. {p}</span>
-                          )}
-                          <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {editingPhraseIndex === i ? (
-                              <>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600" onClick={handleSaveEditPhrase}>
-                                  <Check className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingPhraseIndex(null)}>
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-600" onClick={() => {
-                                  setEditingPhraseIndex(i);
-                                  setEditPhraseText(p);
-                                }}>
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500" onClick={() => removePhrase(p)}>
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </>
-                            )}
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">物料品號</Label>
+                      <Input 
+                        list={`mat-id-${index}`}
+                        value={item.materialId}
+                        className="h-8 text-xs"
+                        onChange={e => {
+                          const val = e.target.value;
+                          const mat = materials.find(m => {
+                            const compositeId = `${m.name}${m.headType ? " (" + m.headType + ")" : ""}`;
+                            return compositeId === val || m.name === val;
+                          });
+                          const newItems = [...formData.items];
+                          newItems[index].materialId = mat ? mat.name : val;
+                          newItems[index].materialName = mat ? (mat.partName || mat.name) : newItems[index].materialName;
+                          setFormData({...formData, items: newItems});
+                        }}
+                        placeholder="輸入/選擇品號"
+                      />
+                      <datalist id={`mat-id-${index}`}>
+                        {materials.filter(m => !item.category || m.category === item.category).map(m => (
+                          <option key={m.id} value={`${m.name}${m.headType ? " (" + m.headType + ")" : ""}`} />
+                        ))}
+                      </datalist>
+                    </div>
+                    
+                    <div className="col-span-4 space-y-1">
+                      <Label className="text-xs">物料品名</Label>
+                      <Input 
+                        list={`mat-name-${index}`}
+                        value={item.materialName}
+                        className="h-8 text-xs"
+                        onChange={e => {
+                          const val = e.target.value;
+                          const mat = materials.find(m => {
+                            const compositeName = `${m.partName || m.name}${m.headType ? " (" + m.headType + ")" : ""}`;
+                            return compositeName === val || m.partName === val || m.name === val;
+                          });
+                          const newItems = [...formData.items];
+                          newItems[index].materialName = mat ? (mat.partName || mat.name) : val;
+                          newItems[index].materialId = mat ? mat.name : newItems[index].materialId;
+                          setFormData({...formData, items: newItems});
+                        }}
+                        placeholder="輸入/選擇品名"
+                      />
+                      <datalist id={`mat-name-${index}`}>
+                        {materials.filter(m => !item.category || m.category === item.category).map(m => (
+                          <option key={m.id} value={`${m.partName || m.name}${m.headType ? " (" + m.headType + ")" : ""}`} />
+                        ))}
+                      </datalist>
+                    </div>
+                    
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">不良品數量</Label>
+                      <Input type="number" min="0" value={item.quantity} onChange={e => {
+                        const newItems = [...formData.items];
+                        newItems[index].quantity = e.target.value ? Number(e.target.value) : '';
+                        setFormData({...formData, items: newItems});
+                      }} className="h-8 text-xs" placeholder="數量" />
+                    </div>
+                    
+                    <div className="col-span-6 space-y-1 relative">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-xs">不良情況</Label>
+                        <Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]" onClick={() => setShowPhrases(!showPhrases)}>
+                          <ListPlus className="w-3 h-3 mr-1" /> 常用內容
+                        </Button>
+                      </div>
+                      <Input value={item.condition} onChange={e => {
+                        const newItems = [...formData.items];
+                        newItems[index].condition = e.target.value;
+                        setFormData({...formData, items: newItems});
+                      }} className="h-8 text-xs" placeholder="描述不良情況" />
+                      
+                      {showPhrases && (
+                        <div className="absolute right-0 top-12 z-20 w-64 bg-white border rounded-md shadow-lg p-2">
+                          <div className="flex gap-2 mb-2">
+                            <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用內容..." className="h-7 text-xs" />
+                            <Button size="sm" onClick={addPhrase} className="h-7 px-2">新增</Button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {phrases.map((p, i) => (
+                              <div key={i} className="flex justify-between items-center bg-slate-50 p-1 rounded group">
+                                {editingPhraseIndex === i ? (
+                                  <Input 
+                                    value={editPhraseText} 
+                                    onChange={e => setEditPhraseText(e.target.value)} 
+                                    onKeyDown={e => { if (e.key === "Enter") handleSaveEditPhrase(); }} 
+                                    autoFocus
+                                    className="h-7 text-xs flex-1"
+                                  />
+                                ) : (
+                                  <span className="text-xs cursor-pointer flex-1" onClick={() => {
+                                    const newItems = [...formData.items];
+                                    newItems[index].condition = newItems[index].condition ? newItems[index].condition + '，' + p : p;
+                                    setFormData({...formData, items: newItems});
+                                    setShowPhrases(false);
+                                  }}>{i + 1}. {p}</span>
+                                )}
+                                <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {editingPhraseIndex === i ? (
+                                    <>
+                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600" onClick={handleSaveEditPhrase}>
+                                        <Check className="w-3 h-3" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingPhraseIndex(null)}>
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-blue-600" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(p); }}>
+                                        <Pencil className="w-3 h-3" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500" onClick={() => removePhrase(p)}>
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
-                <Input value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})} />
-              </div>
+                    
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">製令編號</Label>
+                      <Input value={item.workOrder} onChange={e => {
+                        const newItems = [...formData.items];
+                        newItems[index].workOrder = e.target.value;
+                        setFormData({...formData, items: newItems});
+                      }} className="h-8 text-xs" placeholder="製令編號" />
+                    </div>
+                    
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">製令數量</Label>
+                      <Input type="number" min="0" value={item.workOrderQuantity} onChange={e => {
+                        const newItems = [...formData.items];
+                        newItems[index].workOrderQuantity = e.target.value ? Number(e.target.value) : '';
+                        setFormData({...formData, items: newItems});
+                      }} className="h-8 text-xs" placeholder="製令數量" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
               <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
               <Button onClick={handleSave}>儲存</Button>
             </div>
@@ -477,15 +615,18 @@ export default function DefectivePage() {
                 <TableHead>物料品號</TableHead>
                 <TableHead>物料品名</TableHead>
                 <TableHead>頭型</TableHead>
+                <TableHead>數量</TableHead>
+                <TableHead>製令編號</TableHead>
+                <TableHead>製令數量</TableHead>
                 <TableHead>發現人員</TableHead>
                 <TableHead>不良情況</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={9} className="text-center h-24">載入中...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center h-24">載入中...</TableCell></TableRow>
               ) : paginatedData.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center h-24">尚無不良品單記錄</TableCell></TableRow>
               ) : (
                 paginatedData.map((defect, index) => {
                   const mat = materials.find(m => m.name === defect.materialId);
@@ -509,6 +650,9 @@ export default function DefectivePage() {
                           </span>
                         ) : '-'}
                       </TableCell>
+                      <TableCell>{defect.quantity || '-'}</TableCell>
+                      <TableCell>{defect.workOrder || '-'}</TableCell>
+                      <TableCell>{defect.workOrderQuantity || '-'}</TableCell>
                       <TableCell>{defect.discoverer}</TableCell>
                       <TableCell>{defect.condition}</TableCell>
                     </TableRow>

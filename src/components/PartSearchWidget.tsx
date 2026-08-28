@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCollection, updateDocument, addDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
+import { getCollection, addDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import type { Material } from '@/pages/Materials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ export default function PartSearchWidget() {
   // Import to Defective Form state
   const [formId, setFormId] = useState('');
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [quantity, setQuantity] = useState<number | ''>('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
   
   const [condition, setCondition] = useState('');
@@ -142,14 +143,20 @@ export default function PartSearchWidget() {
       const existing = defects.find(d => d.formId === formId.trim());
 
       if (existing) {
-        await updateDocument('defects', existing.id, {
+        await addDocument('defects', {
+          formId: existing.formId,
+          date: existing.date,
+          discoverer: existing.discoverer,
           materialId: mat.name,
           materialName: mat.partName || '',
           category: mat.category || '未分類',
-          date: formDate,
-          condition: condition
+          condition: condition,
+          quantity: quantity === '' ? 0 : Number(quantity),
+          workOrder: '',
+          workOrderQuantity: 0,
+          createdAt: new Date().toISOString()
         });
-        setImportStatus(`已成功覆蓋單號 ${formId} 的品號！`);
+        setImportStatus(`已成功新增項目至單號 ${formId}！`);
       } else {
         await addDocument('defects', {
           formId: formId.trim(),
@@ -158,12 +165,15 @@ export default function PartSearchWidget() {
           materialName: mat.partName || '',
           category: mat.category || '未分類',
           condition: condition,
+          quantity: quantity === '' ? 0 : Number(quantity),
+          workOrder: '',
+          workOrderQuantity: 0,
           discoverer: '',
           createdAt: new Date().toISOString()
         });
         setImportStatus(`已建立新單號 ${formId}！`);
       }
-      setCondition('');
+      
       window.dispatchEvent(new Event('defectsUpdated'));
       setTimeout(() => setImportStatus(null), 3000);
     } catch (error) {
@@ -251,6 +261,16 @@ export default function PartSearchWidget() {
               className="h-8 text-sm"
               onClick={(e: any) => e.target.showPicker?.()}
             />
+            <div className="col-span-2">
+              <Input 
+                type="number"
+                placeholder="不良品數量"
+                min="0"
+                value={quantity} 
+                onChange={e => setQuantity(e.target.value ? Number(e.target.value) : '')} 
+                className="h-8 text-sm"
+              />
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-2">
