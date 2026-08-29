@@ -257,8 +257,18 @@ export default function DefectivePage() {
         workOrderQuantity: d.workOrderQuantity ?? ''
       });
     });
+    const grouped = Array.from(formsMap.values());
+    
+    // Sort items within each form so identical materials are grouped together
+    grouped.forEach(form => {
+      form.items.sort((a, b) => {
+        const keyA = `${a.materialName}-${a.materialId}-${a.headType}`;
+        const keyB = `${b.materialName}-${b.materialId}-${b.headType}`;
+        return keyA.localeCompare(keyB);
+      });
+    });
 
-    return Array.from(formsMap.values());
+    return grouped;
   }, [defects, materials]);
 
   const filteredForms = groupedForms.filter(f => {
