@@ -359,7 +359,10 @@ export default function DefectivePage() {
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-primary">不良品管理</h1>
         <Dialog open={isOpen} onOpenChange={(open) => {
-          if (!open) setIsOpen(false);
+          if (!open) {
+            setIsOpen(false);
+            setActivePhraseIndex(null);
+          }
         }}>
           <DialogTrigger asChild>
             <Button onClick={openNewForm} className="bg-blue-600 hover:bg-blue-700">
@@ -394,7 +397,9 @@ export default function DefectivePage() {
             
             <div className="space-y-4 py-2">
               <div className="flex justify-between items-center">
-                <h3 className="font-bold text-lg">不良品項目 <span className="text-sm font-normal text-muted-foreground">(共 {formData.items.length} 項)</span></h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="font-bold text-lg">不良品項目 <span className="text-sm font-normal text-muted-foreground">(共 {formData.items.length} 項)</span></h3>
+                </div>
                 <Button variant="outline" size="sm" onClick={() => {
                   setFormData({...formData, items: [...formData.items, { ...defaultItem }]});
                   setTimeout(() => {
@@ -404,10 +409,31 @@ export default function DefectivePage() {
                   <Plus className="w-4 h-4 mr-1" /> 新增項目
                 </Button>
               </div>
+
+              {formData.items.filter(item => item.materialName).length > 0 && (
+                <div className="bg-blue-50 border border-blue-100 rounded-md p-3 text-sm">
+                  <div className="font-bold text-blue-800 mb-2">品號統計：</div>
+                  <div className="flex flex-wrap gap-3">
+                    {Array.from(
+                      formData.items.reduce((acc, item) => {
+                        if (!item.materialId) return acc;
+                        const key = `${item.materialName}${item.headType ? ` (${item.headType})` : ''} - ${item.materialId}`;
+                        acc.set(key, (acc.get(key) || 0) + (Number(item.quantity) || 0));
+                        return acc;
+                      }, new Map<string, number>())
+                    ).map(([key, count]) => (
+                      <div key={key} className="bg-white px-2 py-1 rounded border border-blue-200 text-blue-700 shadow-sm flex items-center gap-2">
+                        <span className="font-medium">{key}</span>
+                        <span className="font-mono bg-blue-100 px-1.5 rounded-sm">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {formData.items.map((item, index) => (
-                  <Card key={index} id={`defective-item-${index}`} className="relative overflow-hidden">
-                    <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg z-10 border-b border-r border-slate-300">
+                  <Card key={index} id={`defective-item-${index}`} className="relative overflow-visible">
+                    <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg rounded-tl-lg z-10 border-b border-r border-slate-300">
                       #{index + 1}
                     </div>
                     {formData.items.length > 1 && (
@@ -589,7 +615,14 @@ export default function DefectivePage() {
                     </div>
                     
                     <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">製令數量</Label>
+                      <div className="flex justify-between items-center">
+                        <Label className="text-xs">製令數量</Label>
+                        {(item.quantity !== '' && item.workOrderQuantity !== '' && Number(item.workOrderQuantity) > 0) && (
+                          <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 rounded">
+                            不良率: {((Number(item.quantity) / Number(item.workOrderQuantity)) * 100).toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
                       <Input type="number" min="0" value={item.workOrderQuantity} onChange={e => {
                         const newItems = [...formData.items];
                         newItems[index].workOrderQuantity = e.target.value ? Number(e.target.value) : '';
@@ -754,8 +787,26 @@ export default function DefectivePage() {
                       <TableCell>{form.discoverer}</TableCell>
                       <TableCell className="text-center font-bold text-red-600 text-lg">{form.items.length}</TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1.5 py-1">
-                          {form.items.map((item, idx) => (
+                        <div className="flex flex-col gap-2 py-1">
+                          {form.items.filter(item => item.materialName).length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-dashed border-slate-200">
+                              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">品號統計</span>
+                              {Array.from(
+                                form.items.reduce((acc, item) => {
+                                  if (!item.materialId) return acc;
+                                  const key = `${item.materialName}${item.headType ? ` (${item.headType})` : ''} - ${item.materialId}`;
+                                  acc.set(key, (acc.get(key) || 0) + (Number(item.quantity) || 0));
+                                  return acc;
+                                }, new Map<string, number>())
+                              ).map(([key, count]) => (
+                                <span key={key} className="text-[10px] bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded font-medium shadow-sm">
+                                  {key} <span className="font-bold bg-blue-200 px-1 rounded-sm ml-1">{count}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-1.5">
+                            {form.items.map((item, idx) => (
                             <div key={idx} className="flex flex-wrap items-center gap-2">
                               <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
                               <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
@@ -769,6 +820,7 @@ export default function DefectivePage() {
                               {item.condition && <span className="text-xs text-muted-foreground">({item.condition})</span>}
                             </div>
                           ))}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>

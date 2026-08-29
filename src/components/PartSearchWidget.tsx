@@ -257,29 +257,42 @@ export default function PartSearchWidget() {
         <div className="space-y-2 border-t pt-2">
           <label className="text-xs font-bold text-muted-foreground">匯入至不良品單 (選填)</label>
           <div className="grid grid-cols-2 gap-2">
-            <Input 
-              placeholder="不良品單號" 
-              value={formId} 
-              onChange={e => setFormId(e.target.value)} 
-              className="h-8 text-sm"
-            />
-            <Input 
-              type="date"
-              value={formDate} 
-              onChange={e => setFormDate(e.target.value)} 
-              className="h-8 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
-              disabled={matchedDefects.length > 0}
-              onClick={(e: any) => { if (matchedDefects.length === 0) e.target.showPicker?.(); }}
-            />
-            <div className="col-span-2">
+            <div className="col-span-1 space-y-1">
+              <Input 
+                placeholder="不良品單號" 
+                value={formId} 
+                onChange={e => setFormId(e.target.value)} 
+                className="h-8 text-sm"
+              />
+              {matchedDefects.length > 0 && (
+                <div className="text-[10px] text-amber-600 font-bold px-1">系統已存在單號</div>
+              )}
+            </div>
+            <div className="col-span-1 space-y-1">
+              <Input 
+                type="date"
+                value={formDate} 
+                onChange={e => setFormDate(e.target.value)} 
+                className="h-8 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
+                disabled={matchedDefects.length > 0}
+                onClick={(e: any) => { if (matchedDefects.length === 0) e.target.showPicker?.(); }}
+              />
+            </div>
+            <div className="col-span-2 space-y-1">
               <Input 
                 type="number"
                 placeholder="不良品數量"
                 min="0"
                 value={quantity} 
-                onChange={e => setQuantity(e.target.value ? Number(e.target.value) : '')} 
-                className="h-8 text-sm"
+                onChange={e => {
+                  setQuantity(e.target.value ? Number(e.target.value) : '');
+                  if (importStatus === '請輸入不良品數量！') setImportStatus(null);
+                }} 
+                className={`h-8 text-sm ${importStatus === '請輸入不良品數量！' ? 'border-red-500 bg-red-50' : ''}`}
               />
+              {importStatus === '請輸入不良品數量！' && (
+                <div className="text-[10px] text-red-600 font-bold px-1">請輸入不良品數量！</div>
+              )}
             </div>
           </div>
           
@@ -353,8 +366,8 @@ export default function PartSearchWidget() {
             )}
           </div>
           
-          {importStatus && (
-            <div className="text-xs font-bold text-green-600 bg-green-50 p-1 rounded text-center">
+          {importStatus && importStatus !== '請輸入不良品數量！' && (
+            <div className={`text-xs font-bold p-1 rounded text-center ${importStatus.includes('失敗') || importStatus.includes('請輸入') ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'}`}>
               {importStatus}
             </div>
           )}
