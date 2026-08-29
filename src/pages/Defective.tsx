@@ -170,6 +170,11 @@ export default function DefectivePage() {
       setSystemAlert('不良品單號不能為空！');
       return;
     }
+    const isDuplicate = !editingId && defects.some(d => d.formId === formData.formId.trim());
+    if (isDuplicate) {
+      setSystemAlert('您輸入的單號已存在系統中，請使用其他單號！');
+      return;
+    }
     try {
       // If editing, first delete all existing items with this formId
       if (editingId) {
@@ -384,9 +389,17 @@ export default function DefectivePage() {
               <DialogTitle>{editingId ? '編輯不良品單' : '新增不良品單'}</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-3 gap-4 py-4 border-b">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>不良品單號</Label>
-                <Input value={formData.formId} disabled={!!editingId} onChange={e => setFormData({...formData, formId: e.target.value})} />
+                <Input 
+                  value={formData.formId} 
+                  disabled={!!editingId} 
+                  onChange={e => setFormData({...formData, formId: e.target.value})} 
+                  className={(!editingId && formData.formId.trim() && defects.some(d => d.formId === formData.formId.trim())) ? 'border-red-500 bg-red-50' : ''}
+                />
+                {!editingId && formData.formId.trim() && defects.some(d => d.formId === formData.formId.trim()) && (
+                  <div className="text-[10px] text-red-600 font-bold">此單號已存在系統中！</div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>日期</Label>
@@ -665,7 +678,7 @@ export default function DefectivePage() {
             </div>
             <div className="flex justify-end items-center mt-4 pt-4 border-t gap-2">
               <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
-              <Button onClick={handleSave}>儲存</Button>
+              <Button disabled={!editingId && formData.formId.trim() !== '' && defects.some(d => d.formId === formData.formId.trim())} onClick={handleSave}>儲存</Button>
             </div>
           </DialogContent>
         </Dialog>
