@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, X, ListPlus, Pencil, Check, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, X, ListPlus, Pencil, Check, Trash2, AlertCircle, Copy } from 'lucide-react';
 
 export type Defect = {
   id?: string;
@@ -395,13 +395,18 @@ export default function DefectivePage() {
             <div className="space-y-4 py-2">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-lg">不良品項目 <span className="text-sm font-normal text-muted-foreground">(共 {formData.items.length} 項)</span></h3>
-                <Button variant="outline" size="sm" onClick={() => setFormData({...formData, items: [...formData.items, { ...defaultItem }]})}>
+                <Button variant="outline" size="sm" onClick={() => {
+                  setFormData({...formData, items: [...formData.items, { ...defaultItem }]});
+                  setTimeout(() => {
+                    document.getElementById(`defective-item-${formData.items.length}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }}>
                   <Plus className="w-4 h-4 mr-1" /> 新增項目
                 </Button>
               </div>
               
               {formData.items.map((item, index) => (
-                  <Card key={index} className="relative overflow-hidden">
+                  <Card key={index} id={`defective-item-${index}`} className="relative overflow-hidden">
                     <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg z-10 border-b border-r border-slate-300">
                       #{index + 1}
                     </div>
@@ -592,7 +597,17 @@ export default function DefectivePage() {
                       }} className="h-8 text-xs" placeholder="製令數量" />
                     </div>
 
-                    <div className="col-span-12 flex justify-end mt-1 pt-3 border-t border-slate-100">
+                    <div className="col-span-12 flex justify-end gap-2 mt-1 pt-3 border-t border-slate-100">
+                      <Button variant="outline" size="sm" className="h-6 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2" onClick={() => {
+                        const newItems = [...formData.items];
+                        newItems.splice(index + 1, 0, { ...newItems[index] });
+                        setFormData({ ...formData, items: newItems });
+                        setTimeout(() => {
+                          document.getElementById(`defective-item-${index + 1}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                      }}>
+                        <Copy className="w-3 h-3 mr-1" /> 複製此項目
+                      </Button>
                       <Button variant="ghost" size="sm" className="h-6 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2" onClick={() => {
                         const newItems = [...formData.items];
                         newItems[index] = { ...defaultItem };

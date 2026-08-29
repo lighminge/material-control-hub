@@ -378,7 +378,8 @@ export default function PartSearchWidget() {
             <div className="text-xs text-center text-muted-foreground mt-4">無符合的物料</div>
           ) : (
             results.map((mat, index) => {
-              const isExisting = matchedDefects.some(d => d.materialId === mat.name && (d.headType || '') === (mat.headType || ''));
+              const existingCount = matchedDefects.filter(d => d.materialId === mat.name && (d.headType || '') === (mat.headType || '')).length;
+              const isExisting = existingCount > 0;
               return (
                 <div key={mat.id} className={`border rounded p-2 text-xs shadow-sm space-y-2 relative ${isExisting ? 'bg-amber-50 border-amber-300' : 'bg-white'}`}>
                   <div className={`absolute top-2 left-2 text-[10px] font-mono ${isExisting ? 'text-amber-500' : 'text-slate-400'}`}>{index + 1}.</div>
@@ -393,7 +394,7 @@ export default function PartSearchWidget() {
                         )}
                         {isExisting && (
                           <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-200 text-amber-800 border border-amber-300">
-                            已存在此單
+                            已存在此單 ({existingCount}筆)
                           </span>
                         )}
                       </div>
@@ -414,7 +415,6 @@ export default function PartSearchWidget() {
                   variant="outline" 
                   size="sm" 
                   className="w-full h-6 text-[10px]"
-                  disabled={isExisting}
                   onClick={() => handleImport(mat)}
                 >
                   匯入此品號與品名
