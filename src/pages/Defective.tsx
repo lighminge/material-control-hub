@@ -455,7 +455,7 @@ export default function DefectivePage() {
               )}
               
               {formData.items.map((item, index) => (
-                  <Card key={index} id={`defective-item-${index}`} className="relative overflow-visible">
+                  <Card key={index} id={`defective-item-${index}`} className={`relative overflow-visible transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-100/70 border-slate-300'}`}>
                     <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg rounded-tl-lg z-10 border-b border-r border-slate-300">
                       #{index + 1}
                     </div>
@@ -641,7 +641,7 @@ export default function DefectivePage() {
                       <div className="flex justify-between items-center">
                         <Label className="text-xs">製令數量</Label>
                         {(item.quantity !== '' && item.workOrderQuantity !== '' && Number(item.workOrderQuantity) > 0) && (
-                          <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 rounded">
+                          <span className="text-sm font-black text-red-700 bg-red-100 border-2 border-red-300 px-2 py-0.5 rounded-md shadow-sm tracking-wide">
                             不良率: {((Number(item.quantity) / Number(item.workOrderQuantity)) * 100).toFixed(2)}%
                           </span>
                         )}
