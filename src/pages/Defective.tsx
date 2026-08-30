@@ -455,7 +455,7 @@ export default function DefectivePage() {
               )}
               
               {formData.items.map((item, index) => (
-                  <Card key={index} id={`defective-item-${index}`} className={`relative overflow-visible transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-100/70 border-slate-300'}`}>
+                  <Card key={index} id={`defective-item-${index}`} className="relative overflow-visible transition-colors" style={{ background: index % 2 === 0 ? '#ffffff' : '#f0f9ff', borderColor: index % 2 === 0 ? 'transparent' : '#bae6fd', borderWidth: index % 2 === 0 ? '0' : '2px' }}>
                     <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg rounded-tl-lg z-10 border-b border-r border-slate-300">
                       #{index + 1}
                     </div>
