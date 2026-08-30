@@ -96,9 +96,10 @@ export default function StatisticsPage() {
 
     const groupedMap = new Map<string, any>();
     filteredDefects.forEach(d => {
-      const key = `${d.materialId}_${d.materialName}_${d.headType}`;
+      const key = `${d.formId}_${d.materialId}_${d.materialName}_${d.headType}`;
       if (!groupedMap.has(key)) {
         groupedMap.set(key, {
+          formId: d.formId,
           materialId: d.materialId,
           materialName: d.materialName,
           headType: d.headType,
@@ -712,6 +713,30 @@ export default function StatisticsPage() {
       </TabsContent>
       
       <TabsContent value="defective" className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">符合條件的不良品單數量</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-primary">{defectiveStats.formsCount}</div>
+              <p className="text-xs text-muted-foreground mt-2">表單總數</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">符合條件的不良品項目數量</CardTitle>
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-destructive">{defectiveStats.itemsCount}</div>
+              <p className="text-xs text-muted-foreground mt-2">各項不良物料加總</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card className="mb-6 shadow-sm border-t-4 border-t-red-500">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-bold">查詢條件設定</CardTitle>
@@ -749,30 +774,6 @@ export default function StatisticsPage() {
             </div>
           </CardContent>
         </Card>
-        
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">符合條件的不良品單數量</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-primary">{defectiveStats.formsCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">表單總數</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">符合條件的不良品項目數量</CardTitle>
-              <ShieldAlert className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-destructive">{defectiveStats.itemsCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">各項不良物料加總</p>
-            </CardContent>
-          </Card>
-        </div>
 
         <Card className="shadow-sm mt-6">
           <CardHeader className="pb-3 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -817,26 +818,50 @@ export default function StatisticsPage() {
                   <TableHeader className="bg-muted/50">
                     <TableRow>
                       <TableHead className="w-[80px]">項次</TableHead>
+                      <TableHead>單號</TableHead>
                       <TableHead>物料品號</TableHead>
                       <TableHead>物料品名</TableHead>
                       <TableHead>頭型</TableHead>
-                      <TableHead>分類</TableHead>
                       <TableHead className="text-right">不良總數</TableHead>
+                      <TableHead>分類</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {defectiveStats.groupedItems.slice((defectiveListPage - 1) * defectiveListPageSize, defectiveListPage * defectiveListPageSize).map((item: any, index: number) => (
                       <TableRow key={index} className="hover:bg-muted/30">
                         <TableCell>{(defectiveListPage - 1) * defectiveListPageSize + index + 1}</TableCell>
-                        <TableCell className="font-bold">{item.materialId}</TableCell>
-                        <TableCell>{item.materialName}</TableCell>
-                        <TableCell>{item.headType}</TableCell>
+                        <TableCell className="font-bold">{item.formId}</TableCell>
                         <TableCell>
-                          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">
-                            {item.category || '未分類'}
+                          <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
+                            {item.materialId}
                           </span>
                         </TableCell>
+                        <TableCell>
+                          {item.materialName ? (
+                            <span className="text-base font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-md shadow-sm">
+                              {item.materialName}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.headType ? (
+                            <span className={`px-2 py-1 rounded-md text-xs font-bold border ${item.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : item.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : item.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                              {item.headType}
+                            </span>
+                          ) : <span className="text-muted-foreground">-</span>}
+                        </TableCell>
                         <TableCell className="text-right font-black text-destructive text-base">{item.quantity}</TableCell>
+                        <TableCell>
+                          {item.category === 'TKW' ? (
+                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
+                          ) : item.category === '夾鉗' ? (
+                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
+                          ) : (
+                            <span className="text-muted-foreground">{item.category || '未分類'}</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
