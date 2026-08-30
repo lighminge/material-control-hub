@@ -822,7 +822,7 @@ export default function StatisticsPage() {
                       <TableHead>物料品號</TableHead>
                       <TableHead>物料品名</TableHead>
                       <TableHead>頭型</TableHead>
-                      <TableHead className="text-right">不良總數</TableHead>
+                      <TableHead className="text-center">不良總數</TableHead>
                       <TableHead>分類</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -830,7 +830,11 @@ export default function StatisticsPage() {
                     {defectiveStats.groupedItems.slice((defectiveListPage - 1) * defectiveListPageSize, defectiveListPage * defectiveListPageSize).map((item: any, index: number) => (
                       <TableRow key={index} className="hover:bg-muted/30">
                         <TableCell>{(defectiveListPage - 1) * defectiveListPageSize + index + 1}</TableCell>
-                        <TableCell className="font-bold">{item.formId}</TableCell>
+                        <TableCell>
+                          <span className="text-base font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-md shadow-sm">
+                            {item.formId}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
                             {item.materialId}
@@ -852,7 +856,7 @@ export default function StatisticsPage() {
                             </span>
                           ) : <span className="text-muted-foreground">-</span>}
                         </TableCell>
-                        <TableCell className="text-right font-black text-destructive text-base">{item.quantity}</TableCell>
+                        <TableCell className="text-center font-black text-destructive text-base">{item.quantity}</TableCell>
                         <TableCell>
                           {item.category === 'TKW' ? (
                             <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
