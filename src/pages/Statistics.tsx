@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { calculateWorkingDays } from '@/utils/dateUtils';
-import { ClipboardList, ShieldAlert, TrendingUp, PieChart } from 'lucide-react';
+import { ClipboardList, ShieldAlert, TrendingUp, PieChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,8 +29,13 @@ export default function StatisticsPage() {
   const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
   const [listPage, setListPage] = useState(1);
   const [listPageSize, setListPageSize] = useState(10);
-  const [useYearFilter, setUseYearFilter] = useState(false);
+  const [useYearFilter, setUseYearFilter] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  
+  const [defectiveFilterFormId, setDefectiveFilterFormId] = useState('');
+  const [defectiveFilterMaterialId, setDefectiveFilterMaterialId] = useState('');
+  const [defectiveListPage, setDefectiveListPage] = useState(1);
+  const [defectiveListPageSize, setDefectiveListPageSize] = useState(10);
 
   const [staffList, setStaffList] = useState<any[]>([]);
   const [defects, setDefects] = useState<any[]>([]);
@@ -82,16 +87,36 @@ export default function StatisticsPage() {
 
     const filteredDefects = defects.filter(d => {
       if (d.date && !isWithinRange(d.date)) return false;
+      if (defectiveFilterFormId && d.formId && !d.formId.toLowerCase().includes(defectiveFilterFormId.toLowerCase())) return false;
+      if (defectiveFilterMaterialId && d.materialId && !d.materialId.toLowerCase().includes(defectiveFilterMaterialId.toLowerCase())) return false;
       return true;
     });
 
     const uniqueForms = new Set(filteredDefects.map(d => d.formId));
 
+    const groupedMap = new Map<string, any>();
+    filteredDefects.forEach(d => {
+      const key = `${d.materialId}_${d.materialName}_${d.headType}`;
+      if (!groupedMap.has(key)) {
+        groupedMap.set(key, {
+          materialId: d.materialId,
+          materialName: d.materialName,
+          headType: d.headType,
+          category: d.category,
+          quantity: 0
+        });
+      }
+      groupedMap.get(key).quantity += (Number(d.quantity) || 0);
+    });
+
+    const groupedItems = Array.from(groupedMap.values()).sort((a, b) => b.quantity - a.quantity);
+
     return {
       formsCount: uniqueForms.size,
-      itemsCount: filteredDefects.length
+      itemsCount: filteredDefects.length,
+      groupedItems
     };
-  }, [defects, startDate, endDate, useYearFilter, selectedYear]);
+  }, [defects, startDate, endDate, useYearFilter, selectedYear, defectiveFilterFormId, defectiveFilterMaterialId]);
 
   const stats = useMemo(() => {
     // Helper to check date range
@@ -316,44 +341,44 @@ export default function StatisticsPage() {
   return (
     <Tabs defaultValue="material" className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center bg-muted/30 p-4 rounded-xl border border-border/50 gap-6">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex items-center gap-3 flex-wrap">
             <PieChart className="w-8 h-8 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight text-primary">統計作業</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-primary mr-4">統計作業</h1>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-lg shadow-sm border border-border/50 h-[40px]">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="filter-year" checked={useYearFilter} onCheckedChange={(c) => setUseYearFilter(!!c)} />
+                  <label htmlFor="filter-year" className="text-sm font-medium leading-none cursor-pointer text-muted-foreground whitespace-nowrap">
+                    以年度區分
+                  </label>
+                </div>
+                {useYearFilter && (
+                  <div className="border-l pl-3 ml-1">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-[90px] h-7 text-sm">
+                        <SelectValue placeholder="年度" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2024">2024</SelectItem>
+                        <SelectItem value="2025">2025</SelectItem>
+                        <SelectItem value="2026">2026</SelectItem>
+                        <SelectItem value="2027">2027</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold h-[40px]">
+                匯出 Excel
+              </Button>
+            </div>
           </div>
-          <TabsList className="self-start">
+          <TabsList className="self-start mt-2">
             <TabsTrigger value="material">物料管制統計</TabsTrigger>
             <TabsTrigger value="defective">不良品統計</TabsTrigger>
           </TabsList>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3 ml-auto">
-          <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-lg shadow-sm border border-border/50 h-[40px]">
-            <div className="flex items-center space-x-2">
-              <Checkbox id="filter-year" checked={useYearFilter} onCheckedChange={(c) => setUseYearFilter(!!c)} />
-              <label htmlFor="filter-year" className="text-sm font-medium leading-none cursor-pointer text-muted-foreground whitespace-nowrap">
-                以年度區分
-              </label>
-            </div>
-            {useYearFilter && (
-              <div className="border-l pl-3 ml-1">
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="w-[90px] h-7 text-sm">
-                    <SelectValue placeholder="年度" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2024">2024</SelectItem>
-                    <SelectItem value="2025">2025</SelectItem>
-                    <SelectItem value="2026">2026</SelectItem>
-                    <SelectItem value="2027">2027</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold h-[40px]">
-            匯出 Excel
-          </Button>
         </div>
       </div>
       <TabsContent value="material" className="space-y-6">
@@ -691,7 +716,7 @@ export default function StatisticsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-bold">查詢條件設定</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
+          <CardContent className="grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             <div className="space-y-2">
               <Label>建單日期(起)</Label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
@@ -699,6 +724,28 @@ export default function StatisticsPage() {
             <div className="space-y-2">
               <Label>建單日期(迄)</Label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+            </div>
+            <div className="space-y-2">
+              <Label>不良品單號</Label>
+              <Input 
+                placeholder="查詢單號" 
+                value={defectiveFilterFormId} 
+                onChange={(e) => {
+                  setDefectiveFilterFormId(e.target.value);
+                  setDefectiveListPage(1);
+                }} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>不良品品號</Label>
+              <Input 
+                placeholder="查詢品號" 
+                value={defectiveFilterMaterialId} 
+                onChange={(e) => {
+                  setDefectiveFilterMaterialId(e.target.value);
+                  setDefectiveListPage(1);
+                }} 
+              />
             </div>
           </CardContent>
         </Card>
@@ -726,6 +773,78 @@ export default function StatisticsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="shadow-sm mt-6">
+          <CardHeader className="pb-3 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-lg font-bold">不良品清單</CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">每頁顯示</span>
+                <Select value={defectiveListPageSize.toString()} onValueChange={(val) => { setDefectiveListPageSize(Number(val)); setDefectiveListPage(1); }}>
+                  <SelectTrigger className="w-[80px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="30">30</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">筆</span>
+              </div>
+              
+              <div className="flex items-center gap-1 border rounded-md p-1">
+                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={defectiveListPage === 1} onClick={() => setDefectiveListPage(p => Math.max(1, p - 1))}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm px-2">
+                  {defectiveListPage} / {Math.max(1, Math.ceil(defectiveStats.groupedItems.length / defectiveListPageSize))}
+                </span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={defectiveListPage >= Math.ceil(defectiveStats.groupedItems.length / defectiveListPageSize) || defectiveStats.groupedItems.length === 0} onClick={() => setDefectiveListPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {defectiveStats.groupedItems.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground">沒有符合條件的資料</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="w-[80px]">項次</TableHead>
+                      <TableHead>物料品號</TableHead>
+                      <TableHead>物料品名</TableHead>
+                      <TableHead>頭型</TableHead>
+                      <TableHead>分類</TableHead>
+                      <TableHead className="text-right">不良總數</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {defectiveStats.groupedItems.slice((defectiveListPage - 1) * defectiveListPageSize, defectiveListPage * defectiveListPageSize).map((item: any, index: number) => (
+                      <TableRow key={index} className="hover:bg-muted/30">
+                        <TableCell>{(defectiveListPage - 1) * defectiveListPageSize + index + 1}</TableCell>
+                        <TableCell className="font-bold">{item.materialId}</TableCell>
+                        <TableCell>{item.materialName}</TableCell>
+                        <TableCell>{item.headType}</TableCell>
+                        <TableCell>
+                          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">
+                            {item.category || '未分類'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-black text-destructive text-base">{item.quantity}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   );
