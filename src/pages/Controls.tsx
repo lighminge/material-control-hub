@@ -218,32 +218,35 @@ export default function ControlsPage() {
         restockDate: restockDateStr
       };
 
-      setFormData({ ...formData, items: newItems });
+      const updatedFormData = { ...formData, items: newItems };
+      setFormData(updatedFormData);
       setRestockItemIndex(null);
-      setSystemAlert(`已成功設定補件！目前該物料扣除領用後，剩餘庫存為: ${finalStock}`);
+      await syncToDatabase(updatedFormData, false);
+      setSystemAlert(`已成功設定補件並同步領料單！目前該物料扣除領用後，剩餘庫存為: ${finalStock}`);
     } catch (error) {
       console.error("Error restocking:", error);
       setSystemAlert("更新庫存時發生錯誤！");
     }
   };
 
-  const handleSave = async () => {
-    if (!formData || !formData.id) return;
-    
+  
+  const syncToDatabase = async (toSave: any, shouldClose: boolean = false) => {
     try {
-      let toSave = { ...formData };
-      
-      const allRestocked = toSave.items.every(i => i.missingQuantity === 0 && i.restockDate !== '');
+      const allRestocked = toSave.items.every((i: any) => i.missingQuantity === 0 && i.restockDate !== '');
       
       if (allRestocked) {
         toSave.status = '已結案';
-        const dates = toSave.items.map(i => new Date(i.restockDate).getTime());
+        const dates = toSave.items.map((i: any) => new Date(i.restockDate).getTime());
         const maxDate = new Date(Math.max(...dates));
         toSave.completionDate = format(maxDate, 'yyyy-MM-dd');
         toSave.endDate = toSave.completionDate;
+      } else {
+        toSave.status = '處理中';
+        toSave.completionDate = null as any;
+        toSave.endDate = null as any;
       }
 
-      await updateDocument('controls', formData.id, toSave);
+      await updateDocument('controls', toSave.id, toSave);
       
       if (toSave.requisitionId) {
         try {
@@ -253,11 +256,15 @@ export default function ControlsPage() {
           
           if (reqToUpdate) {
             const updatedReqItems = reqToUpdate.items.map((reqItem: any) => {
-              const ctrlItem = toSave.items.find(ci => ci.materialId === reqItem.materialId);
-              // If this item was restocked in the control form, update missingQuantity and latest stock in requisition
-              if (ctrlItem && ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
-                const mat = allMats.find(m => m.id === reqItem.materialId);
-                return { ...reqItem, missingQuantity: 0, currentStock: mat ? mat.stock : reqItem.currentStock };
+              const ctrlItem = toSave.items.find((ci: any) => ci.materialId === reqItem.materialId);
+              if (ctrlItem) {
+                if (ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
+                  const mat = allMats.find(m => m.id === reqItem.materialId);
+                  return { ...reqItem, missingQuantity: 0, currentStock: mat ? mat.stock : reqItem.currentStock };
+                } else if (ctrlItem.missingQuantity > 0 || ctrlItem.missingQuantity === undefined) {
+                  const restoredMissing = (ctrlItem as any).originalMissingQuantity || ctrlItem.missingQuantity || ctrlItem.requiredQuantity || 1;
+                  return { ...reqItem, missingQuantity: restoredMissing, restockDate: '' };
+                }
               }
               return reqItem;
             });
@@ -271,22 +278,63 @@ export default function ControlsPage() {
 
             if (allRestocked && !stillMissing) {
               reqUpdates.completionDate = toSave.completionDate;
+            } else if (stillMissing) {
+              reqUpdates.completionDate = null;
             } else if (!stillMissing && !reqToUpdate.completionDate) {
               reqUpdates.completionDate = format(new Date(), 'yyyy-MM-dd');
             }
 
             await updateDocument('requisitions', reqToUpdate.id, reqUpdates);
           }
-        } catch (syncError) {
-          console.error("Error syncing to requisition:", syncError);
+        } catch (error) {
+          console.error("Error syncing to requisition:", error);
         }
       }
-
-      setIsOpen(false);
+      
+      if (shouldClose) {
+        setIsOpen(false);
+      }
       loadData();
     } catch (error) {
-      console.error("Error saving control:", error);
+      console.error(error);
+      setSystemAlert("儲存時發生錯誤");
     }
+  };
+
+  const handleUndoRestock = async (index: number) => {
+    if (!formData) return;
+    const item = formData.items[index];
+    
+    const originalMissing = (item as any).originalMissingQuantity || item.requiredQuantity || 1;
+
+    try {
+      const allMats = await getCollection('materials') as any[];
+      const mat = allMats.find(m => m.id === item.materialId);
+      if (mat) {
+        const revertedStock = (mat.stock || 0) + (item.requiredQuantity || 0);
+        await updateDocument('materials', item.materialId, { stock: revertedStock });
+      }
+
+      const newItems = [...formData.items];
+      newItems[index] = {
+        ...item,
+        missingQuantity: originalMissing,
+        restockDate: ''
+      };
+      
+      const updatedFormData = { ...formData, items: newItems };
+      setFormData(updatedFormData);
+      await syncToDatabase(updatedFormData, false);
+      setSystemAlert("已撤銷補完，回復缺料狀況。庫存與領料單已同步回復。");
+    } catch (error) {
+      console.error(error);
+      setSystemAlert("撤銷發生錯誤！");
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData || !formData.id) return;
+    await syncToDatabase({ ...formData }, true);
   };
 
   const calculateDays = (control: Control) => {
@@ -554,8 +602,11 @@ export default function ControlsPage() {
                               {item.restockDate}
                             </div>
                             <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={() => handleRestockClick(index)}>
-                              修改
-                            </Button>
+                                修改
+                              </Button>
+                              <Button variant="destructive" size="sm" className="h-8 text-xs px-2" onClick={() => handleUndoRestock(index)}>
+                                撤銷
+                              </Button>
                           </div>
                         ) : (
                           <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => handleRestockClick(index)}>
