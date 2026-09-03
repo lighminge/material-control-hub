@@ -456,9 +456,9 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
                         <div className="text-xs text-muted-foreground">需領: {item.requiredQuantity || 0}</div>
                       </div>
                       <div className="col-span-2">
-                        <Label className="text-xs text-muted-foreground">缺件狀態</Label>
-                        {item.missingQuantity > 0 ? (
-                          <div className="font-bold text-destructive">缺 {item.missingQuantity} PCS</div>
+                        <Label className="text-xs text-muted-foreground">缺件數量</Label>
+                        {(item.missingQuantity > 0 || item.missingQuantity === undefined) ? (
+                          <div className="font-bold text-destructive">缺 {item.missingQuantity ?? item.requiredQuantity ?? '?'} PCS</div>
                         ) : (
                           <div className="font-bold text-green-600">已補完</div>
                         )}

@@ -342,9 +342,9 @@ export default function Dashboard() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">
-                          {c.items?.filter((i: any) => i.missingQuantity > 0).map((i: any) => (
+                          {c.items?.filter((i: any) => i.missingQuantity > 0 || i.missingQuantity === undefined).map((i: any) => (
                             <span key={i.materialId} className="text-sm font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-md shadow-sm">
-                              {i.materialName || i.materialId}
+                              {i.materialName || i.materialId} (缺: {i.missingQuantity ?? i.requiredQuantity ?? '?'})
                             </span>
                           ))}
                         </div>
