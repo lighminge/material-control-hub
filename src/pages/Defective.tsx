@@ -128,7 +128,40 @@ export default function DefectivePage() {
     loadData();
     const handleUpdate = () => loadData();
     window.addEventListener('defectsUpdated', handleUpdate);
-    return () => window.removeEventListener('defectsUpdated', handleUpdate);
+    
+    const handleImport = (e: any) => {
+      const { formId, item } = e.detail;
+      setEditingId(current => {
+        if (current === formId) {
+          setFormData(prev => {
+            const newItems = [...prev.items, {
+              id: item.id,
+              materialId: item.materialId,
+              materialName: item.materialName,
+              category: item.category,
+              headType: item.headType,
+              condition: item.condition,
+              quantity: item.quantity,
+              workOrder: item.workOrder,
+              workOrderQuantity: item.workOrderQuantity
+            }];
+            newItems.sort((a, b) => {
+              const keyA = `${a.materialId}-${a.materialName}-${a.headType}`;
+              const keyB = `${b.materialId}-${b.materialName}-${b.headType}`;
+              return keyA.localeCompare(keyB);
+            });
+            return { ...prev, items: newItems };
+          });
+        }
+        return current;
+      });
+    };
+    window.addEventListener('defectImported', handleImport);
+
+    return () => {
+      window.removeEventListener('defectsUpdated', handleUpdate);
+      window.removeEventListener('defectImported', handleImport);
+    };
   }, []);
 
   const savePhrases = async (newPhrases: string[]) => {
@@ -267,8 +300,8 @@ export default function DefectivePage() {
     // Sort items within each form so identical materials are grouped together
     grouped.forEach(form => {
       form.items.sort((a, b) => {
-        const keyA = `${a.materialName}-${a.materialId}-${a.headType}`;
-        const keyB = `${b.materialName}-${b.materialId}-${b.headType}`;
+        const keyA = `${a.materialId}-${a.materialName}-${a.headType}`;
+        const keyB = `${b.materialId}-${b.materialName}-${b.headType}`;
         return keyA.localeCompare(keyB);
       });
     });
@@ -455,8 +488,8 @@ export default function DefectivePage() {
               )}
               
               {formData.items.map((item, index) => (
-                  <Card key={index} id={`defective-item-${index}`} className="relative overflow-visible transition-colors" style={{ background: index % 2 === 0 ? '#ffffff' : '#f0f9ff', borderColor: index % 2 === 0 ? 'transparent' : '#bae6fd', borderWidth: index % 2 === 0 ? '0' : '2px' }}>
-                    <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg rounded-tl-lg z-10 border-b border-r border-slate-300">
+                  <div key={index} id={`defective-item-${index}`} className={`relative overflow-visible transition-colors rounded-xl border-2 ${index % 2 === 0 ? 'bg-white border-transparent' : 'bg-blue-50/50 border-blue-200'} shadow-sm`}>
+                    <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg rounded-tl-xl z-10 border-b border-r border-slate-300">
                       #{index + 1}
                     </div>
                     {formData.items.length > 1 && (
@@ -464,7 +497,7 @@ export default function DefectivePage() {
                         <X className="w-5 h-5 stroke-[3px]" />
                       </Button>
                     )}
-                    <CardContent className="p-4 pt-8 grid grid-cols-12 gap-3">
+                    <div className="p-4 pt-8 grid grid-cols-12 gap-3">
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">物料分類</Label>
                       <Select value={item.category} onValueChange={(val) => {
@@ -672,9 +705,9 @@ export default function DefectivePage() {
                         清除此項目資料
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </div>
+                  </div>
+                ))}
             </div>
             <div className="flex justify-end items-center mt-4 pt-4 border-t gap-2">
               <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
@@ -830,7 +863,7 @@ export default function DefectivePage() {
                           )}
                           <div className="flex flex-col gap-1.5">
                             {form.items.map((item, idx) => (
-                            <div key={idx} className="flex flex-wrap items-center gap-2">
+                            <div key={idx} className="flex flex-wrap items-center gap-2 bg-white/50 p-1.5 rounded-md border border-slate-100">
                               <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
                               <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
                               {item.headType && (
@@ -839,8 +872,26 @@ export default function DefectivePage() {
                                 </span>
                               )}
                               <span className="text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 border border-red-100 rounded">不良 {item.quantity || 0} PCS</span>
-                              {item.workOrder && <span className="text-xs text-slate-600 bg-slate-100 px-1.5 py-0.5 border border-slate-200 rounded">製令: {item.workOrder} ({item.workOrderQuantity})</span>}
-                              {item.condition && <span className="text-xs text-muted-foreground">({item.condition})</span>}
+                              {item.workOrder && (
+                                <span className="text-xs text-emerald-800 bg-emerald-100 px-1.5 py-0.5 border border-emerald-300 rounded font-bold shadow-sm">
+                                  製令編號: {item.workOrder}
+                                </span>
+                              )}
+                              {item.workOrderQuantity && (
+                                <span className="text-xs text-cyan-800 bg-cyan-100 px-1.5 py-0.5 border border-cyan-300 rounded font-bold shadow-sm">
+                                  製令數量: {item.workOrderQuantity}
+                                </span>
+                              )}
+                              {item.condition && (
+                                <span className="text-xs text-rose-800 bg-rose-100 px-1.5 py-0.5 border border-rose-300 rounded font-bold shadow-sm">
+                                  不良情況: {item.condition}
+                                </span>
+                              )}
+                              {(item.workOrderQuantity && Number(item.workOrderQuantity) > 0) && (
+                                <span className="text-sm text-white bg-red-600 px-2 py-0.5 border border-red-700 rounded-md font-black shadow-md ml-auto">
+                                  不良率: {((Number(item.quantity || 0) / Number(item.workOrderQuantity)) * 100).toFixed(2)}%
+                                </span>
+                              )}
                             </div>
                           ))}
                           </div>

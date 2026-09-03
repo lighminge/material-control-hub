@@ -139,7 +139,9 @@ export default function MaterialsPage() {
 
   // Filter logic
   const filteredMaterials = materials.filter(mat => {
-    const matchName = searchName === '' || mat.name.toLowerCase().includes(searchName.toLowerCase());
+    const matchName = searchName === '' || 
+      mat.name.toLowerCase().includes(searchName.toLowerCase()) ||
+      (mat.partName && mat.partName.toLowerCase().includes(searchName.toLowerCase()));
     const matchCategory = searchCategory === 'all' || (mat.category || '未分類') === searchCategory;
     return matchName && matchCategory;
   });
@@ -163,7 +165,11 @@ export default function MaterialsPage() {
   // History Filter logic
   const filteredHist = historyLogs.filter(log => {
     const mat = materials.find(m => m.id === log.materialId);
-    if (histSearchName && !log.materialName.toLowerCase().includes(histSearchName.toLowerCase())) return false;
+    if (histSearchName && 
+        !log.materialName.toLowerCase().includes(histSearchName.toLowerCase()) && 
+        !(mat?.partName && mat.partName.toLowerCase().includes(histSearchName.toLowerCase()))) {
+      return false;
+    }
     if (histSearchCat !== 'all' && (mat?.category || '未分類') !== histSearchCat) return false;
     if (histStartDate && log.restockDate < histStartDate) return false;
     if (histEndDate && log.restockDate > histEndDate) return false;

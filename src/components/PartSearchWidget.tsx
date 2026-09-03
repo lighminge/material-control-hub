@@ -65,14 +65,16 @@ export default function PartSearchWidget() {
   };
 
   useEffect(() => {
-    // Load materials
-    getCollection('materials').then((data) => {
-      setMaterials(data as Material[]);
-    });
-    getDocument('settings', 'defectivePhrases').then(doc => {
-      if (doc && (doc as any).phrases) setPhrases((doc as any).phrases);
-    });
-  }, []);
+    // Load materials when widget is opened
+    if (isOpen) {
+      getCollection('materials').then((data) => {
+        setMaterials(data as Material[]);
+      });
+      getDocument('settings', 'defectivePhrases').then(doc => {
+        if (doc && (doc as any).phrases) setPhrases((doc as any).phrases);
+      });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     getCollection('defects').then(d => setExistingDefects(d as any[]));
@@ -152,13 +154,12 @@ export default function PartSearchWidget() {
       return;
     }
 
-
     try {
       const defects = await getCollection('defects') as any[];
       const existing = defects.find(d => d.formId === formId.trim());
 
       if (existing) {
-        await addDocument('defects', {
+        const newItem = {
           formId: existing.formId,
           date: existing.date,
           discoverer: existing.discoverer,
@@ -171,10 +172,12 @@ export default function PartSearchWidget() {
           workOrder: '',
           workOrderQuantity: 0,
           createdAt: new Date().toISOString()
-        });
-        setImportStatus(`已成功新增項目至單號 ${formId}！`);
+        };
+        await addDocument('defects', newItem);
+        setImportStatus(`已將品號加入到不良品單 ${existing.formId} 中！`);
+        window.dispatchEvent(new CustomEvent('defectImported', { detail: { formId: existing.formId, item: newItem } }));
       } else {
-        await addDocument('defects', {
+        const newItem = {
           formId: formId.trim(),
           date: formDate,
           materialId: mat.name,
@@ -187,8 +190,10 @@ export default function PartSearchWidget() {
           workOrderQuantity: 0,
           discoverer: '',
           createdAt: new Date().toISOString()
-        });
+        };
+        await addDocument('defects', newItem);
         setImportStatus(`已建立新單號 ${formId}！`);
+        window.dispatchEvent(new CustomEvent('defectImported', { detail: { formId: formId.trim(), item: newItem } }));
       }
       
       window.dispatchEvent(new Event('defectsUpdated'));
