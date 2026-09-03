@@ -160,9 +160,11 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
         restockDate: restockDateStr
       };
 
-      setFormData({ ...formData, items: newItems });
+      const updatedFormData = { ...formData, items: newItems };
+      setFormData(updatedFormData);
       setRestockItemIndex(null);
-      setSystemAlert(`已成功設定補件！目前該物料扣除領用後，剩餘庫存為: ${finalStock}`);
+      await syncToDatabase(updatedFormData, false);
+      setSystemAlert(`已成功設定補件並同步領料單！目前該物料扣除領用後，剩餘庫存為: ${finalStock}`);
     } catch (error) {
       console.error(error);
       setSystemAlert("更新庫存時發生錯誤！");
@@ -192,24 +194,23 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
         restockDate: ''
       };
       
-      setFormData({ ...formData, items: newItems });
-      setSystemAlert("已撤銷補完，回復缺料狀況。庫存已調整回復。");
+      const updatedFormData = { ...formData, items: newItems };
+      setFormData(updatedFormData);
+      await syncToDatabase(updatedFormData, false);
+      setSystemAlert("已撤銷補完，回復缺料狀況。庫存與領料單已同步回復。");
     } catch (error) {
       console.error(error);
       setSystemAlert("撤銷發生錯誤！");
     }
   };
 
-  const handleSave = async () => {
-    if (!formData || !formData.id) return;
-    
+  const syncToDatabase = async (toSave: any, shouldClose: boolean = false) => {
     try {
-      let toSave = { ...formData };
-      const allRestocked = toSave.items.every(i => i.missingQuantity === 0 && i.restockDate !== '');
+      const allRestocked = toSave.items.every((i: any) => i.missingQuantity === 0 && i.restockDate !== '');
       
       if (allRestocked) {
         toSave.status = '已結案';
-        const dates = toSave.items.map(i => new Date(i.restockDate).getTime());
+        const dates = toSave.items.map((i: any) => new Date(i.restockDate).getTime());
         const maxDate = new Date(Math.max(...dates));
         toSave.completionDate = format(maxDate, 'yyyy-MM-dd');
         toSave.endDate = toSave.completionDate;
@@ -219,7 +220,7 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
         toSave.endDate = null as any;
       }
 
-      await updateDocument('controls', formData.id, toSave);
+      await updateDocument('controls', toSave.id, toSave);
       
       if (toSave.requisitionId) {
         try {
@@ -234,8 +235,8 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
                 if (ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
                   const mat = allMats.find(m => m.id === reqItem.materialId);
                   return { ...reqItem, missingQuantity: 0, currentStock: mat ? mat.stock : reqItem.currentStock };
-                } else if (ctrlItem.missingQuantity > 0) {
-                  const restoredMissing = (ctrlItem as any).originalMissingQuantity || ctrlItem.missingQuantity;
+                } else if (ctrlItem.missingQuantity > 0 || ctrlItem.missingQuantity === undefined) {
+                  const restoredMissing = (ctrlItem as any).originalMissingQuantity || ctrlItem.missingQuantity || ctrlItem.requiredQuantity || 1;
                   return { ...reqItem, missingQuantity: restoredMissing, restockDate: '' };
                 }
               }
@@ -265,11 +266,18 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
       }
       
       onSaved();
-      onClose();
+      if (shouldClose) {
+        onClose();
+      }
     } catch (error) {
       console.error(error);
       setSystemAlert("儲存時發生錯誤");
     }
+  };
+
+  const handleSave = async () => {
+    if (!formData || !formData.id) return;
+    await syncToDatabase({ ...formData }, true);
   };
 
   return (
