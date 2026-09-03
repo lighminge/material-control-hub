@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getCollection, updateDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,6 +169,37 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
     }
   };
 
+  const handleUndoRestock = async (index: number) => {
+    if (!formData) return;
+    const item = formData.items[index];
+    
+    // Original missing quantity should be restored
+    const originalMissing = (item as any).originalMissingQuantity || item.requiredQuantity || 1;
+
+    try {
+      // Revert the stock (add back the required quantity that was deducted)
+      const allMats = await getCollection('materials') as any[];
+      const mat = allMats.find(m => m.id === item.materialId);
+      if (mat) {
+        const revertedStock = (mat.stock || 0) + (item.requiredQuantity || 0);
+        await updateDocument('materials', item.materialId, { stock: revertedStock });
+      }
+
+      const newItems = [...formData.items];
+      newItems[index] = {
+        ...item,
+        missingQuantity: originalMissing,
+        restockDate: ''
+      };
+      
+      setFormData({ ...formData, items: newItems });
+      setSystemAlert("已撤銷補完，回復缺料狀況。庫存已調整回復。");
+    } catch (error) {
+      console.error(error);
+      setSystemAlert("撤銷發生錯誤！");
+    }
+  };
+
   const handleSave = async () => {
     if (!formData || !formData.id) return;
     
@@ -182,6 +213,10 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
         const maxDate = new Date(Math.max(...dates));
         toSave.completionDate = format(maxDate, 'yyyy-MM-dd');
         toSave.endDate = toSave.completionDate;
+      } else {
+        toSave.status = '處理中';
+        toSave.completionDate = null as any;
+        toSave.endDate = null as any;
       }
 
       await updateDocument('controls', formData.id, toSave);
@@ -194,10 +229,15 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
           
           if (reqToUpdate) {
             const updatedReqItems = reqToUpdate.items.map((reqItem: any) => {
-              const ctrlItem = toSave.items.find(ci => ci.materialId === reqItem.materialId);
-              if (ctrlItem && ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
-                const mat = allMats.find(m => m.id === reqItem.materialId);
-                return { ...reqItem, missingQuantity: 0, currentStock: mat ? mat.stock : reqItem.currentStock };
+              const ctrlItem = toSave.items.find((ci: any) => ci.materialId === reqItem.materialId);
+              if (ctrlItem) {
+                if (ctrlItem.missingQuantity === 0 && ctrlItem.restockDate !== '') {
+                  const mat = allMats.find(m => m.id === reqItem.materialId);
+                  return { ...reqItem, missingQuantity: 0, currentStock: mat ? mat.stock : reqItem.currentStock };
+                } else if (ctrlItem.missingQuantity > 0) {
+                  const restoredMissing = (ctrlItem as any).originalMissingQuantity || ctrlItem.missingQuantity;
+                  return { ...reqItem, missingQuantity: restoredMissing, restockDate: '' };
+                }
               }
               return reqItem;
             });
@@ -211,6 +251,8 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
 
             if (allRestocked && !stillMissing) {
               reqUpdates.completionDate = toSave.completionDate;
+            } else if (stillMissing) {
+              reqUpdates.completionDate = null;
             } else if (!stillMissing && !reqToUpdate.completionDate) {
               reqUpdates.completionDate = format(new Date(), 'yyyy-MM-dd');
             }
@@ -218,7 +260,7 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
             await updateDocument('requisitions', reqToUpdate.id, reqUpdates);
           }
         } catch (error) {
-          console.error(error);
+          console.error("Error syncing to requisition:", error);
         }
       }
       
@@ -424,12 +466,15 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
                       <div className="col-span-3 space-y-1">
                         <Label className="text-xs">補完日期與庫存</Label>
                         {item.restockDate ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <div className="flex-1 h-8 px-2 flex items-center bg-green-50 text-green-600 font-bold border rounded-md text-xs">
                               {item.restockDate}
                             </div>
                             <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={() => handleRestockClick(index)}>
                               修改
+                            </Button>
+                            <Button variant="destructive" size="sm" className="h-8 text-xs px-2" onClick={() => handleUndoRestock(index)}>
+                              撤銷
                             </Button>
                           </div>
                         ) : (

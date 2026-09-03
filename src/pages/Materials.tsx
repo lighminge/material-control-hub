@@ -32,6 +32,7 @@ export default function MaterialsPage() {
   
   const [sortBy, setSortBy] = useState<'asc' | 'desc' | 'cat_asc' | 'cat_desc' | 'none'>('asc');
   const [searchName, setSearchName] = useState('');
+  const [searchPartName, setSearchPartName] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
 
   const [formData, setFormData] = useState<Material>({
@@ -48,6 +49,7 @@ export default function MaterialsPage() {
   const [historyLogs, setHistoryLogs] = useState<any[]>([]);
   
   const [histSearchName, setHistSearchName] = useState('');
+  const [histSearchPartName, setHistSearchPartName] = useState('');
   const [histSearchCat, setHistSearchCat] = useState('all');
   const [histStartDate, setHistStartDate] = useState('');
   const [histEndDate, setHistEndDate] = useState('');
@@ -140,10 +142,11 @@ export default function MaterialsPage() {
   // Filter logic
   const filteredMaterials = materials.filter(mat => {
     const matchName = searchName === '' || 
-      mat.name.toLowerCase().includes(searchName.toLowerCase()) ||
-      (mat.partName && mat.partName.toLowerCase().includes(searchName.toLowerCase()));
+      mat.name.toLowerCase().includes(searchName.toLowerCase());
+    const matchPartName = searchPartName === '' || 
+      (mat.partName && mat.partName.toLowerCase().includes(searchPartName.toLowerCase()));
     const matchCategory = searchCategory === 'all' || (mat.category || '未分類') === searchCategory;
-    return matchName && matchCategory;
+    return matchName && matchPartName && matchCategory;
   });
 
   // Sort logic
@@ -167,7 +170,11 @@ export default function MaterialsPage() {
     const mat = materials.find(m => m.id === log.materialId);
     if (histSearchName && 
         !log.materialName.toLowerCase().includes(histSearchName.toLowerCase()) && 
-        !(mat?.partName && mat.partName.toLowerCase().includes(histSearchName.toLowerCase()))) {
+        !(mat?.name && mat.name.toLowerCase().includes(histSearchName.toLowerCase()))) {
+      return false;
+    }
+    if (histSearchPartName && 
+        !(mat?.partName && mat.partName.toLowerCase().includes(histSearchPartName.toLowerCase()))) {
       return false;
     }
     if (histSearchCat !== 'all' && (mat?.category || '未分類') !== histSearchCat) return false;
@@ -352,9 +359,18 @@ export default function MaterialsPage() {
               <div className="flex items-center gap-2">
                 <Label>查詢品號:</Label>
                 <Input 
-                  placeholder="輸入關鍵字..." 
+                  placeholder="輸入品號..." 
                   value={searchName} 
                   onChange={(e) => { setSearchName(e.target.value); setPage(1); }}
+                  className="w-32 h-8 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>查詢品名:</Label>
+                <Input 
+                  placeholder="輸入品名..." 
+                  value={searchPartName} 
+                  onChange={(e) => { setSearchPartName(e.target.value); setPage(1); }}
                   className="w-32 h-8 text-xs"
                 />
               </div>
@@ -499,9 +515,18 @@ export default function MaterialsPage() {
               <div className="flex items-center gap-2">
                 <Label>查詢品號:</Label>
                 <Input 
-                  placeholder="輸入關鍵字..." 
+                  placeholder="輸入品號..." 
                   value={histSearchName} 
                   onChange={(e) => { setHistSearchName(e.target.value); setHistPage(1); }}
+                  className="w-32 h-8 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>查詢品名:</Label>
+                <Input 
+                  placeholder="輸入品名..." 
+                  value={histSearchPartName} 
+                  onChange={(e) => { setHistSearchPartName(e.target.value); setHistPage(1); }}
                   className="w-32 h-8 text-xs"
                 />
               </div>
