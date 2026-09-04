@@ -885,7 +885,27 @@ const exportDefectiveToExcel = () => {
 
         <Card className="shadow-sm mt-6">
           <CardHeader className="pb-3 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="text-lg font-bold">不良品清單</CardTitle>
+            <div className="flex items-center gap-4">
+              <CardTitle className="text-lg font-bold">不良品清單</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  const counts = defectiveStats.groupedItems.reduce((acc, item) => {
+                    const cat = item.category || '未分類';
+                    acc[cat] = (acc[cat] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  return Object.entries(counts).map(([cat, count]) => (
+                    <span key={cat} className={`px-2.5 py-1 rounded-md text-xs font-bold border shadow-sm ${
+                      cat === 'TKW' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                      cat === '夾鉗' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                      'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}>
+                      {cat}: {String(count)} 筆
+                    </span>
+                  ));
+                })()}
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-4">
               <Button onClick={exportDefectiveToExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold h-9">
                 匯出 Excel
@@ -978,7 +998,7 @@ const exportDefectiveToExcel = () => {
                           ) : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-center font-black text-destructive text-base">{item.quantity}</TableCell>
-                        <TableCell className="text-center font-bold">{item.workOrderQuantity > 0 ? ((item.quantity / item.workOrderQuantity) * 100).toFixed(2) + '%' : '-'}</TableCell>
+                        <TableCell className="text-center font-black text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-md shadow-sm">{item.workOrderQuantity > 0 ? ((item.quantity / item.workOrderQuantity) * 100).toFixed(2) + "%" : "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

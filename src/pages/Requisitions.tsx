@@ -776,7 +776,7 @@ export default function RequisitionsPage() {
                 <TableHead>領料單號</TableHead>
                 <TableHead>領料單分類</TableHead>
                 <TableHead>關聯管制單號</TableHead>
-                <TableHead>缺料項目總數</TableHead>
+                <TableHead className="text-center">缺料項目總數</TableHead>
                 <TableHead>領料單繳回日期</TableHead>
                 <TableHead>完成日期</TableHead>
                 <TableHead>處理天數</TableHead>
@@ -847,7 +847,7 @@ export default function RequisitionsPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className={req.items?.length > 0 ? "font-bold text-destructive" : ""}>
+                    <TableCell className={`text-center ${req.items?.length > 0 ? "font-bold text-destructive text-lg" : ""}`}>
                       {req.items?.length || 0}
                     </TableCell>
                     <TableCell className="font-black text-slate-900">{req.returnDate || '-'}</TableCell>

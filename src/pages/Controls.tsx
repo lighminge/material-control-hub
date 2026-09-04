@@ -808,7 +808,7 @@ export default function ControlsPage() {
                 <TableHead>狀態</TableHead>
                 <TableHead>管制單號</TableHead>
                 <TableHead>關聯領料單</TableHead>
-                <TableHead>缺料項目總數</TableHead>
+                <TableHead className="text-center">缺料項目總數</TableHead>
                 <TableHead>缺件狀態</TableHead>
                 <TableHead>完成日期</TableHead>
                 <TableHead>管制天數</TableHead>
@@ -851,7 +851,7 @@ export default function ControlsPage() {
                         {control.requisitionId}
                       </span>
                     </TableCell>
-                    <TableCell className="text-destructive font-black text-lg">{control.items.length}</TableCell>
+                    <TableCell className="text-center text-destructive font-black text-lg">{control.items.length}</TableCell>
                     <TableCell>
                       {control.items.filter(i => (i.missingQuantity || 0) > 0).length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
