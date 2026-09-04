@@ -51,6 +51,9 @@ export default function StatisticsPage() {
   
   const [defectiveFilterFormId, setDefectiveFilterFormId] = useState('');
   const [defectiveFilterMaterialId, setDefectiveFilterMaterialId] = useState('');
+  const [defectiveFilterCategory, setDefectiveFilterCategory] = useState('all');
+  const [defectiveFilterMaterialName, setDefectiveFilterMaterialName] = useState('');
+  const [defectiveFilterHeadType, setDefectiveFilterHeadType] = useState('');
   const [defectiveListPage, setDefectiveListPage] = useState(1);
   const [defectiveListPageSize, setDefectiveListPageSize] = useState(10);
 
@@ -106,6 +109,9 @@ export default function StatisticsPage() {
       if (d.date && !isWithinRange(d.date)) return false;
       if (defectiveFilterFormId && d.formId && !d.formId.toLowerCase().includes(defectiveFilterFormId.toLowerCase())) return false;
       if (defectiveFilterMaterialId && d.materialId && !d.materialId.toLowerCase().includes(defectiveFilterMaterialId.toLowerCase())) return false;
+      if (defectiveFilterCategory !== 'all' && d.category !== defectiveFilterCategory) return false;
+      if (defectiveFilterMaterialName && d.materialName && !d.materialName.toLowerCase().includes(defectiveFilterMaterialName.toLowerCase())) return false;
+      if (defectiveFilterHeadType && d.headType && !d.headType.toLowerCase().includes(defectiveFilterHeadType.toLowerCase())) return false;
       return true;
     });
 
@@ -763,11 +769,11 @@ export default function StatisticsPage() {
           <CardContent className="grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             <div className="space-y-2">
               <Label>建單日期(起)</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()}  />
             </div>
             <div className="space-y-2">
               <Label>建單日期(迄)</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()} disabled={useYearFilter} />
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} onClick={(e: any) => e.target.showPicker?.()}  />
             </div>
             <div className="space-y-2">
               <Label>不良品單號</Label>
@@ -787,6 +793,39 @@ export default function StatisticsPage() {
                 value={defectiveFilterMaterialId} 
                 onChange={(e) => {
                   setDefectiveFilterMaterialId(e.target.value);
+                  setDefectiveListPage(1);
+                }} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>分類</Label>
+              <Select value={defectiveFilterCategory} onValueChange={(v) => { setDefectiveFilterCategory(v); setDefectiveListPage(1); }}>
+                <SelectTrigger className="h-10"><SelectValue placeholder="全部分類" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部分類</SelectItem>
+                  <SelectItem value="TKW">TKW</SelectItem>
+                  <SelectItem value="夾鉗">夾鉗</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>物料品名</Label>
+              <Input 
+                placeholder="查詢品名" 
+                value={defectiveFilterMaterialName} 
+                onChange={(e) => {
+                  setDefectiveFilterMaterialName(e.target.value);
+                  setDefectiveListPage(1);
+                }} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>頭型</Label>
+              <Input 
+                placeholder="查詢頭型" 
+                value={defectiveFilterHeadType} 
+                onChange={(e) => {
+                  setDefectiveFilterHeadType(e.target.value);
                   setDefectiveListPage(1);
                 }} 
               />
@@ -838,11 +877,11 @@ export default function StatisticsPage() {
                     <TableRow>
                       <TableHead className="w-[80px]">項次</TableHead>
                       <TableHead>單號</TableHead>
+                      <TableHead>分類</TableHead>
                       <TableHead>物料品號</TableHead>
                       <TableHead>物料品名</TableHead>
                       <TableHead>頭型</TableHead>
                       <TableHead className="text-center">不良總數</TableHead>
-                      <TableHead>分類</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -853,6 +892,15 @@ export default function StatisticsPage() {
                           <span className="text-base font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-md shadow-sm">
                             {item.formId}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          {item.category === 'TKW' ? (
+                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
+                          ) : item.category === '夾鉗' ? (
+                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
+                          ) : (
+                            <span className="text-muted-foreground">{item.category || '未分類'}</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <span className="text-base font-bold bg-teal-100 text-teal-800 border border-teal-300 px-3 py-1.5 rounded-md shadow-sm">
@@ -876,15 +924,6 @@ export default function StatisticsPage() {
                           ) : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-center font-black text-destructive text-base">{item.quantity}</TableCell>
-                        <TableCell>
-                          {item.category === 'TKW' ? (
-                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
-                          ) : item.category === '夾鉗' ? (
-                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold border border-orange-200">夾鉗</span>
-                          ) : (
-                            <span className="text-muted-foreground">{item.category || '未分類'}</span>
-                          )}
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -917,7 +956,7 @@ export default function StatisticsPage() {
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
                     <XAxis type="number" hide={false} />
-                    <YAxis type="category" dataKey="materialId" width={100} tick={{fontSize: 12, fontWeight: 'bold'}} />
+                    <YAxis type="category" dataKey="materialId" width={150} tick={{fontSize: 16, fontWeight: 900, fill: '#0f172a'}} />
                     <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="quantity" fill="#ef4444" name="不良品總數" barSize={20} radius={[0, 4, 4, 0]}>
                       <LabelList dataKey="quantity" position="right" fill="#64748b" fontWeight="bold" />
