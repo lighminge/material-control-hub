@@ -14,6 +14,23 @@ import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, C
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import html2canvas from 'html2canvas';
+
+  const exportDefectiveChart = async () => {
+    const chartNode = document.getElementById('defective-chart-container');
+    if (chartNode) {
+        try {
+            const canvas = await html2canvas(chartNode, { backgroundColor: '#ffffff' });
+            const url = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `不良品統計圖表.png`;
+            a.click();
+        } catch (e) {
+            console.error('匯出圖片失敗', e);
+        }
+    }
+  };
+
 export default function StatisticsPage() {
   const [controls, setControls] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
@@ -709,8 +726,43 @@ export default function StatisticsPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      
+        </Card>
+        
+        {defectiveStats.groupedItems.length > 0 && (
+          <Card className="mt-6 border-slate-200 shadow-sm" id="defective-chart-container">
+            <CardHeader className="bg-slate-50 border-b flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-indigo-500" />
+                不良品圖表統計
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={exportDefectiveChart} data-html2canvas-ignore>
+                匯出圖檔
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="w-full" style={{ height: Math.max(400, defectiveStats.groupedItems.length * 40) + 'px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    layout="vertical"
+                    data={defectiveStats.groupedItems}
+                    margin={{ top: 20, right: 60, left: 100, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
+                    <XAxis type="number" hide={false} />
+                    <YAxis type="category" dataKey="materialId" width={100} tick={{fontSize: 12, fontWeight: 'bold'}} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Bar dataKey="quantity" fill="#ef4444" name="不良品總數" barSize={20} radius={[0, 4, 4, 0]}>
+                      <LabelList dataKey="quantity" position="right" fill="#64748b" fontWeight="bold" />
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
+
       
       <TabsContent value="defective" className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">

@@ -244,6 +244,7 @@ export default function RequisitionsPage() {
                 materialName: i.materialName,
                 requiredQuantity: i.requiredQuantity,
                 missingQuantity: i.missingQuantity,
+                originalMissingQuantity: existingItem?.originalMissingQuantity || i.missingQuantity,
                 restockDate,
                 notes: existingItem?.notes || ''
               };
@@ -292,6 +293,7 @@ export default function RequisitionsPage() {
             materialName: i.materialName,
             requiredQuantity: i.requiredQuantity,
             missingQuantity: i.missingQuantity,
+            originalMissingQuantity: i.missingQuantity,
             restockDate: '',
             notes: ''
           }));
@@ -318,15 +320,31 @@ export default function RequisitionsPage() {
   };
 
   const handleDeleteClick = (req: Requisition) => {
-    const hasMissing = req.items.some(i => i.missingQuantity > 0);
-    if (hasMissing) {
-      setSystemAlert("此領料單尚有未補完的缺料項目，禁止刪除！");
-      return;
+    if (!req.items || req.items.length === 0) {
+      // Allow deletion if there are no items
+    } else {
+      const hasMissing = req.items.some(i => i.missingQuantity > 0);
+      if (hasMissing) {
+        setSystemAlert("此領料單尚有未補完的缺料項目，禁止刪除！");
+        return;
+      }
     }
     setDeleteConfirmId(req.id!);
   };
 
   const handleDelete = async (id: string) => {
+    const req = requisitions.find(r => r.id === id);
+    if (req) {
+      try {
+        const controls = await getCollection('controls') as any[];
+        const ctrlToDelete = controls.find(c => c.requisitionId === req.id || c.requisitionId === req.displayId);
+        if (ctrlToDelete && ctrlToDelete.id) {
+          await deleteDocument('controls', ctrlToDelete.id);
+        }
+      } catch(e) {
+        console.error('Failed to delete associated control', e);
+      }
+    }
     await deleteDocument('requisitions', id);
     setDeleteConfirmId(null);
     loadData();
@@ -778,7 +796,7 @@ export default function RequisitionsPage() {
                           setEditingId(req.id || null);
                           setIsOpen(true);
                         }}>編輯</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)} disabled={req.status === '已完成'}>刪除</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)} disabled={req.status === '已完成' && req.items?.length !== 0}>刪除</Button>
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>

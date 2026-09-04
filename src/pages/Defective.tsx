@@ -84,6 +84,7 @@ export default function DefectivePage() {
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
   
   // Filters
+  const [filterFormId, setFilterFormId] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterMaterialId, setFilterMaterialId] = useState('');
@@ -310,6 +311,7 @@ export default function DefectivePage() {
   }, [defects, materials]);
 
   const filteredForms = groupedForms.filter(f => {
+    if (filterFormId && !f.formId.toLowerCase().includes(filterFormId.toLowerCase())) return false;
     if (filterStartDate && f.date < filterStartDate) return false;
     if (filterEndDate && f.date > filterEndDate) return false;
     if (filterDiscoverer !== 'all' && f.discoverer !== filterDiscoverer) return false;
@@ -722,6 +724,10 @@ export default function DefectivePage() {
           <div className="flex flex-col gap-4 p-4 border-b bg-muted/10">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
+                <Label>單號:</Label>
+                <Input value={filterFormId} onChange={e => {setFilterFormId(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" placeholder="輸入單號..." />
+              </div>
+              <div className="flex items-center gap-2">
                 <Label>日期(起):</Label>
                 <Input type="date" value={filterStartDate} onChange={e => {setFilterStartDate(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
               </div>
@@ -863,37 +869,45 @@ export default function DefectivePage() {
                           )}
                           <div className="flex flex-col gap-1.5">
                             {form.items.map((item, idx) => (
-                            <div key={idx} className="flex flex-wrap items-center gap-2 bg-white/50 p-1.5 rounded-md border border-slate-100">
-                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
-                              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
-                              {item.headType && (
-                                <span className={`px-1.5 py-0.5 text-[10px] rounded font-bold border ${item.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : item.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                                  {item.headType}
-                                </span>
-                              )}
-                              <span className="text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 border border-red-100 rounded">不良 {item.quantity || 0} PCS</span>
-                              {item.workOrder && (
-                                <span className="text-xs text-emerald-800 bg-emerald-100 px-1.5 py-0.5 border border-emerald-300 rounded font-bold shadow-sm">
-                                  製令編號: {item.workOrder}
-                                </span>
-                              )}
-                              {item.workOrderQuantity && (
-                                <span className="text-xs text-cyan-800 bg-cyan-100 px-1.5 py-0.5 border border-cyan-300 rounded font-bold shadow-sm">
-                                  製令數量: {item.workOrderQuantity}
-                                </span>
-                              )}
-                              {item.condition && (
-                                <span className="text-xs text-rose-800 bg-rose-100 px-1.5 py-0.5 border border-rose-300 rounded font-bold shadow-sm">
-                                  不良情況: {item.condition}
-                                </span>
-                              )}
-                              {(item.workOrderQuantity && Number(item.workOrderQuantity) > 0) && (
-                                <span className="text-sm text-white bg-red-600 px-2 py-0.5 border border-red-700 rounded-md font-black shadow-md ml-auto">
-                                  不良率: {((Number(item.quantity || 0) / Number(item.workOrderQuantity)) * 100).toFixed(2)}%
-                                </span>
-                              )}
+                            <div key={idx} className="flex flex-col gap-1.5 bg-white/50 p-2 rounded-md border border-slate-100">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
+                                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
+                                {item.headType && (
+                                  <span className={`px-1.5 py-0.5 text-[10px] rounded font-bold border ${item.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : item.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                    {item.headType}
+                                  </span>
+                                )}
+                                {item.condition && (
+                                  <span className="text-xs text-rose-800 bg-rose-100 px-1.5 py-0.5 border border-rose-300 rounded font-bold shadow-sm">
+                                    不良情況: {item.condition}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {item.workOrder ? (
+                                  <span className="text-xs text-emerald-800 bg-emerald-100 px-1.5 py-0.5 border border-emerald-300 rounded font-bold shadow-sm">
+                                    製令編號: {item.workOrder}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-emerald-800/50 bg-emerald-100/50 px-1.5 py-0.5 border border-emerald-300/50 rounded font-bold shadow-sm">
+                                    製令編號: 系統帶入中
+                                  </span>
+                                )}
+                                {item.workOrderQuantity && (
+                                  <span className="text-xs text-cyan-800 bg-cyan-100 px-1.5 py-0.5 border border-cyan-300 rounded font-bold shadow-sm">
+                                    製令數量: {item.workOrderQuantity}
+                                  </span>
+                                )}
+                                <span className="text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 border border-red-100 rounded">不良 {item.quantity || 0} PCS</span>
+                                {(item.workOrderQuantity && Number(item.workOrderQuantity) > 0) && (
+                                  <span className="text-sm text-white bg-red-600 px-2 py-0.5 border border-red-700 rounded-md font-black shadow-md ml-auto">
+                                    不良率: {((Number(item.quantity || 0) / Number(item.workOrderQuantity)) * 100).toFixed(2)}%
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          ))}
+                            ))}
                           </div>
                         </div>
                       </TableCell>

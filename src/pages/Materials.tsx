@@ -162,6 +162,11 @@ export default function MaterialsPage() {
   }
 
   const totalItems = sortedMaterials.length;
+  const categoryCounts = sortedMaterials.reduce((acc, m) => {
+    const cat = m.category || '未分類';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const paginatedData = sortedMaterials.slice((page - 1) * pageSize, page * pageSize);
 
@@ -407,7 +412,10 @@ export default function MaterialsPage() {
             </div>
             
             <div className="flex items-center gap-4 flex-wrap border-t pt-4 border-muted-foreground/20">
-              <div className="font-medium pr-4 border-r border-muted-foreground/20">總計: {totalItems} 筆資料</div>
+              <div className="font-medium pr-4 border-r border-muted-foreground/20">總計: {totalItems} 筆</div>
+              {Object.entries(categoryCounts).map(([cat, count]) => (
+                <div key={cat} className="font-medium pr-4 border-r border-muted-foreground/20 text-blue-700">{cat}: {count}</div>
+              ))}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Label>每頁顯示:</Label>
