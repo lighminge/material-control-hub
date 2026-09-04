@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { calculateWorkingDays } from '@/utils/dateUtils';
 import { getCollection, updateDocument, deleteDocument, setDocumentWithId, generateCustomId, getControlsByRequisitionId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ export default function RequisitionsPage() {
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [staffList, setStaffList] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isOpen, setIsOpen] = useState(false);
@@ -80,18 +82,32 @@ export default function RequisitionsPage() {
     returnDate: ''
   });
 
+  
+  const getDaysBadgeColor = (days: number) => {
+    if (days === 0) return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800/50 dark:text-slate-300';
+    if (days === 1) return 'bg-cyan-200 text-cyan-900 border-cyan-400 dark:bg-cyan-900/50 dark:text-cyan-300';
+    if (days === 2) return 'bg-blue-200 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-300';
+    if (days === 3) return 'bg-lime-200 text-lime-800 border-lime-400 dark:bg-lime-900/60 dark:text-lime-300';
+    if (days === 4) return 'bg-yellow-200 text-yellow-800 border-yellow-400 dark:bg-yellow-900/60 dark:text-yellow-300';
+    if (days === 5) return 'bg-amber-200 text-amber-800 border-amber-400 dark:bg-amber-900/60 dark:text-amber-300';
+    if (days === 6) return 'bg-orange-200 text-orange-800 border-orange-400 dark:bg-orange-900/60 dark:text-orange-300';
+    return 'bg-red-500 text-white border-red-600 dark:bg-red-700 font-bold';
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reqs, staffs, mats] = await Promise.all([
+      const [reqs, staffs, mats, hols] = await Promise.all([
         getCollection('requisitions'),
         getCollection('staff'),
-        getCollection('materials')
+        getCollection('materials'),
+        getCollection('holidays')
       ]);
       const sortedReqs = (reqs as Requisition[]).sort((a, b) => (b.displayId || '').localeCompare(a.displayId || ''));
       setRequisitions(sortedReqs);
       setStaffList(staffs);
       setMaterials(mats as Material[]);
+      setHolidays(hols);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -763,16 +779,17 @@ export default function RequisitionsPage() {
                 <TableHead>缺料項目總數</TableHead>
                 <TableHead>領料單繳回日期</TableHead>
                 <TableHead>完成日期</TableHead>
+                <TableHead>處理天數</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">載入中...</TableCell>
+                  <TableCell colSpan={10} className="text-center h-24">載入中...</TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">尚無領料單資料</TableCell>
+                  <TableCell colSpan={10} className="text-center h-24">尚無領料單資料</TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((req, index) => (
@@ -805,7 +822,11 @@ export default function RequisitionsPage() {
                         {req.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-bold">{req.displayId || req.id?.slice(0,8)}</TableCell>
+                    <TableCell>
+                      <span className="text-base font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-md shadow-sm">
+                        {req.displayId || req.id?.slice(0,8)}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-bold shadow-sm ${
                         req.category === 'TKW' 
@@ -826,11 +847,21 @@ export default function RequisitionsPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className={req.items.filter(i => i.missingQuantity > 0).length > 0 ? "font-bold text-destructive" : ""}>
-                      {req.items.filter(i => i.missingQuantity > 0).length}
+                    <TableCell className={req.items?.length > 0 ? "font-bold text-destructive" : ""}>
+                      {req.items?.length || 0}
                     </TableCell>
-                    <TableCell>{req.returnDate || '-'}</TableCell>
-                    <TableCell>{req.completionDate || '-'}</TableCell>
+                    <TableCell className="font-black text-slate-900">{req.returnDate || '-'}</TableCell>
+                    <TableCell className="font-black text-slate-900">{req.completionDate || '-'}</TableCell>
+                    <TableCell>
+                      {req.returnDate ? (() => {
+                        const days = calculateWorkingDays(req.returnDate, req.completionDate, holidays);
+                        return (
+                          <span className={`inline-flex items-center justify-center min-w-[2.5rem] py-1 rounded-md border ${getDaysBadgeColor(days)}`}>
+                            {days}
+                          </span>
+                        );
+                      })() : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
                   </TableRow>
                 ))
               )}

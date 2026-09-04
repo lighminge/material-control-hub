@@ -728,39 +728,6 @@ export default function StatisticsPage() {
         </CardContent>
       
         </Card>
-        
-        {defectiveStats.groupedItems.length > 0 && (
-          <Card className="mt-6 border-slate-200 shadow-sm" id="defective-chart-container">
-            <CardHeader className="bg-slate-50 border-b flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-indigo-500" />
-                不良品圖表統計
-              </CardTitle>
-              <Button variant="outline" size="sm" onClick={exportDefectiveChart} data-html2canvas-ignore>
-                匯出圖檔
-              </Button>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="w-full" style={{ height: Math.max(400, defectiveStats.groupedItems.length * 40) + 'px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    layout="vertical"
-                    data={defectiveStats.groupedItems}
-                    margin={{ top: 20, right: 60, left: 100, bottom: 20 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
-                    <XAxis type="number" hide={false} />
-                    <YAxis type="category" dataKey="materialId" width={100} tick={{fontSize: 12, fontWeight: 'bold'}} />
-                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    <Bar dataKey="quantity" fill="#ef4444" name="不良品總數" barSize={20} radius={[0, 4, 4, 0]}>
-                      <LabelList dataKey="quantity" position="right" fill="#64748b" fontWeight="bold" />
-                    </Bar>
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </TabsContent>
 
       
@@ -926,6 +893,41 @@ export default function StatisticsPage() {
             )}
           </CardContent>
         </Card>
+      
+
+        
+        {defectiveStats.groupedItems.length > 0 && (
+          <Card className="mt-6 border-slate-200 shadow-sm" id="defective-chart-container">
+            <CardHeader className="bg-slate-50 border-b flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-indigo-500" />
+                不良品圖表統計
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={exportDefectiveChart} data-html2canvas-ignore>
+                匯出圖檔
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="w-full" style={{ height: Math.max(400, defectiveStats.groupedItems.length * 40) + 'px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    layout="vertical"
+                    data={defectiveStats.groupedItems}
+                    margin={{ top: 20, right: 60, left: 100, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
+                    <XAxis type="number" hide={false} />
+                    <YAxis type="category" dataKey="materialId" width={100} tick={{fontSize: 12, fontWeight: 'bold'}} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Bar dataKey="quantity" fill="#ef4444" name="不良品總數" barSize={20} radius={[0, 4, 4, 0]}>
+                      <LabelList dataKey="quantity" position="right" fill="#64748b" fontWeight="bold" />
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
     </Tabs>
   );
