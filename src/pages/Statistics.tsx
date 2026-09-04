@@ -998,7 +998,11 @@ const exportDefectiveToExcel = () => {
                           ) : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-center font-black text-destructive text-base">{item.quantity}</TableCell>
-                        <TableCell className="text-center font-black text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-md shadow-sm">{item.workOrderQuantity > 0 ? ((item.quantity / item.workOrderQuantity) * 100).toFixed(2) + "%" : "-"}</TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-base font-black text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-md shadow-sm">
+                            {item.workOrderQuantity > 0 ? ((item.quantity / item.workOrderQuantity) * 100).toFixed(2) + "%" : "-"}
+                          </span>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
