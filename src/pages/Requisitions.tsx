@@ -856,8 +856,8 @@ export default function RequisitionsPage() {
                       {req.returnDate ? (() => {
                         const days = calculateWorkingDays(req.returnDate, req.completionDate, holidays);
                         return (
-                          <span className={`inline-flex items-center justify-center min-w-[2.5rem] py-1 rounded-md border ${getDaysBadgeColor(days)}`}>
-                            {days}
+                          <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded-md border ${getDaysBadgeColor(days)}`}>
+                            {days} 天
                           </span>
                         );
                       })() : <span className="text-muted-foreground">-</span>}

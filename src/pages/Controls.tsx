@@ -178,14 +178,6 @@ export default function ControlsPage() {
     await setDocumentWithId('settings', 'quickPhrases', { phrases: updated });
   };
 
-  const handleDeleteClick = (control: Control) => {
-    const hasMissing = control.items.some(i => i.missingQuantity > 0);
-    if (hasMissing) {
-      setSystemAlert("此管制單尚有未補完的缺料項目，禁止刪除！");
-      return;
-    }
-    setDeleteConfirmId(control.id!);
-  };
 
   const handleDelete = async (id: string) => {
     await deleteDocument('controls', id);
@@ -840,7 +832,7 @@ export default function ControlsPage() {
                           setFormData(control);
                           setIsOpen(true);
                         }}>處理檢視</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(control)} disabled={control.status === '已結案'}>刪除</Button>
+                        
                       </div>
                     </TableCell>
                     <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>

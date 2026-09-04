@@ -12,10 +12,11 @@ import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import html2canvas from 'html2canvas';
 
-  const exportDefectiveChart = async () => {
+  
+    const exportDefectiveChart = async () => {
     const chartNode = document.getElementById('defective-chart-container');
     if (chartNode) {
         try {
@@ -109,7 +110,7 @@ export default function StatisticsPage() {
       if (d.date && !isWithinRange(d.date)) return false;
       if (defectiveFilterFormId && d.formId && !d.formId.toLowerCase().includes(defectiveFilterFormId.toLowerCase())) return false;
       if (defectiveFilterMaterialId && d.materialId && !d.materialId.toLowerCase().includes(defectiveFilterMaterialId.toLowerCase())) return false;
-      if (defectiveFilterCategory !== 'all' && d.category !== defectiveFilterCategory) return false;
+      if (defectiveFilterCategory !== 'all' && (d.category || '未分類') !== defectiveFilterCategory) return false;
       if (defectiveFilterMaterialName && d.materialName && !d.materialName.toLowerCase().includes(defectiveFilterMaterialName.toLowerCase())) return false;
       if (defectiveFilterHeadType && d.headType && !d.headType.toLowerCase().includes(defectiveFilterHeadType.toLowerCase())) return false;
       return true;
@@ -127,10 +128,12 @@ export default function StatisticsPage() {
           materialName: d.materialName,
           headType: d.headType,
           category: d.category,
-          quantity: 0
+          quantity: 0,
+          workOrderQuantity: 0
         });
       }
       groupedMap.get(key).quantity += (Number(d.quantity) || 0);
+      groupedMap.get(key).workOrderQuantity += (Number(d.workOrderQuantity) || 0);
     });
 
     const groupedItems = Array.from(groupedMap.values()).sort((a, b) => b.quantity - a.quantity);
@@ -140,7 +143,42 @@ export default function StatisticsPage() {
       itemsCount: filteredDefects.length,
       groupedItems
     };
-  }, [defects, startDate, endDate, useYearFilter, selectedYear, defectiveFilterFormId, defectiveFilterMaterialId]);
+  }, [defects, startDate, endDate, useYearFilter, selectedYear, defectiveFilterFormId, defectiveFilterMaterialId, defectiveFilterCategory, defectiveFilterMaterialName, defectiveFilterHeadType]);
+
+const exportDefectiveToExcel = () => {
+    const data = defectiveStats.groupedItems.map((item, index) => ({
+      '項次': index + 1,
+      '單號': item.formId,
+      '分類': item.category || '未分類',
+      '物料品號': item.materialId,
+      '物料品名': item.materialName || '',
+      '頭型': item.headType || '',
+      '不良總數': item.quantity,
+      '製令數量': item.workOrderQuantity,
+      '不良率': item.workOrderQuantity > 0 ? ((item.quantity / item.workOrderQuantity) * 100).toFixed(2) + '%' : '-'
+    }));
+
+    const totalDefects = defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.quantity, 0);
+    const totalWorkOrders = defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.workOrderQuantity, 0);
+    const avgDefectRate = totalWorkOrders > 0 ? ((totalDefects / totalWorkOrders) * 100).toFixed(2) + '%' : '-';
+    
+    data.push({
+      '項次': '總計' as any,
+      '單號': '',
+      '分類': '',
+      '物料品號': '',
+      '物料品名': '',
+      '頭型': '',
+      '不良總數': totalDefects,
+      '製令數量': totalWorkOrders,
+      '不良率': avgDefectRate
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "不良品統計");
+    XLSX.writeFile(workbook, `不良品統計_${new Date().getTime()}.xlsx`);
+  };
 
   const stats = useMemo(() => {
     // Helper to check date range
@@ -727,6 +765,17 @@ export default function StatisticsPage() {
                       })
                     )}
                   </TableBody>
+                  <TableFooter className="bg-muted/50 font-bold">
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-right pr-4 text-base">總計</TableCell>
+                      <TableCell className="text-center text-destructive text-xl">{defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.quantity, 0)}</TableCell>
+                      <TableCell className="text-center text-lg">{(() => {
+                        const totalD = defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.quantity, 0);
+                        const totalW = defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.workOrderQuantity, 0);
+                        return totalW > 0 ? ((totalD / totalW) * 100).toFixed(2) + '%' : '-';
+                      })()}</TableCell>
+                    </TableRow>
+                  </TableFooter>
                 </Table>
               </div>
             </div>
@@ -821,14 +870,15 @@ export default function StatisticsPage() {
             </div>
             <div className="space-y-2">
               <Label>頭型</Label>
-              <Input 
-                placeholder="查詢頭型" 
-                value={defectiveFilterHeadType} 
-                onChange={(e) => {
-                  setDefectiveFilterHeadType(e.target.value);
-                  setDefectiveListPage(1);
-                }} 
-              />
+              <Select value={defectiveFilterHeadType} onValueChange={(v) => { setDefectiveFilterHeadType(v === 'all' ? '' : v); setDefectiveListPage(1); }}>
+                <SelectTrigger className="h-10"><SelectValue placeholder="全部頭型" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部頭型</SelectItem>
+                  <SelectItem value="A型">A型</SelectItem>
+                  <SelectItem value="B型">B型</SelectItem>
+                  <SelectItem value="C型">C型</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -836,7 +886,10 @@ export default function StatisticsPage() {
         <Card className="shadow-sm mt-6">
           <CardHeader className="pb-3 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="text-lg font-bold">不良品清單</CardTitle>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <Button onClick={exportDefectiveToExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold h-9">
+                匯出 Excel
+              </Button>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">每頁顯示</span>
                 <Select value={defectiveListPageSize.toString()} onValueChange={(val) => { setDefectiveListPageSize(Number(val)); setDefectiveListPage(1); }}>
@@ -882,6 +935,7 @@ export default function StatisticsPage() {
                       <TableHead>物料品名</TableHead>
                       <TableHead>頭型</TableHead>
                       <TableHead className="text-center">不良總數</TableHead>
+                      <TableHead className="text-center">不良率</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -924,6 +978,7 @@ export default function StatisticsPage() {
                           ) : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-center font-black text-destructive text-base">{item.quantity}</TableCell>
+                        <TableCell className="text-center font-bold">{item.workOrderQuantity > 0 ? ((item.quantity / item.workOrderQuantity) * 100).toFixed(2) + '%' : '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
