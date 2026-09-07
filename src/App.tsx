@@ -1,5 +1,19 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+
+
+
+function ForceRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    // If it's a direct load and not on root, redirect to dashboard
+    if (window.location.pathname !== '/' && window.location.pathname !== import.meta.env.BASE_URL) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+  return null;
+}
+
 import MainLayout from '@/layouts/MainLayout';
 import { loginAnonymously } from '@/lib/firebase/config';
 
@@ -25,6 +39,7 @@ function App() {
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <ForceRedirect />
       <PartSearchWidget />
       <Routes>
         <Route path="/" element={<MainLayout />}>
