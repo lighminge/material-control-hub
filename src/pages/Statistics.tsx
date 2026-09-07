@@ -137,11 +137,27 @@ export default function StatisticsPage() {
     });
 
     const groupedItems = Array.from(groupedMap.values()).sort((a, b) => b.quantity - a.quantity);
+    
+    const materialMap = new Map<string, any>();
+    filteredDefects.forEach(d => {
+      const key = `${d.materialId}_${d.materialName}_${d.headType}`;
+      if (!materialMap.has(key)) {
+        materialMap.set(key, {
+          materialId: d.materialId,
+          materialName: d.materialName,
+          headType: d.headType,
+          quantity: 0
+        });
+      }
+      materialMap.get(key).quantity += (Number(d.quantity) || 0);
+    });
+    const materialStats = Array.from(materialMap.values()).sort((a, b) => b.quantity - a.quantity);
 
     return {
       formsCount: uniqueForms.size,
       itemsCount: filteredDefects.length,
-      groupedItems
+      groupedItems,
+      materialStats
     };
   }, [defects, startDate, endDate, useYearFilter, selectedYear, defectiveFilterFormId, defectiveFilterMaterialId, defectiveFilterCategory, defectiveFilterMaterialName, defectiveFilterHeadType]);
 
@@ -617,9 +633,35 @@ const exportDefectiveToExcel = () => {
                 )}
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+              <div className="mt-8 border-t pt-6">
+                <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-destructive" />
+                  前三名不良物料
+                </h4>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {defectiveStats.materialStats.slice(0, 3).map((item: any, i: number) => (
+                    <div key={i} className="flex flex-col bg-muted/30 p-4 rounded-md border text-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-rose-100 rounded-bl-full flex items-start justify-end p-2 opacity-50 pointer-events-none">
+                        <span className="text-rose-700 font-black text-xl">#{i + 1}</span>
+                      </div>
+                      <div className="z-10 flex flex-col h-full justify-between">
+                        <div>
+                          <span className="font-black text-lg mb-1 block">{item.materialId}</span>
+                          <span className="text-muted-foreground block mb-4">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          <span className="font-bold text-slate-600">不良總數</span>
+                          <span className="font-black text-destructive text-xl">{item.quantity} 件</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {defectiveStats.materialStats.length === 0 && <div className="text-sm text-muted-foreground">無資料</div>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
       <Card className="flex flex-col mb-10">
         <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -787,7 +829,7 @@ const exportDefectiveToExcel = () => {
 
       
       <TabsContent value="defective" className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">符合條件的不良品單數量</CardTitle>
@@ -807,6 +849,27 @@ const exportDefectiveToExcel = () => {
             <CardContent>
               <div className="text-4xl font-bold text-destructive">{defectiveStats.itemsCount}</div>
               <p className="text-xs text-muted-foreground mt-2">各項不良物料加總</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">前三名不良物料</CardTitle>
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 mt-2">
+                {defectiveStats.materialStats.slice(0, 3).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between bg-muted/30 p-2 rounded-md border text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full text-xs">#{i + 1}</span>
+                      <span className="font-bold">{item.materialId}</span>
+                      <span className="text-muted-foreground text-xs">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
+                    </div>
+                    <span className="font-black text-destructive">{item.quantity} 件</span>
+                  </div>
+                ))}
+                {defectiveStats.materialStats.length === 0 && <div className="text-sm text-muted-foreground">無資料</div>}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1026,16 +1089,36 @@ const exportDefectiveToExcel = () => {
               </Button>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="w-full" style={{ height: Math.max(400, defectiveStats.groupedItems.length * 40) + 'px' }}>
+              <div className="w-full" style={{ height: Math.max(400, defectiveStats.materialStats.length * 50) + 'px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     layout="vertical"
-                    data={defectiveStats.groupedItems}
-                    margin={{ top: 20, right: 60, left: 100, bottom: 20 }}
+                    data={defectiveStats.materialStats}
+                    margin={{ top: 20, right: 60, left: 150, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
                     <XAxis type="number" hide={false} />
-                    <YAxis type="category" dataKey="materialId" width={150} tick={{fontSize: 16, fontWeight: 900, fill: '#0f172a'}} />
+                    <YAxis 
+                      type="category" 
+                      dataKey="materialId" 
+                      width={150} 
+                      tick={(props: any) => {
+                        const { x, y, payload } = props;
+                        const item = defectiveStats.materialStats.find((d: any) => d.materialId === payload.value);
+                        return (
+                          <g transform={`translate(${x},${y})`}>
+                            <text x={0} y={-4} dy={0} textAnchor="end" fill="#0f172a" fontSize={14} fontWeight={900}>
+                              {payload.value}
+                            </text>
+                            {item && (
+                              <text x={0} y={12} dy={0} textAnchor="end" fill="#64748b" fontSize={11}>
+                                {item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      }} 
+                    />
                     <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="quantity" fill="#ef4444" name="不良品總數" barSize={20} radius={[0, 4, 4, 0]}>
                       <LabelList dataKey="quantity" position="right" fill="#64748b" fontWeight="bold" />
