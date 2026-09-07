@@ -633,35 +633,9 @@ const exportDefectiveToExcel = () => {
                 )}
               </ComposedChart>
             </ResponsiveContainer>
-              </div>
-              <div className="mt-8 border-t pt-6">
-                <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <ShieldAlert className="w-5 h-5 text-destructive" />
-                  前三名不良物料
-                </h4>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {defectiveStats.materialStats.slice(0, 3).map((item: any, i: number) => (
-                    <div key={i} className="flex flex-col bg-muted/30 p-4 rounded-md border text-sm relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-16 h-16 bg-rose-100 rounded-bl-full flex items-start justify-end p-2 opacity-50 pointer-events-none">
-                        <span className="text-rose-700 font-black text-xl">#{i + 1}</span>
-                      </div>
-                      <div className="z-10 flex flex-col h-full justify-between">
-                        <div>
-                          <span className="font-black text-lg mb-1 block">{item.materialId}</span>
-                          <span className="text-muted-foreground block mb-4">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                          <span className="font-bold text-slate-600">不良總數</span>
-                          <span className="font-black text-destructive text-xl">{item.quantity} 件</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {defectiveStats.materialStats.length === 0 && <div className="text-sm text-muted-foreground">無資料</div>}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="flex flex-col mb-10">
         <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -863,7 +837,7 @@ const exportDefectiveToExcel = () => {
                     <div className="flex items-center gap-2">
                       <span className="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full text-xs">#{i + 1}</span>
                       <span className="font-bold">{item.materialId}</span>
-                      <span className="text-muted-foreground text-xs">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
+                      <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md text-xs">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
                     </div>
                     <span className="font-black text-destructive">{item.quantity} 件</span>
                   </div>
@@ -1111,7 +1085,7 @@ const exportDefectiveToExcel = () => {
                               {payload.value}
                             </text>
                             {item && (
-                              <text x={0} y={12} dy={0} textAnchor="end" fill="#64748b" fontSize={11}>
+                              <text x={0} y={14} dy={0} textAnchor="end" fill="#3730a3" fontSize={12} fontWeight="bold">
                                 {item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}
                               </text>
                             )}
@@ -1125,6 +1099,32 @@ const exportDefectiveToExcel = () => {
                     </Bar>
                   </ComposedChart>
                 </ResponsiveContainer>
+              </div>
+              <div className="mt-8 border-t pt-6">
+                <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-destructive" />
+                  前三名不良物料
+                </h4>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {defectiveStats.materialStats.slice(0, 3).map((item: any, i: number) => (
+                    <div key={i} className="flex flex-col bg-muted/30 p-4 rounded-md border text-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-rose-100 rounded-bl-full flex items-start justify-end p-2 opacity-50 pointer-events-none">
+                        <span className="text-rose-700 font-black text-xl">#{i + 1}</span>
+                      </div>
+                      <div className="z-10 flex flex-col h-full justify-between">
+                        <div>
+                          <span className="font-black text-lg mb-1 block">{item.materialId}</span>
+                          <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md text-sm inline-block mb-4">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          <span className="font-bold text-slate-600">不良總數</span>
+                          <span className="font-black text-destructive text-xl">{item.quantity} 件</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {defectiveStats.materialStats.length === 0 && <div className="text-sm text-muted-foreground">無資料</div>}
+                </div>
               </div>
             </CardContent>
           </Card>
