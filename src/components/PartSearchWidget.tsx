@@ -24,6 +24,8 @@ export default function PartSearchWidget() {
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [quantity, setQuantity] = useState<number | ''>('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [workOrder, setWorkOrder] = useState('');
+  const [workOrderQuantity, setWorkOrderQuantity] = useState<number | ''>('');
   
   const [condition, setCondition] = useState('');
   const [phrases, setPhrases] = useState<string[]>([]);
@@ -169,8 +171,8 @@ export default function PartSearchWidget() {
           category: mat.category || '未分類',
           condition: condition,
           quantity: quantity,
-          workOrder: '',
-          workOrderQuantity: 0,
+          workOrder: workOrder,
+          workOrderQuantity: workOrderQuantity === '' ? 0 : workOrderQuantity,
           createdAt: new Date().toISOString()
         };
         await addDocument('defects', newItem);
@@ -186,8 +188,8 @@ export default function PartSearchWidget() {
           category: mat.category || '未分類',
           condition: condition,
           quantity: quantity,
-          workOrder: '',
-          workOrderQuantity: 0,
+          workOrder: workOrder,
+          workOrderQuantity: workOrderQuantity === '' ? 0 : workOrderQuantity,
           discoverer: '',
           createdAt: new Date().toISOString()
         };
@@ -281,6 +283,24 @@ export default function PartSearchWidget() {
                 className="h-8 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
                 disabled={matchedDefects.length > 0}
                 onClick={(e: any) => { if (matchedDefects.length === 0) e.target.showPicker?.(); }}
+              />
+            </div>
+            <div className="col-span-1 space-y-1">
+              <Input 
+                placeholder="製令編號" 
+                value={workOrder} 
+                onChange={e => setWorkOrder(e.target.value)} 
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="col-span-1 space-y-1">
+              <Input 
+                type="number"
+                placeholder="製令數量"
+                min="0"
+                value={workOrderQuantity} 
+                onChange={e => setWorkOrderQuantity(e.target.value ? Number(e.target.value) : '')} 
+                className="h-8 text-sm"
               />
             </div>
             <div className="col-span-2 space-y-1">
