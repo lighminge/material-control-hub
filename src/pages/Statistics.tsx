@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
@@ -136,6 +135,7 @@ export default function StatisticsPage() {
       if (!groupedMap.has(key)) {
         groupedMap.set(key, {
           formId: d.formId,
+          date: d.date || '',
           materialId: d.materialId,
           materialName: d.materialName,
           headType: d.headType,
@@ -148,7 +148,16 @@ export default function StatisticsPage() {
       groupedMap.get(key).workOrderQuantity += (Number(d.workOrderQuantity) || 0);
     });
 
-    const groupedItems = Array.from(groupedMap.values()).sort((a, b) => b.quantity - a.quantity);
+    const groupedItems = Array.from(groupedMap.values()).sort((a, b) => {
+      let valA = a[defectiveSortBy];
+      let valB = b[defectiveSortBy];
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      
+      if (valA < valB) return defectiveSortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return defectiveSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
     
     const materialMap = new Map<string, any>();
     filteredDefects.forEach(d => {
@@ -855,12 +864,6 @@ const exportDefectiveToExcel = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-destructive">{item.quantity} 件</span>
-                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('list'); setTopMaterialPage(1); }}>
-                        <List className="w-3 h-3 mr-1" /> 清單
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('chart'); }}>
-                        <BarChart className="w-3 h-3 mr-1" /> 圖表
-                      </Button>
                     </div>
                   </div>
                 ))}
@@ -1032,6 +1035,7 @@ const exportDefectiveToExcel = () => {
                     <TableRow>
                       <TableHead className="w-[80px]">項次</TableHead>
                       <TableHead>單號</TableHead>
+                      <TableHead>日期</TableHead>
                       <TableHead>分類</TableHead>
                       <TableHead>物料品號</TableHead>
                       <TableHead>物料品名</TableHead>
@@ -1049,6 +1053,7 @@ const exportDefectiveToExcel = () => {
                             {item.formId}
                           </span>
                         </TableCell>
+                        <TableCell>{item.date}</TableCell>
                         <TableCell>
                           {item.category === 'TKW' ? (
                             <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
@@ -1166,13 +1171,127 @@ const exportDefectiveToExcel = () => {
                           <span className="font-black text-destructive text-xl">{item.quantity} 件</span>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                          <Button variant="outline" size="sm" className="flex-1 h-7 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('list'); setTopMaterialPage(1); }}>
+                          <Button variant={selectedTopMaterial === item && topMaterialModalView === 'list' ? 'default' : 'outline'} size="sm" className="flex-1 h-7 text-xs" onClick={() => { if (selectedTopMaterial === item && topMaterialModalView === 'list') { setSelectedTopMaterial(null); } else { setSelectedTopMaterial(item); setTopMaterialModalView('list'); setTopMaterialPage(1); } }}>
                             <List className="w-3 h-3 mr-1" /> 清單
                           </Button>
-                          <Button variant="outline" size="sm" className="flex-1 h-7 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('chart'); }}>
+                          <Button variant={selectedTopMaterial === item && topMaterialModalView === 'chart' ? 'default' : 'outline'} size="sm" className="flex-1 h-7 text-xs" onClick={() => { if (selectedTopMaterial === item && topMaterialModalView === 'chart') { setSelectedTopMaterial(null); } else { setSelectedTopMaterial(item); setTopMaterialModalView('chart'); } }}>
                             <BarChart className="w-3 h-3 mr-1" /> 圖表
                           </Button>
                         </div>
+                        {selectedTopMaterial === item && (
+                          <div className="mt-4 border-t pt-4">
+                            {topMaterialModalView === 'list' ? (
+                              <div className="space-y-4">
+                                <div className="flex justify-end items-center gap-2">
+                                  <span className="text-xs">每頁</span>
+                                  <Select value={topMaterialPageSize.toString()} onValueChange={(v) => { setTopMaterialPageSize(Number(v)); setTopMaterialPage(1); }}>
+                                    <SelectTrigger className="w-[60px] h-7 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="5">5</SelectItem>
+                                      <SelectItem value="10">10</SelectItem>
+                                      <SelectItem value="15">15</SelectItem>
+                                      <SelectItem value="20">20</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <span className="text-xs">筆</span>
+                                </div>
+                                <Table className="text-xs">
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead className="p-1 h-8">單號</TableHead>
+                                      <TableHead className="p-1 h-8">日期</TableHead>
+                                      <TableHead className="p-1 h-8">數量</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {(() => {
+                                      const items = defects.filter(d => 
+                                        d.materialId === selectedTopMaterial.materialId && 
+                                        (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
+                                        (d.headType || '') === (selectedTopMaterial.headType || '')
+                                      ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+                                      const start = (topMaterialPage - 1) * topMaterialPageSize;
+                                      const paginated = items.slice(start, start + topMaterialPageSize);
+                                      return paginated.length > 0 ? paginated.map((dItem, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="p-1">{dItem.formId}</TableCell>
+                                          <TableCell className="p-1">{dItem.date}</TableCell>
+                                          <TableCell className="p-1">{dItem.quantity}件</TableCell>
+                                        </TableRow>
+                                      )) : (
+                                        <TableRow><TableCell colSpan={3} className="text-center p-2">無資料</TableCell></TableRow>
+                                      );
+                                    })()}
+                                  </TableBody>
+                                </Table>
+                                {(() => {
+                                  const items = defects.filter(d => 
+                                    d.materialId === selectedTopMaterial.materialId && 
+                                    (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
+                                    (d.headType || '') === (selectedTopMaterial.headType || '')
+                                  );
+                                  const totalPages = Math.max(1, Math.ceil(items.length / topMaterialPageSize));
+                                  return (
+                                    <div className="flex justify-center items-center gap-2 mt-2">
+                                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => setTopMaterialPage(p => Math.max(1, p - 1))} disabled={topMaterialPage === 1}>上一頁</Button>
+                                      <span className="text-xs text-slate-600">{topMaterialPage} / {totalPages}</span>
+                                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => setTopMaterialPage(p => Math.min(totalPages, p + 1))} disabled={topMaterialPage === totalPages}>下一頁</Button>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex justify-end">
+                                  <Select value={topMaterialChartType} onValueChange={(v: any) => setTopMaterialChartType(v)}>
+                                    <SelectTrigger className="w-[90px] h-7 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="bar">長條圖</SelectItem>
+                                      <SelectItem value="line">折線圖</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="h-[200px] w-full mt-2">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={(() => {
+                                      const items = defects.filter(d => 
+                                        d.materialId === selectedTopMaterial.materialId && 
+                                        (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
+                                        (d.headType || '') === (selectedTopMaterial.headType || '')
+                                      );
+                                      const dateMap = new Map<string, number>();
+                                      items.forEach(d => {
+                                        const date = d.date || '未知日期';
+                                        dateMap.set(date, (dateMap.get(date) || 0) + (Number(d.quantity) || 0));
+                                      });
+                                      return Array.from(dateMap.entries())
+                                        .sort((a, b) => a[0].localeCompare(b[0]))
+                                        .map(([date, quantity]) => ({ date, 數量: quantity }));
+                                    })()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                      <XAxis dataKey="date" axisLine={false} tickLine={false} tickMargin={5} style={{ fontSize: '10px' }} />
+                                      <YAxis axisLine={false} tickLine={false} style={{ fontSize: '10px' }} />
+                                      <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ fontSize: '12px' }} />
+                                      {topMaterialChartType === 'bar' ? (
+                                        <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} maxBarSize={30}>
+                                          <LabelList dataKey="數量" position="top" style={{ fontSize: '10px' }} />
+                                        </Bar>
+                                      ) : (
+                                        <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 3 }}>
+                                          <LabelList dataKey="數量" position="top" style={{ fontSize: '10px' }} />
+                                        </Line>
+                                      )}
+                                    </ComposedChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1183,129 +1302,6 @@ const exportDefectiveToExcel = () => {
           </Card>
         )}
 
-      {selectedTopMaterial && (
-        <Dialog open={!!selectedTopMaterial} onOpenChange={(open) => !open && setSelectedTopMaterial(null)}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedTopMaterial.materialId} {selectedTopMaterial.materialName} ({selectedTopMaterial.headType}) - {topMaterialModalView === 'list' ? '不良品清單' : '不良品圖表'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="mt-4">
-              {topMaterialModalView === 'list' ? (
-                <div className="space-y-4">
-                  <div className="flex justify-end items-center gap-2">
-                    <span className="text-sm">每頁顯示</span>
-                    <Select value={topMaterialPageSize.toString()} onValueChange={(v) => { setTopMaterialPageSize(Number(v)); setTopMaterialPage(1); }}>
-                      <SelectTrigger className="w-[80px] h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5">5</SelectItem>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="15">15</SelectItem>
-                        <SelectItem value="20">20</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <span className="text-sm">筆</span>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>單號</TableHead>
-                        <TableHead>日期</TableHead>
-                        <TableHead>數量</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const items = defects.filter(d => 
-                          d.materialId === selectedTopMaterial.materialId && 
-                          (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
-                          (d.headType || '') === (selectedTopMaterial.headType || '')
-                        ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-                        const start = (topMaterialPage - 1) * topMaterialPageSize;
-                        const paginated = items.slice(start, start + topMaterialPageSize);
-                        return paginated.length > 0 ? paginated.map((item, i) => (
-                          <TableRow key={i}>
-                            <TableCell>{item.formId}</TableCell>
-                            <TableCell>{item.date}</TableCell>
-                            <TableCell>{item.quantity} 件</TableCell>
-                          </TableRow>
-                        )) : (
-                          <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">無資料</TableCell></TableRow>
-                        );
-                      })()}
-                    </TableBody>
-                  </Table>
-                  {(() => {
-                    const items = defects.filter(d => 
-                      d.materialId === selectedTopMaterial.materialId && 
-                      (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
-                      (d.headType || '') === (selectedTopMaterial.headType || '')
-                    );
-                    const totalPages = Math.max(1, Math.ceil(items.length / topMaterialPageSize));
-                    return (
-                      <div className="flex justify-center items-center gap-2 mt-4">
-                        <Button variant="outline" size="sm" onClick={() => setTopMaterialPage(p => Math.max(1, p - 1))} disabled={topMaterialPage === 1}>上一頁</Button>
-                        <span className="text-sm text-slate-600">第 {topMaterialPage} 頁，共 {totalPages} 頁</span>
-                        <Button variant="outline" size="sm" onClick={() => setTopMaterialPage(p => Math.min(totalPages, p + 1))} disabled={topMaterialPage === totalPages}>下一頁</Button>
-                      </div>
-                    );
-                  })()}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-end">
-                    <Select value={topMaterialChartType} onValueChange={(v: any) => setTopMaterialChartType(v)}>
-                      <SelectTrigger className="w-[120px] h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bar">長條圖</SelectItem>
-                        <SelectItem value="line">折線圖</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={(() => {
-                        const items = defects.filter(d => 
-                          d.materialId === selectedTopMaterial.materialId && 
-                          (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
-                          (d.headType || '') === (selectedTopMaterial.headType || '')
-                        );
-                        const dateMap = new Map<string, number>();
-                        items.forEach(d => {
-                          const date = d.date || '未知日期';
-                          dateMap.set(date, (dateMap.get(date) || 0) + (Number(d.quantity) || 0));
-                        });
-                        return Array.from(dateMap.entries())
-                          .sort((a, b) => a[0].localeCompare(b[0]))
-                          .map(([date, quantity]) => ({ date, 數量: quantity }));
-                      })()} margin={{ top: 20, right: 20, left: -20, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} tickMargin={10} />
-                        <YAxis axisLine={false} tickLine={false} />
-                        <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
-                        {topMaterialChartType === 'bar' ? (
-                          <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                            <LabelList dataKey="數量" position="top" />
-                          </Bar>
-                        ) : (
-                          <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }}>
-                            <LabelList dataKey="數量" position="top" />
-                          </Line>
-                        )}
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
       </TabsContent>
     </Tabs>
   );
