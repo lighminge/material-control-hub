@@ -126,7 +126,11 @@ export default function PartSearchWidget() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (isOpen && widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement;
+      if (target.closest('[role="listbox"]') || target.closest('[data-radix-popper-content-wrapper]')) {
+        return;
+      }
+      if (isOpen && widgetRef.current && !widgetRef.current.contains(target as Node)) {
         setIsOpen(false);
       }
     };
