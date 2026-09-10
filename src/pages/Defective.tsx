@@ -38,6 +38,14 @@ export type DefectItemState = {
   createdAt?: string;
 };
 
+const parseTime = (val: any) => {
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (val.seconds) return val.seconds * 1000;
+  const t = new Date(val).getTime();
+  return isNaN(t) ? 0 : t;
+};
+
 export type DefectFormState = {
   id?: string; // We don't strictly need a single id for a form in a flat DB, but good to have
   formId: string;
@@ -114,8 +122,8 @@ export default function DefectivePage() {
       const sorted = (data as Defect[]).sort((a, b) => {
         const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
         if (dateDiff !== 0) return dateDiff;
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const timeA = parseTime(a.createdAt);
+        const timeB = parseTime(b.createdAt);
         return timeA - timeB;
       });
       setDefects(sorted);
@@ -160,8 +168,8 @@ export default function DefectivePage() {
                 const comp = keyA.localeCompare(keyB);
                 if (comp !== 0) return comp;
                 
-                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                const timeA = parseTime(a.createdAt);
+                const timeB = parseTime(b.createdAt);
                 return timeA - timeB;
               });
             return { ...prev, items: newItems };
@@ -320,8 +328,8 @@ export default function DefectivePage() {
           const comp = keyA.localeCompare(keyB);
           if (comp !== 0) return comp;
           
-          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const timeA = parseTime(a.createdAt);
+          const timeB = parseTime(b.createdAt);
           return timeA - timeB;
         });
       });
