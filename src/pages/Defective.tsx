@@ -110,7 +110,13 @@ export default function DefectivePage() {
       ]);
       setMaterials(matsData);
       setStaffList(staffsData);
-      const sorted = (data as Defect[]).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sorted = (data as Defect[]).sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeA - timeB;
+      });
       setDefects(sorted);
       
       const phrasesDoc = await getDocument('settings', 'defectivePhrases');

@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { calculateWorkingDays } from '@/utils/dateUtils';
-import { ClipboardList, ShieldAlert, TrendingUp, PieChart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ClipboardList, ShieldAlert, TrendingUp, PieChart, ChevronLeft, ChevronRight, List, BarChart } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -55,8 +56,19 @@ export default function StatisticsPage() {
   const [defectiveFilterCategory, setDefectiveFilterCategory] = useState('all');
   const [defectiveFilterMaterialName, setDefectiveFilterMaterialName] = useState('');
   const [defectiveFilterHeadType, setDefectiveFilterHeadType] = useState('');
+
+  const [defectiveSortBy, setDefectiveSortBy] = useState('date');
+  const [defectiveSortOrder, setDefectiveSortOrder] = useState('desc');
+
   const [defectiveListPage, setDefectiveListPage] = useState(1);
   const [defectiveListPageSize, setDefectiveListPageSize] = useState(10);
+
+  const [selectedTopMaterial, setSelectedTopMaterial] = useState<any>(null);
+  const [topMaterialModalView, setTopMaterialModalView] = useState<'list' | 'chart'>('list');
+  const [topMaterialPage, setTopMaterialPage] = useState(1);
+  const [topMaterialPageSize, setTopMaterialPageSize] = useState(5);
+  const [topMaterialChartType, setTopMaterialChartType] = useState<'bar' | 'line'>('bar');
+
 
   const [staffList, setStaffList] = useState<any[]>([]);
   const [defects, setDefects] = useState<any[]>([]);
@@ -159,12 +171,13 @@ export default function StatisticsPage() {
       groupedItems,
       materialStats
     };
-  }, [defects, startDate, endDate, useYearFilter, selectedYear, defectiveFilterFormId, defectiveFilterMaterialId, defectiveFilterCategory, defectiveFilterMaterialName, defectiveFilterHeadType]);
+  }, [defects, startDate, endDate, useYearFilter, selectedYear, defectiveFilterFormId, defectiveFilterMaterialId, defectiveFilterCategory, defectiveFilterMaterialName, defectiveFilterHeadType, defectiveSortBy, defectiveSortOrder]);
 
 const exportDefectiveToExcel = () => {
     const data = defectiveStats.groupedItems.map((item, index) => ({
       '項次': index + 1,
       '單號': item.formId,
+      '日期': item.date,
       '分類': item.category || '未分類',
       '物料品號': item.materialId,
       '物料品名': item.materialName || '',
@@ -181,6 +194,7 @@ const exportDefectiveToExcel = () => {
     data.push({
       '項次': '總計' as any,
       '單號': '',
+      '日期': '',
       '分類': '',
       '物料品號': '',
       '物料品名': '',
@@ -839,7 +853,15 @@ const exportDefectiveToExcel = () => {
                       <span className="font-bold">{item.materialId}</span>
                       <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md text-xs">{item.materialName || '-'} {item.headType ? `(${item.headType})` : ''}</span>
                     </div>
-                    <span className="font-black text-destructive">{item.quantity} 件</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-destructive">{item.quantity} 件</span>
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('list'); setTopMaterialPage(1); }}>
+                        <List className="w-3 h-3 mr-1" /> 清單
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('chart'); }}>
+                        <BarChart className="w-3 h-3 mr-1" /> 圖表
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {defectiveStats.materialStats.length === 0 && <div className="text-sm text-muted-foreground">無資料</div>}
@@ -943,7 +965,30 @@ const exportDefectiveToExcel = () => {
                 })()}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 mr-auto">
+                <span className="text-sm font-bold text-slate-600">排序:</span>
+                <Select value={defectiveSortBy} onValueChange={(v) => { setDefectiveSortBy(v); setDefectiveListPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">日期</SelectItem>
+                    <SelectItem value="formId">單號</SelectItem>
+                    <SelectItem value="materialId">物料品號</SelectItem>
+                    <SelectItem value="materialName">物料品名</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={defectiveSortOrder} onValueChange={(v) => { setDefectiveSortOrder(v); setDefectiveListPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">由小到大</SelectItem>
+                    <SelectItem value="desc">由大到小</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
               <Button onClick={exportDefectiveToExcel} className="bg-green-600 hover:bg-green-700 text-white font-bold h-9">
                 匯出 Excel
               </Button>
@@ -1120,6 +1165,14 @@ const exportDefectiveToExcel = () => {
                           <span className="font-bold text-slate-600">不良總數</span>
                           <span className="font-black text-destructive text-xl">{item.quantity} 件</span>
                         </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button variant="outline" size="sm" className="flex-1 h-7 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('list'); setTopMaterialPage(1); }}>
+                            <List className="w-3 h-3 mr-1" /> 清單
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1 h-7 text-xs" onClick={() => { setSelectedTopMaterial(item); setTopMaterialModalView('chart'); }}>
+                            <BarChart className="w-3 h-3 mr-1" /> 圖表
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1129,6 +1182,130 @@ const exportDefectiveToExcel = () => {
             </CardContent>
           </Card>
         )}
+
+      {selectedTopMaterial && (
+        <Dialog open={!!selectedTopMaterial} onOpenChange={(open) => !open && setSelectedTopMaterial(null)}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedTopMaterial.materialId} {selectedTopMaterial.materialName} ({selectedTopMaterial.headType}) - {topMaterialModalView === 'list' ? '不良品清單' : '不良品圖表'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              {topMaterialModalView === 'list' ? (
+                <div className="space-y-4">
+                  <div className="flex justify-end items-center gap-2">
+                    <span className="text-sm">每頁顯示</span>
+                    <Select value={topMaterialPageSize.toString()} onValueChange={(v) => { setTopMaterialPageSize(Number(v)); setTopMaterialPage(1); }}>
+                      <SelectTrigger className="w-[80px] h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="15">15</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm">筆</span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>單號</TableHead>
+                        <TableHead>日期</TableHead>
+                        <TableHead>數量</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const items = defects.filter(d => 
+                          d.materialId === selectedTopMaterial.materialId && 
+                          (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
+                          (d.headType || '') === (selectedTopMaterial.headType || '')
+                        ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+                        const start = (topMaterialPage - 1) * topMaterialPageSize;
+                        const paginated = items.slice(start, start + topMaterialPageSize);
+                        return paginated.length > 0 ? paginated.map((item, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{item.formId}</TableCell>
+                            <TableCell>{item.date}</TableCell>
+                            <TableCell>{item.quantity} 件</TableCell>
+                          </TableRow>
+                        )) : (
+                          <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">無資料</TableCell></TableRow>
+                        );
+                      })()}
+                    </TableBody>
+                  </Table>
+                  {(() => {
+                    const items = defects.filter(d => 
+                      d.materialId === selectedTopMaterial.materialId && 
+                      (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
+                      (d.headType || '') === (selectedTopMaterial.headType || '')
+                    );
+                    const totalPages = Math.max(1, Math.ceil(items.length / topMaterialPageSize));
+                    return (
+                      <div className="flex justify-center items-center gap-2 mt-4">
+                        <Button variant="outline" size="sm" onClick={() => setTopMaterialPage(p => Math.max(1, p - 1))} disabled={topMaterialPage === 1}>上一頁</Button>
+                        <span className="text-sm text-slate-600">第 {topMaterialPage} 頁，共 {totalPages} 頁</span>
+                        <Button variant="outline" size="sm" onClick={() => setTopMaterialPage(p => Math.min(totalPages, p + 1))} disabled={topMaterialPage === totalPages}>下一頁</Button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Select value={topMaterialChartType} onValueChange={(v: any) => setTopMaterialChartType(v)}>
+                      <SelectTrigger className="w-[120px] h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bar">長條圖</SelectItem>
+                        <SelectItem value="line">折線圖</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={(() => {
+                        const items = defects.filter(d => 
+                          d.materialId === selectedTopMaterial.materialId && 
+                          (d.materialName || '') === (selectedTopMaterial.materialName || '') &&
+                          (d.headType || '') === (selectedTopMaterial.headType || '')
+                        );
+                        const dateMap = new Map<string, number>();
+                        items.forEach(d => {
+                          const date = d.date || '未知日期';
+                          dateMap.set(date, (dateMap.get(date) || 0) + (Number(d.quantity) || 0));
+                        });
+                        return Array.from(dateMap.entries())
+                          .sort((a, b) => a[0].localeCompare(b[0]))
+                          .map(([date, quantity]) => ({ date, 數量: quantity }));
+                      })()} margin={{ top: 20, right: 20, left: -20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tickMargin={10} />
+                        <YAxis axisLine={false} tickLine={false} />
+                        <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
+                        {topMaterialChartType === 'bar' ? (
+                          <Bar dataKey="數量" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                            <LabelList dataKey="數量" position="top" />
+                          </Bar>
+                        ) : (
+                          <Line type="monotone" dataKey="數量" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }}>
+                            <LabelList dataKey="數量" position="top" />
+                          </Line>
+                        )}
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       </TabsContent>
     </Tabs>
   );
