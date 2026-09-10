@@ -67,6 +67,16 @@ export default function PartSearchWidget() {
   };
 
   useEffect(() => {
+    if (formId) {
+      const existing = existingDefects.find(d => d.formId === formId && d.workOrder);
+      if (existing) {
+        setWorkOrder(existing.workOrder);
+        setWorkOrderQuantity(existing.workOrderQuantity || '');
+      }
+    }
+  }, [formId, existingDefects]);
+
+  useEffect(() => {
     // Load materials when widget is opened
     if (isOpen) {
       getCollection('materials').then((data) => {
