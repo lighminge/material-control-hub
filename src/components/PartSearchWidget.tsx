@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getCollection, addDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import type { Material } from '@/pages/Materials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Search, Copy, Check, Move, X, ListPlus, Trash2, Pencil } from 'lucide-react';
 
@@ -26,6 +27,7 @@ export default function PartSearchWidget() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [workOrder, setWorkOrder] = useState('');
   const [workOrderQuantity, setWorkOrderQuantity] = useState<number | ''>('');
+  const [isManualWorkOrder, setIsManualWorkOrder] = useState(false);
   
   const [condition, setCondition] = useState('');
   const [phrases, setPhrases] = useState<string[]>([]);
@@ -66,13 +68,33 @@ export default function PartSearchWidget() {
     }
   };
 
+  const availableWorkOrders = useMemo(() => {
+    if (!formId) return [];
+    const items = existingDefects.filter(d => d.formId === formId && d.workOrder);
+    const uniqueWOs = Array.from(new Set(items.map(d => d.workOrder)));
+    return uniqueWOs.map(wo => {
+      const match = items.find(d => d.workOrder === wo);
+      return { workOrder: wo, quantity: match?.workOrderQuantity || '' };
+    });
+  }, [formId, existingDefects]);
+
   useEffect(() => {
     if (formId) {
-      const existing = existingDefects.find(d => d.formId === formId && d.workOrder);
-      if (existing) {
-        setWorkOrder(existing.workOrder);
-        setWorkOrderQuantity(existing.workOrderQuantity || '');
+      if (availableWorkOrders.length === 1) {
+        setWorkOrder(availableWorkOrders[0].workOrder);
+        setWorkOrderQuantity(availableWorkOrders[0].quantity);
+        setIsManualWorkOrder(false);
+      } else if (availableWorkOrders.length > 1) {
+        if (!availableWorkOrders.find(w => w.workOrder === workOrder)) {
+          setWorkOrder('');
+          setWorkOrderQuantity('');
+        }
+        setIsManualWorkOrder(false);
+      } else {
+        setIsManualWorkOrder(true);
       }
+    } else {
+      setIsManualWorkOrder(true);
     }
   }, [formId, existingDefects]);
 
@@ -296,12 +318,43 @@ export default function PartSearchWidget() {
               />
             </div>
             <div className="col-span-1 space-y-1">
-              <Input 
-                placeholder="製令編號" 
-                value={workOrder} 
-                onChange={e => setWorkOrder(e.target.value)} 
-                className="h-8 text-sm"
-              />
+              {availableWorkOrders.length > 0 && !isManualWorkOrder ? (
+                <Select value={workOrder} onValueChange={(val) => {
+                  if (val === 'MANUAL') {
+                    setIsManualWorkOrder(true);
+                    setWorkOrder('');
+                    setWorkOrderQuantity('');
+                  } else {
+                    setWorkOrder(val);
+                    const match = availableWorkOrders.find(w => w.workOrder === val);
+                    if (match) setWorkOrderQuantity(match.quantity);
+                  }
+                }}>
+                  <SelectTrigger className="w-full h-8 text-sm">
+                    <SelectValue placeholder="選擇製令或新增..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableWorkOrders.map(w => (
+                      <SelectItem key={w.workOrder} value={w.workOrder}>{w.workOrder}</SelectItem>
+                    ))}
+                    <SelectItem value="MANUAL" className="text-primary font-bold">+ 手動輸入新製令</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="relative">
+                  <Input 
+                    placeholder="製令編號" 
+                    value={workOrder} 
+                    onChange={e => setWorkOrder(e.target.value)} 
+                    className="h-8 text-sm w-full pr-10"
+                  />
+                  {availableWorkOrders.length > 0 && (
+                    <Button variant="ghost" size="sm" className="absolute right-0 top-0 h-full text-[10px] px-1 text-muted-foreground" onClick={() => setIsManualWorkOrder(false)}>
+                      取消
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="col-span-1 space-y-1">
               <Input 

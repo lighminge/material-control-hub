@@ -1251,6 +1251,18 @@ const exportDefectiveToExcel = () => {
                                       );
                                     })()}
                                   </TableBody>
+                                  <TableFooter className="bg-muted/50">
+                                    <TableRow>
+                                      <TableCell colSpan={3} className="p-1.5 h-8 text-right font-bold">總計件數</TableCell>
+                                      <TableCell className="p-1.5 h-8 font-black text-destructive">
+                                        {defects.filter(d => 
+                                          d.materialId === item.materialId && 
+                                          (d.materialName || '') === (item.materialName || '') &&
+                                          (d.headType || '') === (item.headType || '')
+                                        ).reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0)} 件
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableFooter>
                                 </Table>
                                 {(() => {
                                   const items = defects.filter(d => 
