@@ -151,13 +151,19 @@ export default function DefectivePage() {
               condition: item.condition,
               quantity: item.quantity,
               workOrder: item.workOrder,
-              workOrderQuantity: item.workOrderQuantity
-            }];
-            newItems.sort((a, b) => {
-              const keyA = `${a.materialId}-${a.materialName}-${a.headType}`;
-              const keyB = `${b.materialId}-${b.materialName}-${b.headType}`;
-              return keyA.localeCompare(keyB);
-            });
+              workOrderQuantity: item.workOrderQuantity,
+                createdAt: item.createdAt
+              }];
+              newItems.sort((a, b) => {
+                const keyA = `${a.materialId}-${a.materialName}-${a.headType}`;
+                const keyB = `${b.materialId}-${b.materialName}-${b.headType}`;
+                const comp = keyA.localeCompare(keyB);
+                if (comp !== 0) return comp;
+                
+                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return timeA - timeB;
+              });
             return { ...prev, items: newItems };
           });
         }
