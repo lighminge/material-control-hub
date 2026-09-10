@@ -74,7 +74,11 @@ export default function PartSearchWidget() {
     const uniqueWOs = Array.from(new Set(items.map(d => d.workOrder)));
     return uniqueWOs.map(wo => {
       const match = items.find(d => d.workOrder === wo);
-      return { workOrder: wo, quantity: match?.workOrderQuantity || '' };
+      return { 
+        workOrder: wo, 
+        quantity: match?.workOrderQuantity || '',
+        materialName: match?.materialName || ''
+      };
     });
   }, [formId, existingDefects]);
 
@@ -83,6 +87,9 @@ export default function PartSearchWidget() {
       if (availableWorkOrders.length === 1) {
         setWorkOrder(availableWorkOrders[0].workOrder);
         setWorkOrderQuantity(availableWorkOrders[0].quantity);
+        if (availableWorkOrders[0].materialName) {
+          setSearchName(availableWorkOrders[0].materialName);
+        }
         setIsManualWorkOrder(false);
       } else if (availableWorkOrders.length > 1) {
         if (!availableWorkOrders.find(w => w.workOrder === workOrder)) {
@@ -331,7 +338,10 @@ export default function PartSearchWidget() {
                   } else {
                     setWorkOrder(val);
                     const match = availableWorkOrders.find(w => w.workOrder === val);
-                    if (match) setWorkOrderQuantity(match.quantity);
+                    if (match) {
+                      setWorkOrderQuantity(match.quantity);
+                      if (match.materialName) setSearchName(match.materialName);
+                    }
                   }
                 }}>
                   <SelectTrigger className="w-full h-8 text-sm">
