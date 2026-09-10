@@ -35,6 +35,7 @@ export type DefectItemState = {
   workOrderQuantity: number | '';
   category: string;
   headType: string;
+  createdAt?: string;
 };
 
 export type DefectFormState = {
@@ -299,7 +300,8 @@ export default function DefectivePage() {
         condition: d.condition,
         quantity: d.quantity ?? '',
         workOrder: d.workOrder || '',
-        workOrderQuantity: d.workOrderQuantity ?? ''
+        workOrderQuantity: d.workOrderQuantity ?? '',
+          createdAt: d.createdAt
       });
     });
     const grouped = Array.from(formsMap.values());
@@ -309,9 +311,14 @@ export default function DefectivePage() {
       form.items.sort((a, b) => {
         const keyA = `${a.materialId}-${a.materialName}-${a.headType}`;
         const keyB = `${b.materialId}-${b.materialName}-${b.headType}`;
-        return keyA.localeCompare(keyB);
+          const comp = keyA.localeCompare(keyB);
+          if (comp !== 0) return comp;
+          
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeA - timeB;
+        });
       });
-    });
 
     return grouped;
   }, [defects, materials]);
