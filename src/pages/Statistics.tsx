@@ -809,13 +809,9 @@ const exportDefectiveToExcel = () => {
                   </TableBody>
                   <TableFooter className="bg-muted/50 font-bold">
                     <TableRow>
-                      <TableCell colSpan={6} className="text-right pr-4 text-base">總計</TableCell>
-                      <TableCell className="text-center text-destructive text-xl">{defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.quantity, 0)}</TableCell>
-                      <TableCell className="text-center text-lg">{(() => {
-                        const totalD = defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.quantity, 0);
-                        const totalW = defectiveStats.groupedItems.reduce((acc, curr) => acc + curr.workOrderQuantity, 0);
-                        return totalW > 0 ? ((totalD / totalW) * 100).toFixed(2) + '%' : '-';
-                      })()}</TableCell>
+                      <TableCell colSpan={6} className="text-right pr-4 text-base">
+                        總計: {selectedControls.length} 筆 ({((selectedControls.length / Math.max(1, stats.filteredControls.length)) * 100).toFixed(1)}%)
+                      </TableCell>
                     </TableRow>
                   </TableFooter>
                 </Table>
@@ -1253,13 +1249,16 @@ const exportDefectiveToExcel = () => {
                                   </TableBody>
                                   <TableFooter className="bg-muted/50">
                                     <TableRow>
-                                      <TableCell colSpan={3} className="p-1.5 h-8 text-right font-bold">總計件數</TableCell>
-                                      <TableCell className="p-1.5 h-8 font-black text-destructive">
-                                        {defects.filter(d => 
-                                          d.materialId === item.materialId && 
-                                          (d.materialName || '') === (item.materialName || '') &&
-                                          (d.headType || '') === (item.headType || '')
-                                        ).reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0)} 件
+                                      <TableCell colSpan={3} className="p-1.5 h-8 text-right font-bold">總計單號數</TableCell>
+                                      <TableCell className="p-1.5 h-8 font-black text-indigo-700">
+                                        {(() => {
+                                          const items = defects.filter(d => 
+                                            d.materialId === item.materialId && 
+                                            (d.materialName || '') === (item.materialName || '') &&
+                                            (d.headType || '') === (item.headType || '')
+                                          );
+                                          return new Set(items.map(d => d.formId)).size;
+                                        })()} 單
                                       </TableCell>
                                     </TableRow>
                                   </TableFooter>
