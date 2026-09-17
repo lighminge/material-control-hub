@@ -1,32 +1,53 @@
-# React + TypeScript + Vite
+# 領料單與物料管制管理系統 (Material Control Hub)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+本系統是一款專為製造業、科技業產線及倉儲管理打造的**智慧物料與不良品管理平台**。透過直覺的操作介面與高度整合的工作流，協助企業精準掌握物料流向、嚴格控管不良品，並透過數據統計找出流程瓶頸。
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 核心功能詳細說明
 
-## React Compiler
+### 1. 📊 儀表板 (Dashboard)
+- **功能說明**：系統的首頁中樞，提供即時的數據總覽與快速操作入口。
+- **實際範例**：管理者一登入系統，就能一眼看見「本月新增了多少張領料單」、「目前累積了多少待處理的不良品」，以及「急需催料的件數」，幫助主管快速決定今日的工作優先順序。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 2. 📝 領料單管理 (Requisitions)
+- **功能說明**：全面管理生產線或工程單位的領料需求，支援建立、修改與追蹤領料單狀態，確保每一份物料都有跡可循。
+- **實際範例**：當產線今天要組裝一台新設備，需要領取 100 顆「電阻」與 50 顆「電容」。領班可以在此新增一張領料單（例如單號：`REQ-20260901-01`），詳細記錄物料明細、對應的製令單號與申請人員，讓倉管人員能依據這張單據準確發料。
 
-## Expanding the Oxlint configuration
+### 3. 🔒 物料管制 (Controls)
+- **功能說明**：針對高單價、極短缺或經常超領的物料，進行嚴格的獨立列管與配額追蹤。
+- **實際範例**：若發現某款「核心晶片」最近良率不穩、經常被產線超領。倉管可將該晶片列入「物料管制」清單。當下次又有領料單包含這款晶片時，系統會特別發出標示，並追蹤其「管制天數」與「剩餘配額」，確保晶片不會被濫用。
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### 4. ⏳ 催料作業 (Expediting)
+- **功能說明**：專門用來追蹤供應商交期、延遲狀況與進件進度，避免因為缺料導致產線停擺（斷線）。
+- **實際範例**：向廠商訂購的「金屬機殼」已經逾期三天尚未交貨。採購人員可以在催料清單中將該筆物料標記為「已催促」，並備註「廠商承諾本週五下午送達」。這樣產線與生管人員也能同步在系統上掌握最新交期，及早調整排程。
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+### 5. ⚠️ 不良品管理 (Defective)
+此模組包含兩個強大的子分頁，全面涵蓋不良品從「發現」到「最終處置」的生命週期：
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+#### (A) 不良品維護 (資料登錄)
+- **功能說明**：記錄產線組裝或品檢過程中發現的瑕疵物料。支援快速帶入料件，同單內若有重複料件也能精準排序。
+- **實際範例**：品管員在檢驗時發現了 5 顆「刮傷的螺絲」，他在此新增一筆不良品單，記錄下物料品號、頭型、數量，以及不良情況為「表面嚴重刮傷」。若同單中還有另外 2 顆相同型號但瑕疵不同的螺絲，能使用「複製此項目」快速新增一筆並排在正下方，方便連續輸入。
+
+#### (B) 不良品處置 (批次作業與自動分配)
+- **功能說明**：針對已登錄的不良品進行後續處理，採用智慧「先進先出 (FIFO)」演算法，自動扣帳並記錄處理軌跡。
+- **處理方式包含**：廠內報廢、廠內重工、廠商重工、退廠商扣款、轉測試用料。
+- **實際範例**：
+  月底結算時，管理者在搜尋框輸入「螺絲」，畫面會將 9 月份所有不同日期發生的「螺絲」不良品，以卡片形式群組在一起。
+  管理者直接 **打勾選取** 3 張螺絲卡片，接著輸入處置數量 `10`，並點擊「廠內報廢」。系統會自動從**日期最舊**的卡片開始扣除，並在卡片上用醒目的顏色與放大字體顯示「10 PCS 廠內報廢」的處理明細。若日後發現扣錯了，也能點擊修改圖示重新調整數量或處理方式。
+
+### 6. 📈 統計作業 (Statistics)
+- **功能說明**：透過數據可視化與自動化報表，協助管理者掌握物料健康度與品質趨勢。
+- **實際範例 1（不良品統計）**：系統會自動運算本月的「前三名不良物料」。點開清單，不僅能看見不良件數總和，還能看見包含該物料的「單號總數」，幫助品保主管精準抓出最常出包的供應商零件。
+- **實際範例 2（物料管制佔比）**：以圓餅圖或長條圖顯示管制天數的佔比，主管能一眼看出「超過 30 天未解除管制」的物料有哪些，進而介入處理。
+
+### 7. 🔍 智慧品號查詢工具 (Part Search Widget)
+- **功能說明**：這是一個懸浮於系統側邊的便捷小工具，不論使用者身處在哪個頁面，都能隨時呼叫出來搜尋料號，並直接與當前表單連動。
+- **實際範例**：當您正在「不良品維護」建立一張複雜的表單時，突然忘記某個螢幕面板的品號。這時不需要跳出當前畫面，只要點開左側的「品號查詢」，輸入關鍵字「面板」，找到正確的料件後按下匯入，該料件（包含品名與預設製令）就會自動填入您正在編輯的表單欄位中，大幅提升建檔效率。
+
+### 8. ⚙️ 基礎資料維護 (Staff / Materials)
+- **功能說明**：管理系統底層的基礎主檔資料，包含人員清單與物料庫。
+- **實際範例**：有新進員工報到，或是研發部導入了新的電子零件。管理員可在此處統一定義與新增，確保全系統在建立領料單、不良品單時，下拉選單都能出現最新且一致的資料。
+
+---
+*Built with React, TypeScript, Vite, TailwindCSS & Firebase.*
