@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Defect } from '@/pages/Defective';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const DISPOSITION_METHODS = ['廠內報廢', '廠內重工', '廠商重工', '退廠商扣款', '轉測試用料'] as const;
 type DispositionMethod = typeof DISPOSITION_METHODS[number];
@@ -35,6 +36,14 @@ export default function DefectDisposition() {
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [processQuantity, setProcessQuantity] = useState('');
+  
+  // New states
+  const [systemAlert, setSystemAlert] = useState<string | null>(null);
+  const [editDisp, setEditDisp] = useState<{defectId: string, index: number, method: DispositionMethod, quantity: number, maxQty: number} | null>(null);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, year, month]);
 
   const loadData = async () => {
     setLoading(true);
@@ -123,11 +132,11 @@ export default function DefectDisposition() {
   const handleProcess = async (method: DispositionMethod) => {
     const qtyToProcess = parseInt(processQuantity, 10);
     if (isNaN(qtyToProcess) || qtyToProcess <= 0) {
-      alert('請輸入有效數量');
+      setSystemAlert('請輸入有效數量');
       return;
     }
     if (qtyToProcess > totalSelectedRemaining) {
-      alert(`輸入數量 (${qtyToProcess}) 大於選取項目的可處理數量 (${totalSelectedRemaining})`);
+      setSystemAlert(`輸入數量 (${qtyToProcess}) 大於選取項目的可處理數量 (${totalSelectedRemaining})`);
       return;
     }
 
@@ -164,13 +173,60 @@ export default function DefectDisposition() {
         });
       }
       
-      alert('處理完成');
+      setSystemAlert('處理完成');
       setProcessQuantity('');
       setSelectedIds(new Set());
       await loadData();
     } catch (err) {
       console.error(err);
-      alert('處理失敗，請重試');
+      setSystemAlert('處理失敗，請重試');
+    }
+    setLoading(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editDisp) return;
+    const { defectId, index, method, quantity } = editDisp;
+    const defect = defects.find(d => d.id === defectId);
+    if (!defect || !defect.dispositions) return;
+
+    if (quantity <= 0) {
+      setSystemAlert('數量必須大於 0');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const updatedDispositions = [...defect.dispositions];
+      updatedDispositions[index] = {
+        ...updatedDispositions[index],
+        method,
+        quantity
+      };
+      await updateDocument('defects', defectId, { dispositions: updatedDispositions });
+      setEditDisp(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setSystemAlert('修改失敗，請重試');
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteDisp = async (defectId: string, index: number) => {
+    const defect = defects.find(d => d.id === defectId);
+    if (!defect || !defect.dispositions) return;
+    
+    setLoading(true);
+    try {
+      const updatedDispositions = [...defect.dispositions];
+      updatedDispositions.splice(index, 1);
+      await updateDocument('defects', defectId, { dispositions: updatedDispositions });
+      setEditDisp(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setSystemAlert('刪除失敗，請重試');
     }
     setLoading(false);
   };
@@ -272,7 +328,7 @@ export default function DefectDisposition() {
           <div key={group.materialId} className="border-l-4 border-slate-300 pl-4 py-2">
             <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
               <span className="text-blue-600">{group.materialId}</span>
-              <span className="text-slate-500 font-normal text-sm">{group.materialName}</span>
+              <span className="text-rose-600 font-extrabold text-xl ml-2">{group.materialName}</span>
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {group.items.map((item, index) => {
@@ -307,8 +363,10 @@ export default function DefectDisposition() {
                       <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                         <span className="text-slate-500">頭型</span>
                         <span>{item.headType || '-'}</span>
-                        <span className="text-slate-500">不良情況</span>
-                        <span className="truncate" title={item.condition}>{item.condition || '-'}</span>
+                      </div>
+                      <div className="mt-2">
+                        <span className="text-slate-500 text-xs">不良情況</span>
+                        <div className="break-words whitespace-pre-wrap text-sm leading-tight mt-0.5">{item.condition || '-'}</div>
                       </div>
                       
                       <div className="bg-slate-50 p-2 rounded border mt-2">
@@ -325,12 +383,30 @@ export default function DefectDisposition() {
                       {(item.dispositions || []).length > 0 && (
                         <div className="mt-2 space-y-1">
                           <div className="text-xs text-slate-500 font-medium border-b pb-1 mb-1">處理明細</div>
-                          {item.dispositions!.map((disp, i) => (
-                            <div key={i} className="flex justify-between text-xs items-center">
-                              <Badge variant="outline" className="text-[10px] py-0">{disp.method}</Badge>
-                              <span className="font-mono text-slate-600">{disp.quantity} PCS</span>
-                            </div>
-                          ))}
+                          {item.dispositions!.map((disp, i) => {
+                            // Calculate max allowed qty for editing
+                            const otherDispSum = item.dispositions!.reduce((sum, d, idx) => idx === i ? sum : sum + d.quantity, 0);
+                            const maxQty = (Number(item.quantity) || 0) - otherDispSum;
+                            return (
+                              <div key={i} className="flex justify-between text-xs items-center group">
+                                <Badge variant="outline" className="text-[10px] py-0">{disp.method}</Badge>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-mono text-slate-600">{disp.quantity} PCS</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditDisp({ defectId: item.id!, index: i, method: disp.method as DispositionMethod, quantity: disp.quantity, maxQty });
+                                    }}
+                                  >
+                                    <Pencil className="w-3 h-3 text-blue-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </CardContent>
@@ -347,6 +423,64 @@ export default function DefectDisposition() {
           </div>
         )}
       </div>
+      <Dialog open={!!systemAlert} onOpenChange={(open) => !open && setSystemAlert(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>系統提示</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-slate-700">
+            {systemAlert}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSystemAlert(null)}>確定</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editDisp} onOpenChange={(open) => !open && setEditDisp(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>修改處理狀態</DialogTitle>
+          </DialogHeader>
+          {editDisp && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">處理方式</span>
+                <Select value={editDisp.method} onValueChange={(val) => setEditDisp({...editDisp, method: val as DispositionMethod})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DISPOSITION_METHODS.map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm font-medium">數量 (最大可輸入: {editDisp.maxQty})</span>
+                <Input 
+                  type="number" 
+                  value={editDisp.quantity} 
+                  onChange={e => {
+                    let val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) val = 0;
+                    if (val > editDisp.maxQty) val = editDisp.maxQty;
+                    setEditDisp({...editDisp, quantity: val});
+                  }} 
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-between items-center w-full sm:justify-between">
+            <Button variant="destructive" size="icon" onClick={() => editDisp && handleDeleteDisp(editDisp.defectId, editDisp.index)}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditDisp(null)}>取消</Button>
+              <Button onClick={handleSaveEdit}>儲存修改</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
