@@ -360,13 +360,13 @@ export default function DefectDisposition() {
                           </Badge>
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 items-center">
                         <span className="text-slate-500">頭型</span>
-                        <span>{item.headType || '-'}</span>
+                        <span className="font-bold text-blue-700 text-base">{item.headType || '-'}</span>
                       </div>
                       <div className="mt-2">
                         <span className="text-slate-500 text-xs">不良情況</span>
-                        <div className="break-words whitespace-pre-wrap text-sm leading-tight mt-0.5">{item.condition || '-'}</div>
+                        <div className="break-words whitespace-pre-wrap font-bold text-rose-700 text-base leading-tight mt-0.5">{item.condition || '-'}</div>
                       </div>
                       
                       <div className="bg-slate-50 p-2 rounded border mt-2">
@@ -388,20 +388,20 @@ export default function DefectDisposition() {
                             const otherDispSum = item.dispositions!.reduce((sum, d, idx) => idx === i ? sum : sum + d.quantity, 0);
                             const maxQty = (Number(item.quantity) || 0) - otherDispSum;
                             return (
-                              <div key={i} className="flex justify-between text-xs items-center group">
-                                <Badge variant="outline" className="text-[10px] py-0">{disp.method}</Badge>
+                              <div key={i} className="flex justify-between items-center group bg-white p-1.5 rounded border border-slate-200 mb-1">
+                                <Badge variant="default" className="text-sm px-2 py-0.5 bg-indigo-100 text-indigo-800 border-indigo-300 font-bold hover:bg-indigo-200">{disp.method}</Badge>
                                 <div className="flex items-center gap-1">
-                                  <span className="font-mono text-slate-600">{disp.quantity} PCS</span>
+                                  <span className="font-mono font-extrabold text-lg text-rose-600">{disp.quantity} PCS</span>
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" 
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 hover:bg-blue-100 ml-1" 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setEditDisp({ defectId: item.id!, index: i, method: disp.method as DispositionMethod, quantity: disp.quantity, maxQty });
                                     }}
                                   >
-                                    <Pencil className="w-3 h-3 text-blue-500" />
+                                    <Pencil className="w-4 h-4 text-blue-600" />
                                   </Button>
                                 </div>
                               </div>
