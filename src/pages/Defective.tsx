@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DefectDisposition from '@/components/DefectDisposition';
 import { Plus, X, ListPlus, Pencil, Check, Trash2, AlertCircle, Copy } from 'lucide-react';
 
 export type Defect = {
@@ -23,6 +25,11 @@ export type Defect = {
   category?: string;
   headType?: string;
   createdAt?: string;
+  dispositions?: {
+    method: '廠內報廢' | '廠內重工' | '廠商重工' | '退廠商扣款' | '轉測試用料';
+    quantity: number;
+    timestamp: string;
+  }[];
 };
 
 export type DefectItemState = {
@@ -377,6 +384,15 @@ export default function DefectivePage() {
 
   return (
     <div className="container mx-auto p-4 max-w-7xl relative">
+      <Tabs defaultValue="maintenance" className="w-full">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="maintenance">不良品維護</TabsTrigger>
+            <TabsTrigger value="disposition">不良品處置</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="maintenance" className="mt-0 space-y-4">
       <Dialog open={!!deleteConfirmFormId} onOpenChange={(open) => !open && setDeleteConfirmFormId(null)}>
         <DialogContent>
           <DialogHeader>
@@ -958,6 +974,12 @@ export default function DefectivePage() {
       {/* 內建的小工具可以直接在這裡引入嗎？ 
           使用者說：請在系統畫面的左方，增加一個"品號查詢"的小工具。
           所以最好是放在 App.tsx，這樣所有頁面都看得到。 */}
+        </TabsContent>
+
+        <TabsContent value="disposition" className="mt-0">
+          <DefectDisposition />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
