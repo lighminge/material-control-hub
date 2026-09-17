@@ -29,6 +29,7 @@ export type Defect = {
     method: '廠內報廢' | '廠內重工' | '廠商重工' | '退廠商扣款' | '轉測試用料';
     quantity: number;
     timestamp: string;
+    remark?: string;
   }[];
 };
 

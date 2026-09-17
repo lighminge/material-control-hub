@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getCollection, updateDocument } from '@/lib/firebase/api';
+import { getCollection, updateDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Defect } from '@/pages/Defective';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Pencil, Trash2, ListPlus, X, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const DISPOSITION_METHODS = ['廠內報廢', '廠內重工', '廠商重工', '退廠商扣款', '轉測試用料'] as const;
@@ -39,7 +39,58 @@ export default function DefectDisposition() {
   
   // New states
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
-  const [editDisp, setEditDisp] = useState<{defectId: string, index: number, method: DispositionMethod, quantity: number, maxQty: number} | null>(null);
+  const [editDisp, setEditDisp] = useState<{defectId: string, index: number, method: DispositionMethod, quantity: number, maxQty: number, remark: string} | null>(null);
+  
+  // Remarks & Phrases
+  const [processRemark, setProcessRemark] = useState('');
+  const [phrases, setPhrases] = useState<string[]>([]);
+  const [newPhrase, setNewPhrase] = useState('');
+  const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
+  const [editPhraseText, setEditPhraseText] = useState('');
+  const [isPhraseMenuOpen, setIsPhraseMenuOpen] = useState(false);
+
+  const loadPhrases = async () => {
+    try {
+      const doc = await getDocument('settings', 'dispositionPhrases');
+      if (doc && (doc as any).phrases) setPhrases((doc as any).phrases);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    loadPhrases();
+  }, []);
+
+  const savePhrases = async (newPhrases: string[]) => {
+    setPhrases(newPhrases);
+    await setDocumentWithId('settings', 'dispositionPhrases', { phrases: newPhrases });
+  };
+
+  const addPhrase = () => {
+    if (newPhrase.trim() && !phrases.includes(newPhrase.trim())) {
+      savePhrases([...phrases, newPhrase.trim()]);
+      setNewPhrase('');
+    }
+  };
+
+  const handleSaveEditPhrase = async () => {
+    if (editingPhraseIndex === null || !editPhraseText.trim()) return;
+    if (phrases[editingPhraseIndex] === editPhraseText.trim()) {
+      setEditingPhraseIndex(null);
+      return;
+    }
+    const newPhrases = [...phrases];
+    newPhrases[editingPhraseIndex] = editPhraseText.trim();
+    savePhrases(newPhrases);
+    setEditingPhraseIndex(null);
+  };
+
+  const handleDeletePhrase = async (index: number) => {
+    const newPhrases = [...phrases];
+    newPhrases.splice(index, 1);
+    savePhrases(newPhrases);
+  };
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -164,7 +215,8 @@ export default function DefectDisposition() {
         const newDisposition = {
           method,
           quantity: processForThisItem,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          remark: processRemark
         };
 
         const updatedDispositions = [...(item.dispositions || []), newDisposition];
@@ -175,6 +227,7 @@ export default function DefectDisposition() {
       
       setSystemAlert('處理完成');
       setProcessQuantity('');
+      setProcessRemark('');
       setSelectedIds(new Set());
       await loadData();
     } catch (err) {
@@ -201,7 +254,8 @@ export default function DefectDisposition() {
       updatedDispositions[index] = {
         ...updatedDispositions[index],
         method,
-        quantity
+        quantity,
+        remark: editDisp.remark
       };
       await updateDocument('defects', defectId, { dispositions: updatedDispositions });
       setEditDisp(null);
@@ -307,7 +361,57 @@ export default function DefectDisposition() {
             value={processQuantity}
             onChange={e => setProcessQuantity(e.target.value)}
           />
-          <div className="flex flex-wrap gap-2">
+          
+          <div className="relative flex items-center gap-2">
+            <Input 
+              className="w-48 bg-white" 
+              placeholder="輸入備註..." 
+              value={processRemark}
+              onChange={e => setProcessRemark(e.target.value)}
+            />
+            <Button variant="outline" size="sm" className="bg-white" onClick={() => setIsPhraseMenuOpen(!isPhraseMenuOpen)}>
+              <ListPlus className="w-4 h-4 mr-1" /> 常用內容
+            </Button>
+            
+            {isPhraseMenuOpen && (
+              <div className="absolute top-12 left-0 z-50 w-72 bg-white border rounded-md shadow-xl p-3">
+                <div className="flex justify-between items-center mb-3 pb-2 border-b">
+                  <span className="font-bold text-sm">常用備註</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsPhraseMenuOpen(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="flex gap-2 mb-3">
+                  <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用備註..." className="h-8 text-xs" />
+                  <Button size="sm" onClick={addPhrase} className="h-8 px-3">新增</Button>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {phrases.map((p, i) => (
+                    <div key={i} className="flex justify-between items-center bg-slate-50 hover:bg-blue-50 p-1.5 rounded group border border-transparent hover:border-blue-100 transition-colors cursor-pointer" onClick={() => { if (editingPhraseIndex !== i) { setProcessRemark(p); setIsPhraseMenuOpen(false); } }}>
+                      {editingPhraseIndex === i ? (
+                        <div className="flex gap-1 w-full" onClick={e => e.stopPropagation()}>
+                          <Input value={editPhraseText} onChange={e => setEditPhraseText(e.target.value)} className="h-7 text-xs flex-1" autoFocus />
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={handleSaveEditPhrase}><Check className="w-4 h-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400" onClick={() => setEditingPhraseIndex(null)}><X className="w-4 h-4" /></Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-xs text-slate-700 flex-1 truncate pr-2">{p}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                            <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(p); }}><Pencil className="w-3 h-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeletePhrase(i)}><Trash2 className="w-3 h-3" /></Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {phrases.length === 0 && <div className="text-center text-slate-400 text-xs py-4">尚無常用備註</div>}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2 ml-auto">
             {DISPOSITION_METHODS.map(m => (
               <Button 
                 key={m} 
@@ -354,7 +458,7 @@ export default function DefectDisposition() {
                     </CardHeader>
                     <CardContent className="p-3 text-sm space-y-2 relative">
                       {rem <= 0 && (
-                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-b-lg">
+                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-b-lg pointer-events-none">
                           <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                             <CheckCircle2 className="w-3 h-3 mr-1" /> 已處理完畢
                           </Badge>
@@ -388,22 +492,29 @@ export default function DefectDisposition() {
                             const otherDispSum = item.dispositions!.reduce((sum, d, idx) => idx === i ? sum : sum + d.quantity, 0);
                             const maxQty = (Number(item.quantity) || 0) - otherDispSum;
                             return (
-                              <div key={i} className="flex justify-between items-center group bg-white p-1.5 rounded border border-slate-200 mb-1">
-                                <Badge variant="default" className="text-sm px-2 py-0.5 bg-indigo-100 text-indigo-800 border-indigo-300 font-bold hover:bg-indigo-200">{disp.method}</Badge>
-                                <div className="flex items-center gap-1">
-                                  <span className="font-mono font-extrabold text-lg text-rose-600">{disp.quantity} PCS</span>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 hover:bg-blue-100 ml-1" 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditDisp({ defectId: item.id!, index: i, method: disp.method as DispositionMethod, quantity: disp.quantity, maxQty });
-                                    }}
-                                  >
-                                    <Pencil className="w-4 h-4 text-blue-600" />
-                                  </Button>
+                              <div key={i} className="flex flex-col bg-white p-1.5 rounded border border-slate-200 mb-1.5 shadow-sm relative z-20">
+                                <div className="flex justify-between items-center group">
+                                  <Badge variant="default" className="text-sm px-2 py-0.5 bg-indigo-100 text-indigo-800 border-indigo-300 font-bold hover:bg-indigo-200">{disp.method}</Badge>
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono font-extrabold text-lg text-rose-600">{disp.quantity} PCS</span>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 hover:bg-blue-100 ml-1" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditDisp({ defectId: item.id!, index: i, method: disp.method as DispositionMethod, quantity: disp.quantity, maxQty, remark: disp.remark || '' });
+                                      }}
+                                    >
+                                      <Pencil className="w-4 h-4 text-blue-600" />
+                                    </Button>
+                                  </div>
                                 </div>
+                                {disp.remark && (
+                                  <div className="text-[11px] text-slate-500 mt-1 px-1 break-words whitespace-pre-wrap border-t border-dashed border-slate-200 pt-1">
+                                    {disp.remark}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -466,6 +577,14 @@ export default function DefectDisposition() {
                     if (val > editDisp.maxQty) val = editDisp.maxQty;
                     setEditDisp({...editDisp, quantity: val});
                   }} 
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm font-medium">備註</span>
+                <Input 
+                  value={editDisp.remark} 
+                  onChange={e => setEditDisp({...editDisp, remark: e.target.value})} 
+                  placeholder="備註..."
                 />
               </div>
             </div>
