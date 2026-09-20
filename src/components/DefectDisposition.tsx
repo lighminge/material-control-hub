@@ -9,6 +9,7 @@ import type { Defect } from '@/pages/Defective';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CheckCircle2, Pencil, Trash2, ListPlus, X, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DISPOSITION_METHODS = ['廠內報廢', '廠內重工', '廠商重工', '退廠商扣款', '轉測試用料'] as const;
 type DispositionMethod = typeof DISPOSITION_METHODS[number];
@@ -48,6 +49,8 @@ export default function DefectDisposition() {
   const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
   const [editPhraseText, setEditPhraseText] = useState('');
   const [isPhraseMenuOpen, setIsPhraseMenuOpen] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'pending'>('all');
+  const [isEditPhraseMenuOpen, setIsEditPhraseMenuOpen] = useState(false);
 
   const loadPhrases = async () => {
     try {
@@ -345,78 +348,85 @@ export default function DefectDisposition() {
         </CardContent>
       </Card>
 
+            <Tabs value={filterType} onValueChange={(v) => setFilterType(v as 'all'|'pending')} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="all">全部</TabsTrigger>
+          <TabsTrigger value="pending">未處理</TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" /> 批次處置作業
         </h3>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="text-sm">
-            已選 <span className="font-bold text-lg">{selectedIds.size}</span> 項，
-            可處理總數：<span className="font-bold text-lg text-blue-600">{totalSelectedRemaining}</span>
-          </div>
-          <Input 
-            type="number"
-            className="w-32 bg-white" 
-            placeholder="輸入處理數量" 
-            value={processQuantity}
-            onChange={e => setProcessQuantity(e.target.value)}
-          />
-          
-          <div className="relative flex items-center gap-2">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="text-sm">
+              已選 <span className="font-bold text-lg">{selectedIds.size}</span> 項，
+              可處理總數：<span className="font-bold text-lg text-blue-600">{totalSelectedRemaining}</span>
+            </div>
             <Input 
-              className="w-48 bg-white" 
-              placeholder="輸入備註..." 
-              value={processRemark}
-              onChange={e => setProcessRemark(e.target.value)}
+              type="number"
+              className="w-32 bg-white" 
+              placeholder="輸入處理數量" 
+              value={processQuantity}
+              onChange={e => setProcessQuantity(e.target.value)}
             />
-            <Button variant="outline" size="sm" className="bg-white" onClick={() => setIsPhraseMenuOpen(!isPhraseMenuOpen)}>
-              <ListPlus className="w-4 h-4 mr-1" /> 常用內容
-            </Button>
             
-            {isPhraseMenuOpen && (
-              <div className="absolute top-12 left-0 z-50 w-72 bg-white border rounded-md shadow-xl p-3">
-                <div className="flex justify-between items-center mb-3 pb-2 border-b">
-                  <span className="font-bold text-sm">常用備註</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsPhraseMenuOpen(false)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex gap-2 mb-3">
-                  <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用備註..." className="h-8 text-xs" />
-                  <Button size="sm" onClick={addPhrase} className="h-8 px-3">新增</Button>
-                </div>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                  {phrases.map((p, i) => (
-                    <div key={i} className="flex justify-between items-center bg-slate-50 hover:bg-blue-50 p-1.5 rounded group border border-transparent hover:border-blue-100 transition-colors cursor-pointer" onClick={() => { if (editingPhraseIndex !== i) { setProcessRemark(p); setIsPhraseMenuOpen(false); } }}>
-                      {editingPhraseIndex === i ? (
-                        <div className="flex gap-1 w-full" onClick={e => e.stopPropagation()}>
-                          <Input value={editPhraseText} onChange={e => setEditPhraseText(e.target.value)} className="h-7 text-xs flex-1" autoFocus />
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={handleSaveEditPhrase}><Check className="w-4 h-4" /></Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400" onClick={() => setEditingPhraseIndex(null)}><X className="w-4 h-4" /></Button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-xs text-slate-700 flex-1 truncate pr-2">{p}</span>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                            <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(p); }}><Pencil className="w-3 h-3" /></Button>
-                            <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeletePhrase(i)}><Trash2 className="w-3 h-3" /></Button>
+            <div className="relative flex items-center gap-2">
+              <Input 
+                className="w-48 bg-white" 
+                placeholder="輸入備註..." 
+                value={processRemark}
+                onChange={e => setProcessRemark(e.target.value)}
+              />
+              <Button variant="outline" size="sm" className="bg-white" onClick={() => setIsPhraseMenuOpen(!isPhraseMenuOpen)}>
+                <ListPlus className="w-4 h-4 mr-1" /> 常用內容
+              </Button>
+              
+              {isPhraseMenuOpen && (
+                <div className="absolute top-12 left-0 z-50 w-72 bg-white border rounded-md shadow-xl p-3">
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b">
+                    <span className="font-bold text-sm">常用備註</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsPhraseMenuOpen(false)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex gap-2 mb-3">
+                    <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用備註..." className="h-8 text-xs" />
+                    <Button size="sm" onClick={addPhrase} className="h-8 px-3">新增</Button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                    {phrases.map((p, i) => (
+                      <div key={i} className="flex justify-between items-center bg-slate-50 hover:bg-blue-50 p-1.5 rounded group border border-transparent hover:border-blue-100 transition-colors cursor-pointer" onClick={() => { if (editingPhraseIndex !== i) { setProcessRemark(p); setIsPhraseMenuOpen(false); } }}>
+                        {editingPhraseIndex === i ? (
+                          <div className="flex gap-1 w-full" onClick={e => e.stopPropagation()}>
+                            <Input value={editPhraseText} onChange={e => setEditPhraseText(e.target.value)} className="h-7 text-xs flex-1" autoFocus />
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={handleSaveEditPhrase}><Check className="w-4 h-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400" onClick={() => setEditingPhraseIndex(null)}><X className="w-4 h-4" /></Button>
                           </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                  {phrases.length === 0 && <div className="text-center text-slate-400 text-xs py-4">尚無常用備註</div>}
+                        ) : (
+                          <>
+                            <span className="text-xs text-slate-700 flex-1 truncate pr-2">{p}</span>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(p); }}><Pencil className="w-3 h-3" /></Button>
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeletePhrase(i)}><Trash2 className="w-3 h-3" /></Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    {phrases.length === 0 && <div className="text-center text-slate-400 text-xs py-4">尚無常用備註</div>}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-
-          <div className="flex flex-wrap gap-2 ml-auto">
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-200 mt-2">
             {DISPOSITION_METHODS.map(m => (
               <Button 
                 key={m} 
                 variant="default" 
-                className="bg-blue-600 hover:bg-blue-700 text-xs shadow-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-sm py-1 h-9 shadow-sm"
                 onClick={() => handleProcess(m)}
                 disabled={!selectedIds.size || !processQuantity || parseInt(processQuantity, 10) <= 0}
               >
@@ -511,7 +521,7 @@ export default function DefectDisposition() {
                                   </div>
                                 </div>
                                 {disp.remark && (
-                                  <div className="text-[11px] text-slate-500 mt-1 px-1 break-words whitespace-pre-wrap border-t border-dashed border-slate-200 pt-1">
+                                  <div className="text-sm font-extrabold text-blue-800 mt-1.5 px-2 py-1 bg-blue-50 rounded break-words whitespace-pre-wrap border border-blue-100">
                                     {disp.remark}
                                   </div>
                                 )}
@@ -579,13 +589,55 @@ export default function DefectDisposition() {
                   }} 
                 />
               </div>
-              <div className="space-y-2">
-                <span className="text-sm font-medium">備註</span>
+              <div className="space-y-2 relative">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">備註</span>
+                  <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => setIsEditPhraseMenuOpen(!isEditPhraseMenuOpen)}>
+                    <ListPlus className="w-3 h-3 mr-1" /> 常用內容
+                  </Button>
+                </div>
                 <Input 
                   value={editDisp.remark} 
                   onChange={e => setEditDisp({...editDisp, remark: e.target.value})} 
                   placeholder="備註..."
                 />
+                
+                {isEditPhraseMenuOpen && (
+                  <div className="absolute top-8 right-0 z-50 w-72 bg-white border rounded-md shadow-xl p-3">
+                    <div className="flex justify-between items-center mb-3 pb-2 border-b">
+                      <span className="font-bold text-sm">常用備註</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditPhraseMenuOpen(false)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2 mb-3">
+                      <Input value={newPhrase} onChange={e => setNewPhrase(e.target.value)} placeholder="新增常用備註..." className="h-8 text-xs" />
+                      <Button size="sm" onClick={addPhrase} className="h-8 px-3">新增</Button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                      {phrases.map((p, i) => (
+                        <div key={i} className="flex justify-between items-center bg-slate-50 hover:bg-blue-50 p-1.5 rounded group border border-transparent hover:border-blue-100 transition-colors cursor-pointer" onClick={() => { if (editingPhraseIndex !== i) { setEditDisp({...editDisp, remark: p}); setIsEditPhraseMenuOpen(false); } }}>
+                          {editingPhraseIndex === i ? (
+                            <div className="flex gap-1 w-full" onClick={e => e.stopPropagation()}>
+                              <Input value={editPhraseText} onChange={e => setEditPhraseText(e.target.value)} className="h-7 text-xs flex-1" autoFocus />
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={handleSaveEditPhrase}><Check className="w-4 h-4" /></Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400" onClick={() => setEditingPhraseIndex(null)}><X className="w-4 h-4" /></Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-xs text-slate-700 flex-1 truncate pr-2">{p}</span>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingPhraseIndex(i); setEditPhraseText(p); }}><Pencil className="w-3 h-3" /></Button>
+                                <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeletePhrase(i)}><Trash2 className="w-3 h-3" /></Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      {phrases.length === 0 && <div className="text-center text-slate-400 text-xs py-4">尚無常用備註</div>}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
