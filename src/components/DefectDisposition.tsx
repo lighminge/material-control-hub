@@ -161,7 +161,7 @@ export default function DefectDisposition() {
     });
 
     return groupArray;
-  }, [filteredDefects, sortBy]);
+  }, [filteredDefects, sortBy, filterType]);
 
   const getRemainingQty = (d: Defect) => {
     const total = Number(d.quantity) || 0;
