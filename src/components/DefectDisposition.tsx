@@ -467,9 +467,17 @@ export default function DefectDisposition() {
         {groupedDefects.map(group => (
           <div key={group.materialId} className="border-l-4 border-slate-300 pl-4 py-2">
             <h4 className="text-lg font-bold mb-3 flex items-center gap-2 flex-wrap">
-              <span className="text-blue-600">{group.materialId}</span>
-              <span className="text-rose-600 font-extrabold text-xl ml-2">{group.materialName}</span>
-            </h4>
+                <span className="text-blue-600">{group.materialId}</span>
+                <span className="text-rose-600 font-extrabold text-xl ml-2">{group.materialName}</span>
+                <span className="text-sm font-normal text-slate-600 border-l-2 border-slate-300 pl-3 ml-2">
+                  本品項不良總數：<span className="font-bold text-slate-800 text-base">{group.items.reduce((s, item) => s + (Number(item.quantity) || 0), 0)}</span>
+                </span>
+                {filterType === 'pending' && (
+                  <span className="text-sm font-normal text-slate-600 border-l-2 border-slate-300 pl-3 ml-2">
+                    本品項待處置數：<span className="font-bold text-amber-700 text-base">{group.items.reduce((s, item) => s + getRemainingQty(item), 0)}</span>
+                  </span>
+                )}
+              </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {group.items.map((item, index) => {
                 const rem = getRemainingQty(item);
