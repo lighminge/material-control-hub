@@ -129,7 +129,8 @@ export default function DefectDisposition() {
   const groupedDefects = useMemo(() => {
     // Group by materialId
     const groups = new Map<string, Defect[]>();
-    filteredDefects.forEach(d => {
+    const filteredByStatus = filteredDefects.filter(d => filterType === 'all' || getRemainingQty(d) > 0);
+    filteredByStatus.forEach(d => {
       const key = d.materialId || 'Unknown';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(d);
