@@ -350,12 +350,36 @@ export default function DefectDisposition() {
         </CardContent>
       </Card>
 
-            <Tabs value={filterType} onValueChange={(v) => setFilterType(v as 'all'|'pending')} className="mb-4">
-        <TabsList>
-          <TabsTrigger value="all">全部</TabsTrigger>
-          <TabsTrigger value="pending">未處理</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <Tabs value={filterType} onValueChange={(v) => setFilterType(v as 'all'|'pending')}>
+          <TabsList>
+            <TabsTrigger value="all">全部</TabsTrigger>
+            <TabsTrigger value="pending">未處理</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm font-medium bg-slate-50 border px-3 py-1.5 md:px-4 md:py-2 rounded-lg shadow-sm">
+          <div>
+            品項總數：<span className="text-blue-700 font-bold text-base">{groupedDefects.length}</span> 種
+          </div>
+          <div className="hidden sm:block w-px h-4 bg-slate-300"></div>
+          <div>
+            不良總數量：<span className="text-rose-600 font-bold text-base">
+              {groupedDefects.reduce((sum, group) => sum + group.items.reduce((s, item) => s + (Number(item.quantity) || 0), 0), 0)}
+            </span>
+          </div>
+          {filterType === 'pending' && (
+            <>
+              <div className="hidden sm:block w-px h-4 bg-slate-300"></div>
+              <div>
+                待處置總數：<span className="text-amber-600 font-bold text-base">
+                  {groupedDefects.reduce((sum, group) => sum + group.items.reduce((s, item) => s + getRemainingQty(item), 0), 0)}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" /> 批次處置作業
