@@ -126,6 +126,12 @@ export default function DefectDisposition() {
     });
   }, [defects, year, month, search]);
 
+  const getRemainingQty = (d: Defect) => {
+    const total = Number(d.quantity) || 0;
+    const processed = d.dispositions?.reduce((sum, disp) => sum + disp.quantity, 0) || 0;
+    return total - processed;
+  };
+
   const groupedDefects = useMemo(() => {
     // Group by materialId
     const groups = new Map<string, Defect[]>();
@@ -163,11 +169,6 @@ export default function DefectDisposition() {
     return groupArray;
   }, [filteredDefects, sortBy, filterType]);
 
-  const getRemainingQty = (d: Defect) => {
-    const total = Number(d.quantity) || 0;
-    const processed = d.dispositions?.reduce((sum, disp) => sum + disp.quantity, 0) || 0;
-    return total - processed;
-  };
 
   const selectedItems = useMemo(() => {
     return filteredDefects.filter(d => d.id && selectedIds.has(d.id));
