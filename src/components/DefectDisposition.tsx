@@ -466,7 +466,7 @@ export default function DefectDisposition() {
       <div className="space-y-8">
         {groupedDefects.map(group => (
           <div key={group.materialId} className="border-l-4 border-slate-300 pl-4 py-2">
-            <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
+            <h4 className="text-lg font-bold mb-3 flex items-center gap-2 flex-wrap">
               <span className="text-blue-600">{group.materialId}</span>
               <span className="text-rose-600 font-extrabold text-xl ml-2">{group.materialName}</span>
             </h4>
