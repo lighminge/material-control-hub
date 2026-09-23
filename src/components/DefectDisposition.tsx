@@ -308,7 +308,6 @@ export default function DefectDisposition() {
           '已處置數': processed,
           '待處置數': rem,
           '不良情況': item.condition || '',
-          '單據備註': item.remark || '',
           '處置紀錄': (item.dispositions || []).map(d => `${d.method}(${d.quantity})`).join('; ')
         });
       });
@@ -331,7 +330,6 @@ export default function DefectDisposition() {
       { wch: 10 }, // 已處置數
       { wch: 10 }, // 待處置數
       { wch: 25 }, // 不良情況
-      { wch: 20 }, // 單據備註
       { wch: 30 }  // 處置紀錄
     ];
     ws['!cols'] = colWidths;
