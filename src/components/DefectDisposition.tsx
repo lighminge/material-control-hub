@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Defect } from '@/pages/Defective';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2, Pencil, Trash2, ListPlus, X, Check } from 'lucide-react';
+import { Download, AlertCircle, CheckCircle2, Pencil, Trash2, ListPlus, X, Check } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -290,7 +291,58 @@ export default function DefectDisposition() {
     setLoading(false);
   };
 
+
+  const handleExportExcel = () => {
+    const exportData: any[] = [];
+    groupedDefects.forEach(group => {
+      group.items.forEach(item => {
+        const rem = getRemainingQty(item);
+        const total = Number(item.quantity) || 0;
+        const processed = total - rem;
+        exportData.push({
+          '日期': item.date,
+          '料號': item.materialId,
+          '品名': item.materialName,
+          '頭型': item.headType || '',
+          '不良數量': total,
+          '已處置數': processed,
+          '待處置數': rem,
+          '不良情況': item.condition || '',
+          '單據備註': item.remark || '',
+          '處置紀錄': (item.dispositions || []).map(d => `${d.method}(${d.quantity})`).join('; ')
+        });
+      });
+    });
+
+    if (exportData.length === 0) {
+      setSystemAlert('目前沒有資料可供匯出');
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Auto-size columns slightly
+    const colWidths = [
+      { wch: 12 }, // 日期
+      { wch: 15 }, // 料號
+      { wch: 20 }, // 品名
+      { wch: 10 }, // 頭型
+      { wch: 10 }, // 不良數量
+      { wch: 10 }, // 已處置數
+      { wch: 10 }, // 待處置數
+      { wch: 25 }, // 不良情況
+      { wch: 20 }, // 單據備註
+      { wch: 30 }  // 處置紀錄
+    ];
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "不良品資料");
+    XLSX.writeFile(wb, `不良品統計_${year}${month}_${filterType === 'pending' ? '未處理' : '全部'}.xlsx`);
+  };
+
   if (loading && defects.length === 0) return <div>載入中...</div>;
+
 
   return (
     <div className="space-y-6">
@@ -351,12 +403,18 @@ export default function DefectDisposition() {
       </Card>
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <Tabs value={filterType} onValueChange={(v) => setFilterType(v as 'all'|'pending')}>
-          <TabsList>
-            <TabsTrigger value="all">全部</TabsTrigger>
-            <TabsTrigger value="pending">未處理</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-3">
+          <Tabs value={filterType} onValueChange={(v) => setFilterType(v as 'all'|'pending')}>
+            <TabsList>
+              <TabsTrigger value="all">全部</TabsTrigger>
+              <TabsTrigger value="pending">未處理</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button variant="outline" size="sm" onClick={handleExportExcel} className="h-9 border-blue-200 text-blue-700 hover:bg-blue-50">
+            <Download className="w-4 h-4 mr-1" />
+            匯出Excel
+          </Button>
+        </div>
         
         <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm font-medium bg-slate-50 border px-3 py-1.5 md:px-4 md:py-2 rounded-lg shadow-sm">
           <div>
