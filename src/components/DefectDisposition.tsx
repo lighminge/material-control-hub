@@ -294,11 +294,20 @@ export default function DefectDisposition() {
 
   const handleExportExcel = () => {
     const exportData: any[] = [];
+    let sumDefects = 0;
+    let sumProcessed = 0;
+    let sumPending = 0;
+
     groupedDefects.forEach(group => {
       group.items.forEach(item => {
         const rem = getRemainingQty(item);
         const total = Number(item.quantity) || 0;
         const processed = total - rem;
+        
+        sumDefects += total;
+        sumProcessed += processed;
+        sumPending += rem;
+
         exportData.push({
           '日期': item.date,
           '料號': item.materialId,
@@ -317,6 +326,25 @@ export default function DefectDisposition() {
       setSystemAlert('目前沒有資料可供匯出');
       return;
     }
+
+    // 加入空白行與統計資料
+    exportData.push({
+      '日期': '', '料號': '', '品名': '', '頭型': '',
+      '不良數量': null, '已處置數': null, '待處置數': null,
+      '不良情況': '', '處置紀錄': ''
+    });
+    
+    exportData.push({
+      '日期': '【總計】',
+      '料號': `品項總數：${groupedDefects.length}`,
+      '品名': '',
+      '頭型': '',
+      '不良數量': sumDefects,
+      '已處置數': sumProcessed,
+      '待處置數': sumPending,
+      '不良情況': '',
+      '處置紀錄': ''
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     
