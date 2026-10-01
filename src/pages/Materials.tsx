@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, addDocument, updateDocument, deleteDocument, getDocument } from '@/lib/firebase/api';
+import { getCollection, addDocument, updateDocument, deleteDocument, getDocument, setDocumentWithId } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -101,7 +101,7 @@ export default function MaterialsPage() {
       if (doc && (doc as any).types) {
         setHeadTypes((doc as any).types);
       } else {
-        await updateDocument('settings', 'headTypes', { types: ['A型', 'B型', 'C型'] });
+        await setDocumentWithId('settings', 'headTypes', { types: ['A型', 'B型', 'C型'] });
       }
     } catch (err) {
       console.error("Error loading head types:", err);
@@ -114,7 +114,7 @@ export default function MaterialsPage() {
 
   const saveHeadTypesToDb = async (newTypes: string[]) => {
     try {
-      await updateDocument('settings', 'headTypes', { types: newTypes });
+      await setDocumentWithId('settings', 'headTypes', { types: newTypes });
     } catch (err) {
       console.error(err);
     }
