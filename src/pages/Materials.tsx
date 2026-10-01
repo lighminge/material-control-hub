@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -357,18 +358,19 @@ export default function MaterialsPage() {
                 </div>
                 <div className="space-y-2 relative">
                   <Label>頭型</Label>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="w-full justify-between font-normal text-slate-700"
-                    onClick={() => setIsHeadTypeMenuOpen(!isHeadTypeMenuOpen)}
-                  >
-                    {formData.headType || <span className="text-slate-500">頭型 (選填)</span>}
-                    <ChevronDown className="w-4 h-4 opacity-50" />
-                  </Button>
-                  
-                  {isHeadTypeMenuOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-full bg-white border shadow-lg rounded-md z-50 p-2">
+                  <Popover open={isHeadTypeMenuOpen} onOpenChange={setIsHeadTypeMenuOpen}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        className="w-full justify-between font-normal text-slate-700"
+                      >
+                        {formData.headType || <span className="text-slate-500">頭型 (選填)</span>}
+                        <ChevronDown className="w-4 h-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
                       <div className="flex gap-2 mb-3">
                         <Input value={newHeadType} onChange={e => setNewHeadType(e.target.value)} placeholder="新增頭型..." className="h-8 text-xs" />
                         <Button size="sm" type="button" onClick={addHeadType} className="h-8 px-3">新增</Button>
