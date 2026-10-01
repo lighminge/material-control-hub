@@ -11,7 +11,37 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+
+const HEAD_TYPE_COLORS = [
+  'bg-purple-100 text-purple-700 border-purple-200',
+  'bg-pink-100 text-pink-700 border-pink-200',
+  'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'bg-blue-100 text-blue-700 border-blue-200',
+  'bg-orange-100 text-orange-700 border-orange-200',
+  'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'bg-rose-100 text-rose-700 border-rose-200',
+  'bg-teal-100 text-teal-700 border-teal-200',
+  'bg-amber-100 text-amber-700 border-amber-200'
+];
+
+export const getHeadTypeColorClass = (headType: string) => {
+  if (!headType) return 'bg-slate-100 text-slate-700 border-slate-200';
+  
+  if (headType === 'A型') return HEAD_TYPE_COLORS[0];
+  if (headType === 'B型') return HEAD_TYPE_COLORS[1];
+  if (headType === 'C型') return HEAD_TYPE_COLORS[2];
+  
+  let hash = 0;
+  for (let i = 0; i < headType.length; i++) {
+    hash = headType.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  hash = Math.abs(hash);
+  return HEAD_TYPE_COLORS[3 + (hash % (HEAD_TYPE_COLORS.length - 3))];
+};
+
 export type Material = {
+
   id?: string;
   name: string; // Part Number (品號)
   partName?: string; // Part Name (品名)
@@ -375,7 +405,7 @@ export default function MaterialsPage() {
                         <Input value={newHeadType} onChange={e => setNewHeadType(e.target.value)} placeholder="新增頭型..." className="h-8 text-xs" />
                         <Button size="sm" type="button" onClick={addHeadType} className="h-8 px-3">新增</Button>
                       </div>
-                      <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                      <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
                         <div 
                           className="p-1.5 rounded bg-slate-50 hover:bg-blue-50 cursor-pointer text-xs transition-colors"
                           onClick={() => { setFormData({...formData, headType: ''}); setIsHeadTypeMenuOpen(false); }}
@@ -591,7 +621,7 @@ export default function MaterialsPage() {
                     </TableCell>
                     <TableCell>
                       {mat.headType ? (
-                        <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                        <span className={`px-2 py-1 rounded-md text-xs font-bold border ${getHeadTypeColorClass(mat.headType)}`}>
                           {mat.headType}
                         </span>
                       ) : <span className="text-muted-foreground">-</span>}
@@ -759,7 +789,7 @@ export default function MaterialsPage() {
                           </TableCell>
                           <TableCell>
                             {mat?.headType ? (
-                              <span className={`px-2 py-1 rounded-md text-xs font-bold border ${mat.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : mat.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : mat.headType === 'C型' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                              <span className={`px-2 py-1 rounded-md text-xs font-bold border ${getHeadTypeColorClass(mat.headType)}`}>
                                 {mat.headType}
                               </span>
                             ) : <span className="text-muted-foreground">-</span>}
