@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCollection, addDocument, updateDocument, deleteDocument } from '@/lib/firebase/api';
+import { getCollection, addDocument, updateDocument, deleteDocument, getDocument } from '@/lib/firebase/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pencil, Trash2, Check, X, Settings2, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export type Material = {
@@ -56,6 +57,60 @@ export default function MaterialsPage() {
   const [histSort, setHistSort] = useState<'desc' | 'asc'>('desc');
   const [histPage, setHistPage] = useState(1);
   const [histPageSize, setHistPageSize] = useState(10);
+
+  const [headTypes, setHeadTypes] = useState<string[]>(['A型', 'B型', 'C型']);
+  const [isHeadTypeMenuOpen, setIsHeadTypeMenuOpen] = useState(false);
+  const [newHeadType, setNewHeadType] = useState('');
+  const [editingHeadTypeIndex, setEditingHeadTypeIndex] = useState<number | null>(null);
+  const [editHeadTypeText, setEditHeadTypeText] = useState('');
+
+  const loadHeadTypes = async () => {
+    try {
+      const doc = await getDocument('settings', 'headTypes');
+      if (doc && (doc as any).types) {
+        setHeadTypes((doc as any).types);
+      } else {
+        await updateDocument('settings', 'headTypes', { types: ['A型', 'B型', 'C型'] });
+      }
+    } catch (err) {
+      console.error("Error loading head types:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadHeadTypes();
+  }, []);
+
+  const saveHeadTypesToDb = async (newTypes: string[]) => {
+    try {
+      await updateDocument('settings', 'headTypes', { types: newTypes });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const addHeadType = () => {
+    if (!newHeadType.trim()) return;
+    const updated = [...headTypes, newHeadType.trim()];
+    setHeadTypes(updated);
+    setNewHeadType('');
+    saveHeadTypesToDb(updated);
+  };
+
+  const handleSaveEditHeadType = () => {
+    if (editingHeadTypeIndex === null || !editHeadTypeText.trim()) return;
+    const updated = [...headTypes];
+    updated[editingHeadTypeIndex] = editHeadTypeText.trim();
+    setHeadTypes(updated);
+    setEditingHeadTypeIndex(null);
+    saveHeadTypesToDb(updated);
+  };
+
+  const handleDeleteHeadType = (index: number) => {
+    const updated = headTypes.filter((_, i) => i !== index);
+    setHeadTypes(updated);
+    saveHeadTypesToDb(updated);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -301,18 +356,54 @@ export default function MaterialsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>頭型</Label>
-                  <Select value={formData.headType || 'none'} onValueChange={(val) => setFormData({...formData, headType: val === 'none' ? '' : val})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="選擇頭型 (選填)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">無 (空白)</SelectItem>
-                      <SelectItem value="A型">A型</SelectItem>
-                      <SelectItem value="B型">B型</SelectItem>
-                      <SelectItem value="C型">C型</SelectItem>
-                    </SelectContent>
-                  </Select>
+                                      <Label>頭型</Label>
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      className="w-full justify-between font-normal text-slate-700"
+                      onClick={() => setIsHeadTypeMenuOpen(!isHeadTypeMenuOpen)}
+                    >
+                      {formData.headType || <span className="text-slate-500">頭型 (選填)</span>}
+                      <ChevronDown className="w-4 h-4 opacity-50" />
+                    </Button>
+                    
+                    {isHeadTypeMenuOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border shadow-lg rounded-md z-50 p-2">
+                        <div className="flex gap-2 mb-3">
+                          <Input value={newHeadType} onChange={e => setNewHeadType(e.target.value)} placeholder="新增頭型..." className="h-8 text-xs" />
+                          <Button size="sm" type="button" onClick={addHeadType} className="h-8 px-3">新增</Button>
+      
+                        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                          <div 
+                            className="p-1.5 rounded bg-slate-50 hover:bg-blue-50 cursor-pointer text-xs transition-colors"
+                            onClick={() => { setFormData({...formData, headType: ''}); setIsHeadTypeMenuOpen(false); }}
+                          >
+                            無 (空白)
+        
+                          {headTypes.map((ht, i) => (
+                            <div key={i} className="flex justify-between items-center bg-slate-50 hover:bg-blue-50 p-1.5 rounded group border border-transparent hover:border-blue-100 transition-colors cursor-pointer" onClick={() => { if (editingHeadTypeIndex !== i) { setFormData({...formData, headType: ht}); setIsHeadTypeMenuOpen(false); } }}>
+                              {editingHeadTypeIndex === i ? (
+                                <div className="flex gap-1 w-full" onClick={e => e.stopPropagation()}>
+                                  <Input value={editHeadTypeText} onChange={e => setEditHeadTypeText(e.target.value)} className="h-7 text-xs flex-1" autoFocus />
+                                  <Button size="icon" type="button" variant="ghost" className="h-7 w-7 text-green-600" onClick={handleSaveEditHeadType}><Check className="w-4 h-4" /></Button>
+                                  <Button size="icon" type="button" variant="ghost" className="h-7 w-7 text-slate-400" onClick={() => setEditingHeadTypeIndex(null)}><X className="w-4 h-4" /></Button>
+              
+                              ) : (
+                                <>
+                                  <span className="text-xs text-slate-700 flex-1 truncate pr-2">{ht}</span>
+                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                    <Button size="icon" type="button" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingHeadTypeIndex(i); setEditHeadTypeText(ht); }}><Pencil className="w-3 h-3" /></Button>
+                                    <Button size="icon" type="button" variant="ghost" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeleteHeadType(i)}><Trash2 className="w-3 h-3" /></Button>
+                
+                                </>
+                              )}
+          
+                          ))}
+                          {headTypes.length === 0 && <div className="text-center text-slate-400 text-xs py-4">無可用頭型</div>}
+      
+    
+                    )}
+
                 </div>
                 <div className="space-y-2">
                   <Label>庫存數量</Label>
