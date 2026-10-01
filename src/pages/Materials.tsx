@@ -234,7 +234,7 @@ export default function MaterialsPage() {
     const matchPartName = searchPartName === '' || 
       (mat.partName && mat.partName.toLowerCase().includes(searchPartName.toLowerCase()));
     const matchCategory = searchCategory === 'all' || (mat.category || '一般') === searchCategory;
-    const matchHeadType = searchHeadType === 'all' || (mat.headType || '') === searchHeadType;
+    const matchHeadType = searchHeadType === 'all' || (searchHeadType === 'none' ? !mat.headType : mat.headType === searchHeadType);
     return matchName && matchPartName && matchCategory && matchHeadType;
   });
 
@@ -272,7 +272,7 @@ export default function MaterialsPage() {
       return false;
     }
     if (histSearchCat !== 'all' && (mat?.category || '一般') !== histSearchCat) return false;
-    if (histSearchHeadType !== 'all' && (mat?.headType || '') !== histSearchHeadType) return false;
+    if (histSearchHeadType !== 'all' && (histSearchHeadType === 'none' ? !!mat?.headType : mat?.headType !== histSearchHeadType)) return false;
     if (histStartDate && log.restockDate < histStartDate) return false;
     if (histEndDate && log.restockDate > histEndDate) return false;
     return true;
@@ -527,7 +527,7 @@ export default function MaterialsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="">無 (空白)</SelectItem>
+                    <SelectItem value="none">無 (空白)</SelectItem>
                     {headTypes.map(ht => (
                       <SelectItem key={ht} value={ht}>{ht}</SelectItem>
                     ))}
@@ -701,7 +701,7 @@ export default function MaterialsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="">無 (空白)</SelectItem>
+                    <SelectItem value="none">無 (空白)</SelectItem>
                     {headTypes.map(ht => (
                       <SelectItem key={ht} value={ht}>{ht}</SelectItem>
                     ))}
