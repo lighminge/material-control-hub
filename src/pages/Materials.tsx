@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Trash2, Check, X, Settings2, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export type Material = {
