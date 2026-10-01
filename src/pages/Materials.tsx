@@ -528,7 +528,7 @@ export default function MaterialsPage() {
                   <SelectContent>
                     <SelectItem value="all">全部</SelectItem>
                     <SelectItem value="none">無 (空白)</SelectItem>
-                    {headTypes.map(ht => (
+                    {headTypes.filter(Boolean).map(ht => (
                       <SelectItem key={ht} value={ht}>{ht}</SelectItem>
                     ))}
                   </SelectContent>
@@ -702,7 +702,7 @@ export default function MaterialsPage() {
                   <SelectContent>
                     <SelectItem value="all">全部</SelectItem>
                     <SelectItem value="none">無 (空白)</SelectItem>
-                    {headTypes.map(ht => (
+                    {headTypes.filter(Boolean).map(ht => (
                       <SelectItem key={ht} value={ht}>{ht}</SelectItem>
                     ))}
                   </SelectContent>
