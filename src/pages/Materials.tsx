@@ -66,6 +66,7 @@ export default function MaterialsPage() {
   const [searchName, setSearchName] = useState('');
   const [searchPartName, setSearchPartName] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
+  const [searchHeadType, setSearchHeadType] = useState('all');
 
   const [formData, setFormData] = useState<Material>({
     name: '',
@@ -83,6 +84,7 @@ export default function MaterialsPage() {
   const [histSearchName, setHistSearchName] = useState('');
   const [histSearchPartName, setHistSearchPartName] = useState('');
   const [histSearchCat, setHistSearchCat] = useState('all');
+  const [histSearchHeadType, setHistSearchHeadType] = useState('all');
   const [histStartDate, setHistStartDate] = useState('');
   const [histEndDate, setHistEndDate] = useState('');
   const [histSort, setHistSort] = useState<'desc' | 'asc'>('desc');
@@ -231,8 +233,9 @@ export default function MaterialsPage() {
       mat.name.toLowerCase().includes(searchName.toLowerCase());
     const matchPartName = searchPartName === '' || 
       (mat.partName && mat.partName.toLowerCase().includes(searchPartName.toLowerCase()));
-    const matchCategory = searchCategory === 'all' || (mat.category || '未分類') === searchCategory;
-    return matchName && matchPartName && matchCategory;
+    const matchCategory = searchCategory === 'all' || (mat.category || '一般') === searchCategory;
+    const matchHeadType = searchHeadType === 'all' || (mat.headType || '') === searchHeadType;
+    return matchName && matchPartName && matchCategory && matchHeadType;
   });
 
   // Sort logic
@@ -268,7 +271,8 @@ export default function MaterialsPage() {
         !(mat?.partName && mat.partName.toLowerCase().includes(histSearchPartName.toLowerCase()))) {
       return false;
     }
-    if (histSearchCat !== 'all' && (mat?.category || '未分類') !== histSearchCat) return false;
+    if (histSearchCat !== 'all' && (mat?.category || '一般') !== histSearchCat) return false;
+    if (histSearchHeadType !== 'all' && (mat?.headType || '') !== histSearchHeadType) return false;
     if (histStartDate && log.restockDate < histStartDate) return false;
     if (histEndDate && log.restockDate > histEndDate) return false;
     return true;
@@ -515,6 +519,21 @@ export default function MaterialsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center gap-2">
+                <Label>查詢頭型:</Label>
+                <Select value={searchHeadType} onValueChange={(val) => { setSearchHeadType(val); setPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="">無 (空白)</SelectItem>
+                    {headTypes.map(ht => (
+                      <SelectItem key={ht} value={ht}>{ht}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
                 <Label>排序:</Label>
@@ -671,6 +690,21 @@ export default function MaterialsPage() {
                     <SelectItem value="未分類">未分類</SelectItem>
                     <SelectItem value="TKW">TKW</SelectItem>
                     <SelectItem value="夾鉗">夾鉗</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>查詢頭型:</Label>
+                <Select value={histSearchHeadType} onValueChange={(val) => { setHistSearchHeadType(val); setHistPage(1); }}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="">無 (空白)</SelectItem>
+                    {headTypes.map(ht => (
+                      <SelectItem key={ht} value={ht}>{ht}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
