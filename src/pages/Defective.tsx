@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DefectDisposition from '@/components/DefectDisposition';
 import { Plus, X, ListPlus, Pencil, Check, Trash2, AlertCircle, Copy } from 'lucide-react';
+import { getHeadTypeColorClass } from '@/lib/utils';
 
 export type Defect = {
   id?: string;
@@ -92,6 +93,7 @@ export default function DefectivePage() {
   
   // Quick Phrases
   const [activePhraseIndex, setActivePhraseIndex] = useState<number | null>(null);
+  const [headTypes, setHeadTypes] = useState<string[]>(['A型', 'B型', 'C型']);
   const [phrases, setPhrases] = useState<string[]>([]);
   const [newPhrase, setNewPhrase] = useState('');
   const [editingPhraseIndex, setEditingPhraseIndex] = useState<number | null>(null);
@@ -135,6 +137,11 @@ export default function DefectivePage() {
         return timeA - timeB;
       });
       setDefects(sorted);
+      
+            const headTypesDoc = await getDocument('settings', 'headTypes');
+      if (headTypesDoc && (headTypesDoc as any).types) {
+        setHeadTypes((headTypesDoc as any).types);
+      }
       
       const phrasesDoc = await getDocument('settings', 'defectivePhrases');
       if (phrasesDoc && (phrasesDoc as any).phrases) {
@@ -617,9 +624,9 @@ export default function DefectivePage() {
 
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">頭型</Label>
-                      <Select value={item.headType} onValueChange={(val) => {
+                      <Select value={item.headType || 'none'} onValueChange={(val) => {
                         const newItems = [...formData.items];
-                        newItems[index].headType = val;
+                        newItems[index].headType = val === 'none' ? '' : val;
                         setFormData({...formData, items: newItems});
                       }}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
@@ -918,7 +925,7 @@ export default function DefectivePage() {
                                 <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
                                 <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
                                 {item.headType && (
-                                  <span className={`px-1.5 py-0.5 text-[10px] rounded font-bold border ${item.headType === 'A型' ? 'bg-purple-100 text-purple-700 border-purple-200' : item.headType === 'B型' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                  <span className={`px-1.5 py-0.5 text-[10px] rounded font-bold border ${getHeadTypeColorClass(item.headType)}`}>
                                     {item.headType}
                                   </span>
                                 )}
