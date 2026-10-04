@@ -895,10 +895,18 @@ export default function DefectivePage() {
                         </div>
                       </TableCell>
                       <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
-                      <TableCell className="font-bold">{form.formId}</TableCell>
-                      <TableCell>{form.date}</TableCell>
-                      <TableCell>{form.discoverer}</TableCell>
-                      <TableCell className="text-center font-bold text-red-600 text-lg">{form.items.length}</TableCell>
+                      <TableCell>
+                        <span className="font-bold text-base text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">{form.formId}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-base text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">{form.date}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-base text-purple-700 bg-purple-50 px-2 py-1 rounded border border-purple-200">{form.discoverer}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="font-extrabold text-lg text-rose-700 bg-rose-50 px-3 py-1 rounded border border-rose-200 shadow-sm">{form.items.length}</span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-2 py-1">
                           {form.items.filter(item => item.materialName).length > 0 && (
