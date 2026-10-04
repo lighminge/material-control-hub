@@ -570,10 +570,10 @@ export default function DefectDisposition() {
                 return (
                   <Card 
                     key={item.id} 
-                    className={`cursor-pointer transition-all border-2 ${isSelected ? 'border-blue-600 bg-blue-100 shadow-md' : 'border-slate-300 bg-slate-50 shadow-sm'} hover:border-blue-400 hover:shadow-md`}
+                    className={`cursor-pointer transition-all border-2 overflow-hidden ${isSelected ? 'border-blue-600 bg-blue-100 shadow-md scale-[1.02]' : 'border-amber-300 bg-amber-50 shadow-sm'} hover:shadow-md hover:border-amber-400`}
                     onClick={() => item.id && rem > 0 && toggleSelect(item.id)}
                   >
-                    <CardHeader className="py-2 px-3 bg-slate-50 border-b flex flex-row items-center justify-between space-y-0">
+                    <CardHeader className={`py-2 px-3 border-b flex flex-row items-center justify-between space-y-0 ${isSelected ? 'bg-blue-200/50 border-blue-200' : 'bg-amber-100/50 border-amber-200'}`}>
                       <div className="flex items-center gap-2">
                         <Checkbox 
                           checked={isSelected}
