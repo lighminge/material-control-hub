@@ -631,10 +631,10 @@ export default function DefectivePage() {
                       }}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="頭型" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="A型">A型</SelectItem>
-                          <SelectItem value="B型">B型</SelectItem>
-                          <SelectItem value="C型">C型</SelectItem>
-                          <SelectItem value="其他">其他</SelectItem>
+                          <SelectItem value="none">無 (空白)</SelectItem>
+                          {headTypes.filter(Boolean).map(ht => (
+                            <SelectItem key={ht} value={ht}>{ht}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
