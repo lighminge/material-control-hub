@@ -1,4 +1,5 @@
-import { User } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
+import { getSession, logout } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { CalendarModal } from '@/components/CalendarModal';
@@ -44,8 +45,12 @@ export function Navbar() {
               )}
             </div>
           )}
-          <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-            <User className="w-5 h-5 text-muted-foreground" />
+          <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+            <User className="w-5 h-5" />
+            <span>{getSession()?.name || getSession()?.username}</span>
+          </div>
+          <Button variant="outline" size="sm" className="shrink-0 gap-1" onClick={() => { logout(); window.location.reload(); }}>
+            <LogOut className="w-4 h-4" />登出
           </Button>
         </div>
       </header>

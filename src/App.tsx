@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 
@@ -17,15 +17,25 @@ import Dashboard from '@/pages/Dashboard';
 import Statistics from '@/pages/Statistics';
 import Expediting from '@/pages/Expediting';
 import Defective from '@/pages/Defective';
+import Settings from '@/pages/Settings';
+import Login from '@/pages/Login';
+import { getSession } from '@/lib/auth';
+import type { SessionUser } from '@/lib/auth';
 import PartSearchWidget from '@/components/PartSearchWidget';
 
 function App() {
+  const [user, setUser] = useState<SessionUser | null>(getSession());
+
   useEffect(() => {
     // Attempt anonymous login on app startup
     loginAnonymously().catch(() => {
       console.error("Firebase is not fully configured yet. Please update config.ts");
     });
   }, []);
+
+  if (!user) {
+    return <Login onSuccess={setUser} />;
+  }
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
@@ -40,6 +50,7 @@ function App() {
           <Route path="controls" element={<Controls />} />
           <Route path="expediting" element={<Expediting />} />
           <Route path="defective" element={<Defective />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, ClipboardList, ShieldAlert, PieChart, AlarmClock, FileWarning, Package } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardList, ShieldAlert, PieChart, AlarmClock, FileWarning, Package, Settings } from 'lucide-react';
 
 const navItems = [
   { name: '儀表板', path: '/', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const navItems = [
   { name: '稽催作業', path: '/expediting', icon: AlarmClock },
   { name: '統計作業', path: '/statistics', icon: PieChart },
   { name: '人員管理', path: '/staff', icon: Users },
+  { name: '系統設定', path: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {
