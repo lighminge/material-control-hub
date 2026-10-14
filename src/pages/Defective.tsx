@@ -894,7 +894,7 @@ export default function DefectivePage() {
                           <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmFormId(form.formId)}>刪除</Button>
                         </div>
                       </TableCell>
-                      <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                      <TableCell><span className="font-black text-xl text-fuchsia-700 bg-fuchsia-50 px-2 py-1 rounded border border-fuchsia-300">{(page - 1) * pageSize + index + 1}</span></TableCell>
                       <TableCell>
                         <span className="font-bold text-base text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">{form.formId}</span>
                       </TableCell>
@@ -928,7 +928,10 @@ export default function DefectivePage() {
                           )}
                           <div className="flex flex-col gap-1.5">
                             {form.items.map((item, idx) => (
-                            <div key={idx} className="flex flex-col gap-1.5 bg-white/50 p-2 rounded-md border border-slate-100">
+                            <div key={idx} className={`relative flex flex-col gap-1.5 pt-6 p-2 rounded-md border-2 overflow-hidden ${idx % 2 === 0 ? 'bg-white border-slate-200' : 'bg-blue-50 border-blue-200'}`}>
+                              <div className="absolute top-0 left-0 bg-slate-200 text-slate-700 font-bold px-2 py-0.5 text-xs rounded-br-lg z-10 border-b border-r border-slate-300">
+                                #{idx + 1}
+                              </div>
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialId}</span>
                                 <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shadow-sm">{item.materialName}</span>
