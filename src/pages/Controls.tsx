@@ -825,7 +825,7 @@ export default function ControlsPage() {
                 </TableRow>
               ) : (
                 paginatedData.map((control, index) => (
-                  <TableRow key={control.id}>
+                  <TableRow key={control.id} className={`border-b-2 ${index % 2 === 0 ? '!bg-amber-100 hover:!bg-amber-200 border-amber-300' : '!bg-sky-100 hover:!bg-sky-200 border-sky-300'}`}>
                     <TableCell>
                       <div className="flex flex-row gap-2">
                         <Button variant="outline" size="sm" onClick={() => {
@@ -835,7 +835,7 @@ export default function ControlsPage() {
                         
                       </div>
                     </TableCell>
-                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell><span className="inline-flex items-center justify-center w-10 h-10 rounded-full font-black text-xl text-white bg-fuchsia-600 border-4 border-fuchsia-200 shadow-md">{(page - 1) * pageSize + index + 1}</span></TableCell>
                     <TableCell>
                       <Badge variant={control.status === '已結案' ? 'default' : 'secondary'} className={control.status === '處理中' ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
                         {control.status}

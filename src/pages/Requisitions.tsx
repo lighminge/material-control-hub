@@ -793,7 +793,7 @@ export default function RequisitionsPage() {
                 </TableRow>
               ) : (
                 paginatedData.map((req, index) => (
-                  <TableRow key={req.id}>
+                  <TableRow key={req.id} className={`border-b-2 ${index % 2 === 0 ? '!bg-amber-100 hover:!bg-amber-200 border-amber-300' : '!bg-sky-100 hover:!bg-sky-200 border-sky-300'}`}>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={async () => {
@@ -816,7 +816,7 @@ export default function RequisitionsPage() {
                         <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(req)} disabled={req.status === '已完成' && req.items?.length !== 0}>刪除</Button>
                       </div>
                     </TableCell>
-                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell><span className="inline-flex items-center justify-center w-10 h-10 rounded-full font-black text-xl text-white bg-fuchsia-600 border-4 border-fuchsia-200 shadow-md">{(page - 1) * pageSize + index + 1}</span></TableCell>
                     <TableCell>
                       <Badge variant={req.status === '已完成' ? 'default' : 'destructive'}>
                         {req.status}

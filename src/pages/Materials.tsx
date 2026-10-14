@@ -587,7 +587,7 @@ export default function MaterialsPage() {
                         <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmItem(mat)}>刪除</Button>
                       </div>
                     </TableCell>
-                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell><span className="inline-flex items-center justify-center w-10 h-10 rounded-full font-black text-xl text-white bg-fuchsia-600 border-4 border-fuchsia-200 shadow-md">{(page - 1) * pageSize + index + 1}</span></TableCell>
                     <TableCell>
                       {mat.category === 'TKW' ? (
                         <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">TKW</span>
