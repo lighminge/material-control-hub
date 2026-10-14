@@ -768,8 +768,8 @@ export default function MaterialsPage() {
                     histPaginatedData.map((log, index) => {
                       const mat = materials.find(m => m.id === log.materialId);
                       return (
-                        <TableRow key={log.id}>
-                          <TableCell>{(histPage - 1) * histPageSize + index + 1}</TableCell>
+                        <TableRow key={log.id} className={`border-b-2 ${index % 2 === 0 ? '!bg-amber-100 hover:!bg-amber-200 border-amber-300' : '!bg-sky-100 hover:!bg-sky-200 border-sky-300'}`}>
+                          <TableCell><span className="inline-flex items-center justify-center w-10 h-10 rounded-full font-black text-xl text-white bg-fuchsia-600 border-4 border-fuchsia-200 shadow-md">{(histPage - 1) * histPageSize + index + 1}</span></TableCell>
                           <TableCell className="font-bold text-green-700">{log.restockDate}</TableCell>
                           <TableCell>
                             {mat?.category === 'TKW' ? (
