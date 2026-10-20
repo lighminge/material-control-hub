@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import LoginLogs from '@/components/LoginLogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type FormState = { username: string; password: string; name: string; unit: string; notes: string };
@@ -132,12 +134,16 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-4">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">系統設定</h1>
-        <Button onClick={openNew}>新增使用者</Button>
-      </div>
+      <h1 className="text-3xl font-bold tracking-tight text-primary">系統設定</h1>
 
-      <div className="text-lg font-bold">系統使用者</div>
+      <Tabs defaultValue="users" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="users">系統使用者</TabsTrigger>
+          <TabsTrigger value="loginLogs">系統登入記錄</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-4">
+      <Button onClick={openNew}>新增使用者</Button>
       <Table>
         <TableHeader>
           <TableRow>
@@ -174,6 +180,12 @@ export default function SettingsPage() {
           ))}
         </TableBody>
       </Table>
+        </TabsContent>
+
+        <TabsContent value="loginLogs">
+          <LoginLogs />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

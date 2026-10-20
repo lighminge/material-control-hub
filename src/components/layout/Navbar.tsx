@@ -49,7 +49,7 @@ export function Navbar() {
             <User className="w-5 h-5" />
             <span>{getSession()?.name || getSession()?.username}</span>
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 gap-1" onClick={() => { logout(); window.location.reload(); }}>
+          <Button variant="outline" size="sm" className="shrink-0 gap-1" onClick={async () => { await logout(); window.location.reload(); }}>
             <LogOut className="w-4 h-4" />登出
           </Button>
         </div>
