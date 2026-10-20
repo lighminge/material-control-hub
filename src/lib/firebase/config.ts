@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 // TODO: Replace with your actual Firebase config
 // You will need to create a project in Firebase Console and provide these values.
@@ -16,6 +17,24 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Firebase App Check with reCAPTCHA Enterprise.
+// The reCAPTCHA Enterprise *site key* is public; it is injected at build time through
+// VITE_RECAPTCHA_ENTERPRISE_SITE_KEY (see .env.example). If it is not set, App Check
+// is skipped so the app keeps working while App Check is not yet enforced.
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY as string | undefined;
+if (recaptchaSiteKey) {
+  // For local development, a debug token is used (register it in Firebase Console > App Check > Manage debug tokens).
+  if (import.meta.env.DEV) {
+    (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN || true;
+  }
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+} else {
+  console.warn("App Check is disabled: VITE_RECAPTCHA_ENTERPRISE_SITE_KEY is not set.");
+}
 const db = getFirestore(app);
 const auth = getAuth(app);
 
