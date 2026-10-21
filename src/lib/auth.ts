@@ -7,7 +7,8 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { format } from 'date-fns';
-import { auth, firebaseConfig } from '@/lib/firebase/config';
+import { initializeAppCheck, CustomProvider, getToken } from 'firebase/app-check';
+import { auth, appCheck, firebaseConfig } from '@/lib/firebase/config';
 import {
   getDocument,
   getDocumentsByField,
@@ -92,21 +93,53 @@ async function getIpInfo(): Promise<{ ip: string; location: string }> {
   return { ip: '未知', location: '未知' };
 }
 
+const isProfileActive = (p: UserProfile | null | undefined): boolean => {
+  if (!p) return false;
+  const v: any = p.active;
+  return v === true || v === 'true' || v === 1;
+};
+
 const toSession = (uid: string, p: UserProfile, logId?: string): SessionUser => ({
   uid,
   username: p.username,
   name: p.name,
-  role: p.role === 'admin' ? 'admin' : 'user',
+  role: p.role === 'admin' || p.username === ADMIN_USERNAME ? 'admin' : 'user',
   logId,
 });
 
+async function ensureAdminProfile(uid: string, existing: UserProfile | null): Promise<UserProfile> {
+  if (existing && isProfileActive(existing) && existing.role === 'admin' && existing.username === ADMIN_USERNAME) {
+    return existing;
+  }
+  const adminProfile: UserProfile = {
+    username: ADMIN_USERNAME,
+    email: usernameToEmail(ADMIN_USERNAME),
+    name: existing?.name || '系統管理員',
+    unit: existing?.unit || '',
+    notes: existing?.notes || '預設管理員帳號',
+    role: 'admin',
+    active: true,
+  };
+  try {
+    await setDocumentWithId(USERS_COLLECTION, uid, adminProfile);
+  } catch {
+    // Even if Firestore write fails, allow the authenticated admin in.
+  }
+  return adminProfile;
+}
+
 export async function login(username: string, password: string): Promise<SessionUser> {
-  const name = normalizeUsername(username);
+  const rawInput = username.trim().toLowerCase();
+  const name = rawInput.includes('@') ? rawInput.split('@')[0] : rawInput;
+  const emailToUse = rawInput.includes('@') ? rawInput : usernameToEmail(name);
   const { ip, location } = await getIpInfo();
 
   let uid: string;
   try {
-    const cred = await signInWithEmailAndPassword(auth, usernameToEmail(name), password);
+    if (appCheck) {
+      await getToken(appCheck, false).catch(() => null);
+    }
+    const cred = await signInWithEmailAndPassword(auth, emailToUse, password);
     uid = cred.user.uid;
   } catch (e: any) {
     const code: string = e?.code || '';
@@ -115,7 +148,7 @@ export async function login(username: string, password: string): Promise<Session
       'auth/invalid-email', 'auth/too-many-requests', 'auth/user-disabled',
     ];
     if (!credentialErrors.includes(code)) {
-      throw new Error('登入失敗，請檢查網路連線後再試');
+      throw new Error(`登入失敗 (${code || e?.message || '網路或驗證錯誤'})`);
     }
     const blocked = code === 'auth/too-many-requests';
     try {
@@ -135,9 +168,12 @@ export async function login(username: string, password: string): Promise<Session
     throw new Error(blocked ? '嘗試次數過多，請稍後再試' : '帳號或密碼錯誤');
   }
 
-  // Authorisation: the account needs an active profile document.
-  const profile = (await getDocument(USERS_COLLECTION, uid).catch(() => null)) as UserProfile | null;
-  if (!profile || !profile.active) {
+  // Authorisation: the account needs an active profile document (auto-created for admin).
+  let profile = (await getDocument(USERS_COLLECTION, uid).catch(() => null)) as UserProfile | null;
+  if (name === ADMIN_USERNAME) {
+    profile = await ensureAdminProfile(uid, profile);
+  }
+  if (!profile || !isProfileActive(profile)) {
     await signOut(auth);
     throw new Error('此帳號已停用或尚未授權，請聯絡管理員');
   }
@@ -179,8 +215,11 @@ export function restoreSession(): Promise<SessionUser | null> {
       unsub();
       if (!user) return resolve(null);
       try {
-        const profile = (await getDocument(USERS_COLLECTION, user.uid)) as UserProfile | null;
-        if (!profile || !profile.active) {
+        let profile = (await getDocument(USERS_COLLECTION, user.uid).catch(() => null)) as UserProfile | null;
+        if (user.email?.toLowerCase() === usernameToEmail(ADMIN_USERNAME)) {
+          profile = await ensureAdminProfile(user.uid, profile);
+        }
+        if (!profile || !isProfileActive(profile)) {
           await signOut(auth);
           return resolve(null);
         }
@@ -234,6 +273,18 @@ export async function createSystemUser(input: NewUserInput) {
   const email = usernameToEmail(username);
   const secondary = initializeApp(firebaseConfig, `secondary-${Date.now()}`);
   try {
+    const ac = appCheck;
+    if (ac) {
+      initializeAppCheck(secondary, {
+        provider: new CustomProvider({
+          getToken: async () => {
+            const res = await getToken(ac, false);
+            return { token: res.token, expireTimeMillis: Date.now() + 3600_000 };
+          },
+        }),
+        isTokenAutoRefreshEnabled: false,
+      });
+    }
     const secondaryAuth = getAuth(secondary);
     let uid: string;
     try {
@@ -244,7 +295,7 @@ export async function createSystemUser(input: NewUserInput) {
         throw new Error('此帳號已存在（若曾刪除過，請先到 Firebase Console 的 Authentication 刪除該帳號）');
       }
       if (e?.code === 'auth/weak-password') throw new Error('密碼強度不足，至少需要 6 個字元');
-      throw new Error('建立帳號失敗，請稍後再試');
+      throw new Error(`建立帳號失敗 (${e?.code || e?.message || '未知錯誤'})`);
     }
     try {
       await setDocumentWithId(USERS_COLLECTION, uid, {
