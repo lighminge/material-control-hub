@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { calculateWorkingDays } from '@/utils/dateUtils';
 import { AlarmClock, ShieldAlert, TrendingUp } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { exportToExcel } from '@/lib/excel';
 
 export default function ExpeditingPage() {
   const [controls, setControls] = useState<any[]>([]);
@@ -166,11 +166,8 @@ export default function ExpeditingPage() {
       };
     });
     
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
     const sheetName = activeTab === 'active' ? '未結案管制單' : '已結案管制單';
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    XLSX.writeFile(wb, `${sheetName}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    exportToExcel(`${sheetName}_${new Date().toISOString().slice(0,10)}.xlsx`, [{ name: sheetName, rows: exportData }]);
   };
 
   return (

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { exportToExcel } from '@/lib/excel';
 import { getHeadTypeColorClass } from '@/lib/utils';
 
 
@@ -273,10 +273,7 @@ export default function MaterialsPage() {
       };
     });
     
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "庫存變更歷程");
-    XLSX.writeFile(wb, `庫存變更歷程_${new Date().toISOString().slice(0,10)}.xlsx`);
+    exportToExcel(`庫存變更歷程_${new Date().toISOString().slice(0,10)}.xlsx`, [{ name: '庫存變更歷程', rows: exportData }]);
   };
 
   return (

@@ -5,7 +5,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 
 import MainLayout from '@/layouts/MainLayout';
-import { loginAnonymously } from '@/lib/firebase/config';
 
 
 
@@ -19,19 +18,22 @@ import Expediting from '@/pages/Expediting';
 import Defective from '@/pages/Defective';
 import Settings from '@/pages/Settings';
 import Login from '@/pages/Login';
-import { getSession } from '@/lib/auth';
+import { restoreSession } from '@/lib/auth';
 import type { SessionUser } from '@/lib/auth';
 import PartSearchWidget from '@/components/PartSearchWidget';
 
 function App() {
-  const [user, setUser] = useState<SessionUser | null>(getSession());
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Attempt anonymous login on app startup
-    loginAnonymously().catch(() => {
-      console.error("Firebase is not fully configured yet. Please update config.ts");
-    });
+    // Restore an existing Firebase Authentication session (if any)
+    restoreSession().then(setUser).finally(() => setChecking(false));
   }, []);
+
+  if (checking) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">載入中...</div>;
+  }
 
   if (!user) {
     return <Login onSuccess={setUser} />;

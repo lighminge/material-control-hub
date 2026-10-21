@@ -1,11 +1,11 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth, signInAnonymously } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
-// TODO: Replace with your actual Firebase config
-// You will need to create a project in Firebase Console and provide these values.
-const firebaseConfig = {
+// Firebase web config (public identifiers, not secrets). Access is protected by
+// Firestore security rules + Firebase Authentication + App Check.
+export const firebaseConfig = {
   apiKey: "AIzaSyAP70NxjHZJ4jC8_8JZ5xEYMwYUDbZi31w",
   authDomain: "material-control-hub.firebaseapp.com",
   projectId: "material-control-hub",
@@ -35,19 +35,10 @@ if (recaptchaSiteKey) {
 } else {
   console.warn("App Check is disabled: VITE_RECAPTCHA_ENTERPRISE_SITE_KEY is not set.");
 }
+
 const db = getFirestore(app);
 const auth = getAuth(app);
-
-// Function to sign in anonymously
-export const loginAnonymously = async () => {
-  try {
-    const userCredential = await signInAnonymously(auth);
-    console.log("Signed in anonymously:", userCredential.user.uid);
-    return userCredential.user;
-  } catch (error) {
-    console.error("Error signing in anonymously:", error);
-    throw error;
-  }
-};
+// The sign-in state only lives for the current browser tab/session.
+setPersistence(auth, browserSessionPersistence).catch(() => { /* ignore */ });
 
 export { db, auth };

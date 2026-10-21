@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Defect } from '@/pages/Defective';
 import { Badge } from '@/components/ui/badge';
 import { Download, AlertCircle, CheckCircle2, Pencil, Trash2, ListPlus, X, Check } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { exportToExcel } from '@/lib/excel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -346,25 +346,11 @@ export default function DefectDisposition() {
       '處置紀錄': ''
     });
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    // Auto-size columns slightly
-    const colWidths = [
-      { wch: 12 }, // 日期
-      { wch: 15 }, // 料號
-      { wch: 20 }, // 品名
-      { wch: 10 }, // 頭型
-      { wch: 10 }, // 不良數量
-      { wch: 10 }, // 已處置數
-      { wch: 10 }, // 待處置數
-      { wch: 25 }, // 不良情況
-      { wch: 30 }  // 處置紀錄
-    ];
-    ws['!cols'] = colWidths;
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "不良品資料");
-    XLSX.writeFile(wb, `不良品統計_${year}${month}_${filterType === 'pending' ? '未處理' : '全部'}.xlsx`);
+    exportToExcel(`不良品統計_${year}${month}_${filterType === 'pending' ? '未處理' : '全部'}.xlsx`, [{
+      name: '不良品資料',
+      rows: exportData,
+      colWidths: [12, 15, 20, 10, 10, 10, 10, 25, 30],
+    }]);
   };
 
   if (loading && defects.length === 0) return <div>載入中...</div>;

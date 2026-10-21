@@ -30,6 +30,12 @@ export const getDocument = async (collectionName: string, id: string) => {
   }
 };
 
+export const getDocumentsByField = async (collectionName: string, field: string, value: any) => {
+  const q = query(collection(db, collectionName), where(field, "==", value));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
 export const addDocument = async (collectionName: string, data: any) => {
   const docRef = await addDoc(collection(db, collectionName), {
     ...data,

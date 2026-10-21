@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getCollection, setDocumentWithId, updateDocument, deleteDocument } from '@/lib/firebase/api';
-import { USERS_COLLECTION, ADMIN_USERNAME, ensureAdmin, hashPassword, type SystemUser } from '@/lib/auth';
+import { getCollection, updateDocument, deleteDocument } from '@/lib/firebase/api';
+import { USERS_COLLECTION, ADMIN_USERNAME, createSystemUser, getSession, type UserProfile } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,19 +13,20 @@ type FormState = { username: string; password: string; name: string; unit: strin
 const emptyForm: FormState = { username: '', password: '', name: '', unit: '', notes: '' };
 
 export default function SettingsPage() {
-  const [users, setUsers] = useState<SystemUser[]>([]);
+  const isAdmin = getSession()?.role === 'admin';
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState('');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      await ensureAdmin();
-      const data = (await getCollection(USERS_COLLECTION)) as SystemUser[];
+      const data = (await getCollection(USERS_COLLECTION)) as UserProfile[];
       data.sort((a, b) => (a.username === ADMIN_USERNAME ? -1 : b.username === ADMIN_USERNAME ? 1 : a.username.localeCompare(b.username)));
       setUsers(data);
     } catch (e) {
@@ -35,7 +36,11 @@ export default function SettingsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+
+  if (!isAdmin) {
+    return <div className="text-lg font-bold text-destructive">您沒有權限使用「系統設定」，請聯絡管理員。</div>;
+  }
 
   const openNew = () => {
     setForm(emptyForm);
@@ -44,56 +49,54 @@ export default function SettingsPage() {
     setIsOpen(true);
   };
 
-  const openEdit = (u: SystemUser) => {
+  const openEdit = (u: UserProfile) => {
     setForm({ username: u.username, password: '', name: u.name || '', unit: u.unit || '', notes: u.notes || '' });
-    setEditingId(u.id || u.username);
+    setEditingId(u.id || null);
     setError('');
     setIsOpen(true);
   };
 
   const handleSave = async () => {
-    const username = form.username.trim();
-    if (!username) return setError('帳號為必填欄位');
-    if (username.includes('/')) return setError('帳號不可包含 "/" 字元');
+    if (!form.username.trim()) return setError('帳號為必填欄位');
     if (!editingId && !form.password) return setError('密碼為必填欄位');
+    setSaving(true);
+    setError('');
     try {
       if (editingId) {
-        const data: any = { name: form.name, unit: form.unit, notes: form.notes };
-        if (form.password) data.password = await hashPassword(form.password);
-        await updateDocument(USERS_COLLECTION, editingId, data);
+        await updateDocument(USERS_COLLECTION, editingId, { name: form.name, unit: form.unit, notes: form.notes });
       } else {
-        if (users.some(u => u.username === username)) return setError('此帳號已存在');
-        await setDocumentWithId(USERS_COLLECTION, username, {
-          username,
-          password: await hashPassword(form.password),
-          name: form.name,
-          unit: form.unit,
-          notes: form.notes
-        });
+        await createSystemUser(form);
       }
       setIsOpen(false);
       load();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error saving user:', e);
-      setError('儲存失敗，請稍後再試');
+      setError(e?.message || '儲存失敗，請稍後再試');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!deleteId || deleteId === ADMIN_USERNAME) return;
-    await deleteDocument(USERS_COLLECTION, deleteId);
-    setDeleteId(null);
+    if (!deleteTarget?.id || deleteTarget.username === ADMIN_USERNAME) return;
+    await deleteDocument(USERS_COLLECTION, deleteTarget.id);
+    setDeleteTarget(null);
     load();
   };
 
   return (
     <div className="space-y-6">
-      <Dialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>確認刪除</DialogTitle></DialogHeader>
-          <div className="py-4">您確定要刪除使用者「{deleteId}」嗎？此動作無法復原。</div>
+          <div className="py-4 space-y-2">
+            <div>您確定要刪除使用者「{deleteTarget?.username}」嗎？刪除後該帳號將無法登入系統。</div>
+            <div className="text-sm text-muted-foreground">
+              若之後要用相同帳號重新建立，請先到 Firebase Console → Authentication 刪除該帳號。
+            </div>
+          </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)}>取消</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
             <Button variant="destructive" onClick={handleDelete}>確認刪除</Button>
           </div>
         </DialogContent>
@@ -105,14 +108,19 @@ export default function SettingsPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>帳號 <span className="text-destructive">*</span></Label>
-              <Input value={form.username} disabled={!!editingId} onChange={e => setForm({ ...form, username: e.target.value })} />
+              <Input value={form.username} disabled={!!editingId} placeholder="英文字母、數字、. _ -"
+                onChange={e => setForm({ ...form, username: e.target.value })} />
             </div>
-            <div className="space-y-2">
-              <Label>密碼 {!editingId && <span className="text-destructive">*</span>}</Label>
-              <Input type="password" autoComplete="new-password" value={form.password}
-                placeholder={editingId ? '不修改請留空' : ''}
-                onChange={e => setForm({ ...form, password: e.target.value })} />
-            </div>
+            {!editingId && (
+              <div className="space-y-2">
+                <Label>密碼 <span className="text-destructive">*</span></Label>
+                <Input type="password" autoComplete="new-password" value={form.password} placeholder="至少 6 個字元"
+                  onChange={e => setForm({ ...form, password: e.target.value })} />
+              </div>
+            )}
+            {editingId && (
+              <div className="text-sm text-muted-foreground">密碼無法在此修改，需要重設請至 Firebase Console → Authentication。</div>
+            )}
             <div className="space-y-2">
               <Label>名稱</Label>
               <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
@@ -128,7 +136,7 @@ export default function SettingsPage() {
             {error && <div className="text-sm font-bold text-destructive">{error}</div>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
-              <Button onClick={handleSave}>儲存</Button>
+              <Button onClick={handleSave} disabled={saving}>{saving ? '儲存中...' : '儲存'}</Button>
             </div>
           </div>
         </DialogContent>
@@ -143,43 +151,43 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
-      <Button onClick={openNew}>新增使用者</Button>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-32">操作</TableHead>
-            <TableHead>帳號</TableHead>
-            <TableHead>名稱</TableHead>
-            <TableHead>單位</TableHead>
-            <TableHead>備註</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            <TableRow><TableCell colSpan={5} className="text-center h-24">載入中...</TableCell></TableRow>
-          ) : users.length === 0 ? (
-            <TableRow><TableCell colSpan={5} className="text-center h-24">尚無使用者</TableCell></TableRow>
-          ) : users.map(u => (
-            <TableRow key={u.id || u.username}>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => openEdit(u)}>編輯</Button>
-                  {u.username !== ADMIN_USERNAME && (
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteId(u.id || u.username)}>刪除</Button>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="font-bold">
-                {u.username}
-                {u.username === ADMIN_USERNAME && <span className="ml-2 text-xs text-primary">(管理員)</span>}
-              </TableCell>
-              <TableCell>{u.name}</TableCell>
-              <TableCell>{u.unit}</TableCell>
-              <TableCell>{u.notes}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          <Button onClick={openNew}>新增使用者</Button>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-32">操作</TableHead>
+                <TableHead>帳號</TableHead>
+                <TableHead>名稱</TableHead>
+                <TableHead>單位</TableHead>
+                <TableHead>備註</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={5} className="text-center h-24">載入中...</TableCell></TableRow>
+              ) : users.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center h-24">尚無使用者</TableCell></TableRow>
+              ) : users.map(u => (
+                <TableRow key={u.id || u.username}>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(u)}>編輯</Button>
+                      {u.username !== ADMIN_USERNAME && (
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(u)}>刪除</Button>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-bold">
+                    {u.username}
+                    {u.username === ADMIN_USERNAME && <span className="ml-2 text-xs text-primary">(管理員)</span>}
+                  </TableCell>
+                  <TableCell>{u.name}</TableCell>
+                  <TableCell>{u.unit}</TableCell>
+                  <TableCell>{u.notes}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </TabsContent>
 
         <TabsContent value="loginLogs">

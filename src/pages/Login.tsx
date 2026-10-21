@@ -22,7 +22,7 @@ export default function Login({ onSuccess }: { onSuccess: (u: SessionUser) => vo
     try {
       onSuccess(await login(username, password));
     } catch (err: any) {
-      setError(err?.message === '帳號或密碼錯誤' ? err.message : '登入失敗，請檢查網路連線後再試');
+      setError(err?.message || '登入失敗，請檢查網路連線後再試');
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export default function Login({ onSuccess }: { onSuccess: (u: SessionUser) => vo
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="login-username">帳號</Label>
-              <Input id="login-username" autoFocus autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} />
+              <Input id="login-username" autoFocus autoComplete="username" autoCapitalize="none" value={username} onChange={e => setUsername(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="login-password">密碼</Label>

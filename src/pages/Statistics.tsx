@@ -11,7 +11,7 @@ import { parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { calculateWorkingDays } from '@/utils/dateUtils';
 import { ClipboardList, ShieldAlert, TrendingUp, PieChart, ChevronLeft, ChevronRight, List, BarChart } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, LabelList, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
-import * as XLSX from 'xlsx';
+import { exportToExcel } from '@/lib/excel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import html2canvas from 'html2canvas';
 
@@ -216,10 +216,7 @@ const exportDefectiveToExcel = () => {
       '不良率': avgDefectRate
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "不良品統計");
-    XLSX.writeFile(workbook, `不良品統計_${new Date().getTime()}.xlsx`);
+    exportToExcel(`不良品統計_${new Date().getTime()}.xlsx`, [{ name: '不良品統計', rows: data }]);
   };
 
   const stats = useMemo(() => {
@@ -428,18 +425,11 @@ const exportDefectiveToExcel = () => {
       '狀態': `處理中: ${processingCount}`
     });
     
-    const wb = XLSX.utils.book_new();
-    
-    const wsBasic = XLSX.utils.json_to_sheet(basicStats);
-    XLSX.utils.book_append_sheet(wb, wsBasic, "基本統計");
-    
-    const wsDays = XLSX.utils.json_to_sheet(daysStats);
-    XLSX.utils.book_append_sheet(wb, wsDays, "天數統計");
-
-    const wsDetails = XLSX.utils.json_to_sheet(detailsStats);
-    XLSX.utils.book_append_sheet(wb, wsDetails, "管制清單明細");
-    
-    XLSX.writeFile(wb, `統計資料_${new Date().toISOString().slice(0,10)}.xlsx`);
+    exportToExcel(`統計資料_${new Date().toISOString().slice(0,10)}.xlsx`, [
+      { name: '基本統計', rows: basicStats },
+      { name: '天數統計', rows: daysStats },
+      { name: '管制清單明細', rows: detailsStats },
+    ]);
   };
 
   return (

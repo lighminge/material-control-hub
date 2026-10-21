@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helper functions ----
+    function signedIn() {
+      return request.auth != null;
+    }
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    // Signed in AND has an active profile document in /users/{uid}
+    function isActive() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profile().active == true;
+    }
+    function isAdmin() {
+      return isActive() && profile().role == 'admin';
+    }
+
+    // ---- user profiles (role / active flag) ----
+    // Every signed-in user may read their own profile (needed at login);
+    // only admins can read everybody's profile or create / change / delete profiles.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---- login logs ----
+    match /loginLogs/{logId} {
+      // Failed login attempts are written *before* the user is authenticated.
+      allow create: if request.auth == null
+        && request.resource.data.keys().hasOnly(
+             ['username', 'ip', 'location', 'loginTime', 'logoutTime', 'remark', 'failed', 'createdAt', 'updatedAt'])
+        && request.resource.data.failed == true
+        && request.resource.data.username is string
+        && request.resource.data.username.size() <= 50
+        && request.resource.data.remark is string
+        && request.resource.data.remark.size() <= 100
+        && request.resource.data.ip is string
+        && request.resource.data.ip.size() <= 64
+        && request.resource.data.location is string
+        && request.resource.data.location.size() <= 100;
+      // Successful logins are written by the signed-in user for their own username.
+      allow create: if isActive() && request.resource.data.username == profile().username;
+      // Admins can read all logs; users can read only their own (used to count failed attempts).
+      allow read: if isAdmin() || (isActive() && resource.data.username == profile().username);
+      // Only the logout time may be filled in afterwards.
+      allow update: if isActive()
+        && resource.data.username == profile().username
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logoutTime', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // ---- legacy collections used by the previous login (no access) ----
+    match /systemUsers/{id} { allow read, write: if false; }
+    match /loginFails/{id}  { allow read, write: if false; }
+
+    // ---- all business data: active, signed-in users only ----
+    match /{collection}/{document=**} {
+      allow read, write: if collection != 'users'
+        && collection != 'loginLogs'
+        && collection != 'systemUsers'
+        && collection != 'loginFails'
+        && isActive();
+    }
+  }
+}
