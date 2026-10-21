@@ -21,7 +21,7 @@ export function Sidebar() {
         Material Hub
       </div>
       <nav className="flex-1 p-4 space-y-2">
-        {navItems.filter(item => item.path !== '/settings' || getSession()?.role === 'admin').map((item) => {
+        {navItems.filter(item => item.path !== '/settings' || getSession()?.role === 'admin' || getSession()?.canAccessSettings).map((item) => {
           const Icon = item.icon;
           return (
             <NavLink

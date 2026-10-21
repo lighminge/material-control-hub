@@ -35,6 +35,7 @@ export type UserProfile = {
   unit?: string;
   notes?: string;
   role: 'admin' | 'user';
+  canAccessSettings?: boolean;
   active: boolean;
 };
 
@@ -43,6 +44,7 @@ export type SessionUser = {
   username: string;
   name?: string;
   role: 'admin' | 'user';
+  canAccessSettings?: boolean;
   logId?: string;
 };
 
@@ -99,13 +101,24 @@ const isProfileActive = (p: UserProfile | null | undefined): boolean => {
   return v === true || v === 'true' || v === 1;
 };
 
-const toSession = (uid: string, p: UserProfile, logId?: string): SessionUser => ({
-  uid,
-  username: p.username,
-  name: p.name,
-  role: p.role === 'admin' || p.username === ADMIN_USERNAME ? 'admin' : 'user',
-  logId,
-});
+export const hasSettingsAccess = (p: UserProfile | null | undefined): boolean => {
+  if (!p) return false;
+  if (p.username === ADMIN_USERNAME || p.role === 'admin') return true;
+  const v: any = p.canAccessSettings;
+  return v === true || v === 'true' || v === 1;
+};
+
+const toSession = (uid: string, p: UserProfile, logId?: string): SessionUser => {
+  const canAccess = hasSettingsAccess(p);
+  return {
+    uid,
+    username: p.username,
+    name: p.name,
+    role: canAccess ? 'admin' : 'user',
+    canAccessSettings: canAccess,
+    logId,
+  };
+};
 
 async function ensureAdminProfile(uid: string, existing: UserProfile | null): Promise<UserProfile> {
   if (existing && isProfileActive(existing) && existing.role === 'admin' && existing.username === ADMIN_USERNAME) {
@@ -256,6 +269,7 @@ export type NewUserInput = {
   name?: string;
   unit?: string;
   notes?: string;
+  canAccessSettings?: boolean;
 };
 
 /**
@@ -297,6 +311,7 @@ export async function createSystemUser(input: NewUserInput) {
       if (e?.code === 'auth/weak-password') throw new Error('密碼強度不足，至少需要 6 個字元');
       throw new Error(`建立帳號失敗 (${e?.code || e?.message || '未知錯誤'})`);
     }
+    const allowSettings = !!input.canAccessSettings || username === ADMIN_USERNAME;
     try {
       await setDocumentWithId(USERS_COLLECTION, uid, {
         username,
@@ -304,7 +319,8 @@ export async function createSystemUser(input: NewUserInput) {
         name: input.name || '',
         unit: input.unit || '',
         notes: input.notes || '',
-        role: 'user',
+        role: allowSettings ? 'admin' : 'user',
+        canAccessSettings: allowSettings,
         active: true,
       });
     } catch {

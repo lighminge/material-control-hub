@@ -21,7 +21,7 @@ service cloud.firestore {
       );
     }
     function isAdmin() {
-      return isBootstrapAdmin() || (isActive() && profile().role == 'admin');
+      return isBootstrapAdmin() || (isActive() && (profile().role == 'admin' || profile().canAccessSettings == true));
     }
 
     // ---- user profiles (role / active flag) ----

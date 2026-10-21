@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { getCollection, updateDocument, deleteDocument } from '@/lib/firebase/api';
-import { USERS_COLLECTION, ADMIN_USERNAME, createSystemUser, getSession, type UserProfile } from '@/lib/auth';
+import { USERS_COLLECTION, ADMIN_USERNAME, createSystemUser, getSession, hasSettingsAccess, type UserProfile } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginLogs from '@/components/LoginLogs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-type FormState = { username: string; password: string; name: string; unit: string; notes: string };
-const emptyForm: FormState = { username: '', password: '', name: '', unit: '', notes: '' };
+type FormState = { username: string; password: string; name: string; unit: string; notes: string; canAccessSettings: boolean };
+const emptyForm: FormState = { username: '', password: '', name: '', unit: '', notes: '', canAccessSettings: false };
 
 export default function SettingsPage() {
-  const isAdmin = getSession()?.role === 'admin';
+  const session = getSession();
+  const isAdmin = session?.role === 'admin' || !!session?.canAccessSettings;
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -50,10 +52,32 @@ export default function SettingsPage() {
   };
 
   const openEdit = (u: UserProfile) => {
-    setForm({ username: u.username, password: '', name: u.name || '', unit: u.unit || '', notes: u.notes || '' });
+    setForm({
+      username: u.username,
+      password: '',
+      name: u.name || '',
+      unit: u.unit || '',
+      notes: u.notes || '',
+      canAccessSettings: hasSettingsAccess(u),
+    });
     setEditingId(u.id || null);
     setError('');
     setIsOpen(true);
+  };
+
+  const handleToggleSettingsAccess = async (u: UserProfile, checked: boolean) => {
+    if (!u.id || u.username === ADMIN_USERNAME) return;
+    const newRole: 'admin' | 'user' = checked ? 'admin' : 'user';
+    setUsers(prev => prev.map(item => item.id === u.id ? { ...item, role: newRole, canAccessSettings: checked } : item));
+    try {
+      await updateDocument(USERS_COLLECTION, u.id, {
+        role: newRole,
+        canAccessSettings: checked,
+      });
+    } catch (e) {
+      console.error('Error updating permission:', e);
+      load();
+    }
   };
 
   const handleSave = async () => {
@@ -62,10 +86,18 @@ export default function SettingsPage() {
     setSaving(true);
     setError('');
     try {
+      const isDefaultAdmin = form.username.trim().toLowerCase() === ADMIN_USERNAME;
+      const allowSettings = isDefaultAdmin ? true : form.canAccessSettings;
       if (editingId) {
-        await updateDocument(USERS_COLLECTION, editingId, { name: form.name, unit: form.unit, notes: form.notes });
+        await updateDocument(USERS_COLLECTION, editingId, {
+          name: form.name,
+          unit: form.unit,
+          notes: form.notes,
+          role: allowSettings ? 'admin' : 'user',
+          canAccessSettings: allowSettings,
+        });
       } else {
-        await createSystemUser(form);
+        await createSystemUser({ ...form, canAccessSettings: allowSettings });
       }
       setIsOpen(false);
       load();
@@ -83,6 +115,8 @@ export default function SettingsPage() {
     setDeleteTarget(null);
     load();
   };
+
+  const isEditingDefaultAdmin = form.username.trim().toLowerCase() === ADMIN_USERNAME;
 
   return (
     <div className="space-y-6">
@@ -133,6 +167,17 @@ export default function SettingsPage() {
               <Label>備註</Label>
               <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="canAccessSettings"
+                checked={isEditingDefaultAdmin ? true : form.canAccessSettings}
+                disabled={isEditingDefaultAdmin}
+                onCheckedChange={(checked) => setForm({ ...form, canAccessSettings: checked === true })}
+              />
+              <Label htmlFor="canAccessSettings" className="cursor-pointer font-bold">
+                允許進入「系統設定」功能
+              </Label>
+            </div>
             {error && <div className="text-sm font-bold text-destructive">{error}</div>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsOpen(false)}>取消</Button>
@@ -159,33 +204,50 @@ export default function SettingsPage() {
                 <TableHead>帳號</TableHead>
                 <TableHead>名稱</TableHead>
                 <TableHead>單位</TableHead>
+                <TableHead>可進入系統設定</TableHead>
                 <TableHead>備註</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">載入中...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">載入中...</TableCell></TableRow>
               ) : users.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">尚無使用者</TableCell></TableRow>
-              ) : users.map(u => (
-                <TableRow key={u.id || u.username}>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(u)}>編輯</Button>
-                      {u.username !== ADMIN_USERNAME && (
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(u)}>刪除</Button>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-bold">
-                    {u.username}
-                    {u.username === ADMIN_USERNAME && <span className="ml-2 text-xs text-primary">(管理員)</span>}
-                  </TableCell>
-                  <TableCell>{u.name}</TableCell>
-                  <TableCell>{u.unit}</TableCell>
-                  <TableCell>{u.notes}</TableCell>
-                </TableRow>
-              ))}
+                <TableRow><TableCell colSpan={6} className="text-center h-24">尚無使用者</TableCell></TableRow>
+              ) : users.map(u => {
+                const canAccess = hasSettingsAccess(u);
+                const isDefaultAdmin = u.username === ADMIN_USERNAME;
+                return (
+                  <TableRow key={u.id || u.username}>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(u)}>編輯</Button>
+                        {!isDefaultAdmin && (
+                          <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(u)}>刪除</Button>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      {u.username}
+                      {isDefaultAdmin && <span className="ml-2 text-xs text-primary">(預設管理員)</span>}
+                    </TableCell>
+                    <TableCell>{u.name}</TableCell>
+                    <TableCell>{u.unit}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={canAccess}
+                          disabled={isDefaultAdmin}
+                          onCheckedChange={(checked) => handleToggleSettingsAccess(u, checked === true)}
+                        />
+                        <span className={`text-xs font-bold ${canAccess ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                          {canAccess ? '允許' : '不允許'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{u.notes}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TabsContent>
