@@ -35,7 +35,7 @@
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -54,5 +54,8 @@
     "@grpc/grpc-js": "^1.14.0",
     "braces": "^3.0.3",
     "source-map-js": "^1.2.2"
+  },
+  "engines": {
+    "node": ">=24.22.1"
   }
 }
