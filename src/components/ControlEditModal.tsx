@@ -450,8 +450,8 @@ export default function ControlEditModal({ control, isOpen, onClose, onSaved }: 
                   <span className="text-sm font-bold text-muted-foreground">總計: {formData.items.length} 筆</span>
                 </div>
                 {formData.items.map((item, index) => (
-                  <Card key={index} className="bg-muted/30 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 bg-primary/20 px-2 py-1 rounded-br-lg text-xs font-bold text-primary">
+                  <Card key={index} className={`relative overflow-hidden border-2 shadow-sm transition-colors ${index % 2 === 0 ? '!bg-amber-100 border-amber-300' : '!bg-sky-100 border-sky-300'}`}>
+                    <div className="absolute top-0 left-0 bg-fuchsia-600 text-white px-2.5 py-1 rounded-br-lg text-xs font-black shadow-sm">
                       #{index + 1}
                     </div>
                     <CardContent className="p-4 pt-6 grid grid-cols-12 gap-4 items-center">

@@ -546,8 +546,8 @@ export default function RequisitionsPage() {
                     : catMats.filter(mat => (mat.partName || '').toLowerCase().includes(qName) || mat.name.toLowerCase().includes(qName));
 
                   return (
-                  <div key={index} className="flex flex-wrap md:flex-nowrap items-center gap-3 border p-4 rounded-md bg-muted/50 relative pt-8">
-                    <div className="absolute top-0 left-0 bg-primary/20 px-2 py-1 rounded-br-lg text-xs font-bold text-primary">#{index + 1}</div>
+                  <div key={index} className={`flex flex-wrap md:flex-nowrap items-center gap-3 border-2 p-4 rounded-md relative pt-8 shadow-sm transition-colors ${index % 2 === 0 ? '!bg-amber-100 border-amber-300' : '!bg-sky-100 border-sky-300'}`}>
+                    <div className="absolute top-0 left-0 bg-fuchsia-600 text-white px-2.5 py-1 rounded-br-lg text-xs font-black shadow-sm">#{index + 1}</div>
                     <div className="flex-1 min-w-[200px] space-y-2">
                       <Label>選擇物料品號</Label>
                       <Popover
