@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react';
+import { format, subMonths } from 'date-fns';
 import { exportToExcel } from '@/lib/excel';
 import { getHeadTypeColorClass } from '@/lib/utils';
 
@@ -58,8 +59,8 @@ export default function MaterialsPage() {
   const [histSearchPartName, setHistSearchPartName] = useState('');
   const [histSearchCat, setHistSearchCat] = useState('all');
   const [histSearchHeadType, setHistSearchHeadType] = useState('all');
-  const [histStartDate, setHistStartDate] = useState('');
-  const [histEndDate, setHistEndDate] = useState('');
+  const [histStartDate, setHistStartDate] = useState(() => format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [histEndDate, setHistEndDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [histSort, setHistSort] = useState<'desc' | 'asc'>('desc');
   const [histPage, setHistPage] = useState(1);
   const [histPageSize, setHistPageSize] = useState(10);

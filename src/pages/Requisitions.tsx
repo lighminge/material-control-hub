@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, ChevronsUpDown, Check, ShieldAlert } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { Material } from './Materials';
 
@@ -63,13 +63,16 @@ export default function RequisitionsPage() {
   const [searchStaff, setSearchStaff] = useState('all');
   const [searchCategory, setSearchCategory] = useState('all');
   const [searchStatus, setSearchStatus] = useState('all');
-  const [searchReturnDateStart, setSearchReturnDateStart] = useState('');
-  const [searchReturnDateEnd, setSearchReturnDateEnd] = useState('');
+  const [searchReturnDateStart, setSearchReturnDateStart] = useState(() => format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [searchReturnDateEnd, setSearchReturnDateEnd] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   
   const [sortBy, setSortBy] = useState<string>('status_desc');
 
-  // Combobox popover open states
+  // Combobox popover open states & search queries
   const [openComboboxIndex, setOpenComboboxIndex] = useState<number | null>(null);
+  const [partIdSearchQuery, setPartIdSearchQuery] = useState('');
+  const [openPartNameComboboxIndex, setOpenPartNameComboboxIndex] = useState<number | null>(null);
+  const [partNameSearchQuery, setPartNameSearchQuery] = useState('');
 
   const [formData, setFormData] = useState<Requisition>({
     displayId: '',
@@ -443,7 +446,7 @@ export default function RequisitionsPage() {
             <Button onClick={openNewForm}>新增領料單</Button>
           </DialogTrigger>
           {/* Prevent closing by interacting outside */}
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{editingId ? `編輯領料單` : '新增領料單'}</DialogTitle>
             </DialogHeader>
@@ -524,57 +527,170 @@ export default function RequisitionsPage() {
 
                 {formData.items.map((item, index) => {
                   const isCompleted = !!(item.missingQuantity === 0 && item.restockDate);
+                  const selectedMat = materials.find((m) => m.id === item.materialId);
+                  const catMats = materials.filter(mat => !formData.category || formData.category === '未分類' || mat.category === formData.category);
+                  
+                  // (1) 品號搜尋：若輸入完全符合的品號，只顯示該筆結果，不顯示多餘項目
+                  const qId = partIdSearchQuery.trim().toLowerCase();
+                  const exactIdMatches = qId ? catMats.filter(mat => mat.name.trim().toLowerCase() === qId) : [];
+                  const displayedIdMats = !qId
+                    ? catMats
+                    : exactIdMatches.length > 0
+                      ? exactIdMatches
+                      : catMats.filter(mat => mat.name.toLowerCase().includes(qId));
+
+                  // (2) 品名關鍵字搜尋：輸入物料品名關鍵字，帶出品號相關資料供選取
+                  const qName = partNameSearchQuery.trim().toLowerCase();
+                  const displayedNameMats = !qName
+                    ? catMats
+                    : catMats.filter(mat => (mat.partName || '').toLowerCase().includes(qName) || mat.name.toLowerCase().includes(qName));
+
                   return (
-                  <div key={index} className="flex items-center gap-4 border p-4 rounded-md bg-muted/50 relative pt-8">
+                  <div key={index} className="flex flex-wrap md:flex-nowrap items-center gap-3 border p-4 rounded-md bg-muted/50 relative pt-8">
                     <div className="absolute top-0 left-0 bg-primary/20 px-2 py-1 rounded-br-lg text-xs font-bold text-primary">#{index + 1}</div>
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 min-w-[200px] space-y-2">
                       <Label>選擇物料品號</Label>
-                      <Popover open={openComboboxIndex === index} onOpenChange={(open: boolean) => setOpenComboboxIndex(open ? index : null)}>
+                      <Popover
+                        open={openComboboxIndex === index}
+                        onOpenChange={(open: boolean) => {
+                          setOpenComboboxIndex(open ? index : null);
+                          if (open) setPartIdSearchQuery('');
+                        }}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
                             aria-expanded={openComboboxIndex === index}
-                            className="w-full justify-between bg-background"
+                            className="w-full justify-between bg-background font-medium"
                             disabled={isCompleted}
                           >
-                            {item.materialId
-                              ? materials.find((m) => m.id === item.materialId)?.name
-                              : "搜尋並選擇物料品號..."}
+                            <span className="truncate">
+                              {selectedMat ? selectedMat.name : "搜尋並選擇物料品號..."}
+                            </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="輸入關鍵字搜尋..." />
+                        <PopoverContent className="w-[340px] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="輸入品號搜尋 (完全符合時僅顯示單筆)..."
+                              value={partIdSearchQuery}
+                              onValueChange={setPartIdSearchQuery}
+                            />
                             <CommandList>
-                              <CommandEmpty>找不到對應的物料。</CommandEmpty>
-                              <CommandGroup>
-                                {materials.filter(mat => !formData.category || formData.category === '未分類' || mat.category === formData.category).map((mat) => (
-                                  <CommandItem
-                                    key={mat.id}
-                                    value={mat.name} // By default, CommandItem filters based on text content / value
-                                    onSelect={() => {
-                                      handleItemChange(index, 'materialId', mat.id);
-                                      setOpenComboboxIndex(null);
-                                    }}
-                                  >
-                                    <Check
+                              {displayedIdMats.length === 0 ? (
+                                <CommandEmpty>找不到對應的物料品號。</CommandEmpty>
+                              ) : (
+                                <CommandGroup>
+                                  {displayedIdMats.map((mat) => (
+                                    <CommandItem
+                                      key={mat.id}
+                                      value={mat.id || mat.name}
+                                      onSelect={() => {
+                                        handleItemChange(index, 'materialId', mat.id);
+                                        setOpenComboboxIndex(null);
+                                        setPartIdSearchQuery('');
+                                      }}
+                                    >
+                                      <Check
                                         className={cn(
-                                          "mr-2 h-4 w-4",
+                                          "mr-2 h-4 w-4 shrink-0",
                                           item.materialId === mat.id ? "opacity-100" : "opacity-0"
                                         )}
                                       />
-                                      <span className="text-primary/70 mr-1 text-xs">[{mat.category || '未分類'}]</span> {mat.name} <span className="ml-auto text-muted-foreground">(庫存: {mat.stock})</span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
+                                      <div className="flex flex-col flex-1 min-w-0">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-primary/70 text-xs">[{mat.category || '未分類'}]</span>
+                                          <span className="font-bold">{mat.name}</span>
+                                          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">(庫存: {mat.stock})</span>
+                                        </div>
+                                        {mat.partName && (
+                                          <span className="text-xs text-muted-foreground truncate">品名: {mat.partName}{mat.headType ? ` (${mat.headType})` : ''}</span>
+                                        )}
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
                             </CommandList>
                           </Command>
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <div className="w-32 space-y-2">
+                    <div className="flex-1 min-w-[200px] space-y-2">
+                      <Label>物料品名搜尋</Label>
+                      <Popover
+                        open={openPartNameComboboxIndex === index}
+                        onOpenChange={(open: boolean) => {
+                          setOpenPartNameComboboxIndex(open ? index : null);
+                          if (open) setPartNameSearchQuery('');
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openPartNameComboboxIndex === index}
+                            className="w-full justify-between bg-background"
+                            disabled={isCompleted}
+                          >
+                            <span className="truncate">
+                              {selectedMat
+                                ? (selectedMat.partName || `(${selectedMat.name} 無品名)`)
+                                : "輸入品名關鍵字帶出品號..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[360px] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="輸入物料品名關鍵字搜尋..."
+                              value={partNameSearchQuery}
+                              onValueChange={setPartNameSearchQuery}
+                            />
+                            <CommandList>
+                              {displayedNameMats.length === 0 ? (
+                                <CommandEmpty>找不到符合此品名關鍵字的物料。</CommandEmpty>
+                              ) : (
+                                <CommandGroup>
+                                  {displayedNameMats.map((mat) => (
+                                    <CommandItem
+                                      key={mat.id}
+                                      value={mat.id || mat.name}
+                                      onSelect={() => {
+                                        handleItemChange(index, 'materialId', mat.id);
+                                        setOpenPartNameComboboxIndex(null);
+                                        setPartNameSearchQuery('');
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4 shrink-0",
+                                          item.materialId === mat.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <div className="flex flex-col flex-1 min-w-0">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-primary/70 text-xs">[{mat.category || '未分類'}]</span>
+                                          <span className="font-bold text-slate-900 truncate">{mat.partName || '無品名'}</span>
+                                          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">(庫存: {mat.stock})</span>
+                                        </div>
+                                        <div className="text-xs text-primary font-semibold">
+                                          品號: {mat.name}{mat.headType ? ` | 頭型: ${mat.headType}` : ''}
+                                        </div>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="w-28 space-y-2">
                       <Label>需領數量</Label>
                       <Input 
                         type="number" 

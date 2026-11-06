@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { Trash2, Pencil } from 'lucide-react';
 import { calculateWorkingDays } from '@/utils/dateUtils';
 
@@ -63,12 +63,12 @@ export default function ControlsPage() {
   const [searchDays, setSearchDays] = useState('all');
   const [searchMaterialId, setSearchMaterialId] = useState('');
   const [searchReqId, setSearchReqId] = useState('');
-  const [sYear, setSYear] = useState('');
-  const [sMonth, setSMonth] = useState('');
-  const [sDay, setSDay] = useState('');
-  const [eYear, setEYear] = useState('');
-  const [eMonth, setEMonth] = useState('');
-  const [eDay, setEDay] = useState('');
+  const [sYear, setSYear] = useState(() => subMonths(new Date(), 1).getFullYear().toString());
+  const [sMonth, setSMonth] = useState(() => (subMonths(new Date(), 1).getMonth() + 1).toString());
+  const [sDay, setSDay] = useState(() => subMonths(new Date(), 1).getDate().toString());
+  const [eYear, setEYear] = useState(() => new Date().getFullYear().toString());
+  const [eMonth, setEMonth] = useState(() => (new Date().getMonth() + 1).toString());
+  const [eDay, setEDay] = useState(() => new Date().getDate().toString());
 
   const searchStartDate = sYear && sMonth && sDay ? `${sYear}-${sMonth.padStart(2, '0')}-${sDay.padStart(2, '0')}` : '';
   const searchEndDate = eYear && eMonth && eDay ? `${eYear}-${eMonth.padStart(2, '0')}-${eDay.padStart(2, '0')}` : '';
@@ -354,10 +354,17 @@ export default function ControlsPage() {
       const req = requisitions.find(r => r.id === control.requisitionId || r.displayId === control.requisitionId);
       if (!req || !(req.displayId || req.id || '').includes(searchReqId)) return false;
     }
-    if (searchStartDate && control.completionDate && control.completionDate < searchStartDate) return false;
-    if (searchEndDate && control.completionDate && control.completionDate > searchEndDate) return false;
-    // If date range is specified but control has no completion date, it shouldn't match completed range
-    if ((searchStartDate || searchEndDate) && !control.completionDate) return false;
+    if (control.completionDate) {
+      if (searchStartDate && control.completionDate < searchStartDate) return false;
+      if (searchEndDate && control.completionDate > searchEndDate) return false;
+    } else {
+      // 處理中 (尚未結案、尚無完成日期) 之管制單：若迄日包含今日或未限制迄日則保留顯示，否則依管制開始日篩選
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      if (searchEndDate && searchEndDate < todayStr) {
+        if (searchStartDate && control.startDate < searchStartDate) return false;
+        if (control.startDate > searchEndDate) return false;
+      }
+    }
     return true;
   });
 
@@ -710,7 +717,7 @@ export default function ControlsPage() {
           <div className="col-span-12 md:col-span-5 space-y-2">
             <Label>完成日期 (起)</Label>
             <div className="flex gap-2">
-              <Select value={sYear} onValueChange={(v) => { setSYear(v); setEYear(v); }}>
+              <Select value={sYear} onValueChange={(v) => { setSYear(v); if (!eYear) setEYear(v); }}>
                 <SelectTrigger><SelectValue placeholder="年" /></SelectTrigger>
                 <SelectContent>
                   {[...Array(5)].map((_, i) => {
@@ -719,13 +726,13 @@ export default function ControlsPage() {
                   })}
                 </SelectContent>
               </Select>
-              <Select value={sMonth} onValueChange={(v) => { setSMonth(v); setEMonth(v); }}>
+              <Select value={sMonth} onValueChange={(v) => { setSMonth(v); if (!eMonth) setEMonth(v); }}>
                 <SelectTrigger><SelectValue placeholder="月" /></SelectTrigger>
                 <SelectContent>
                   {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={(i+1).toString()}>{i+1}月</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={sDay} onValueChange={(v) => { setSDay(v); setEDay(v); }}>
+              <Select value={sDay} onValueChange={(v) => { setSDay(v); if (!eDay) setEDay(v); }}>
                 <SelectTrigger><SelectValue placeholder="日" /></SelectTrigger>
                 <SelectContent>
                   {[...Array(31)].map((_, i) => <SelectItem key={i+1} value={(i+1).toString()}>{i+1}日</SelectItem>)}

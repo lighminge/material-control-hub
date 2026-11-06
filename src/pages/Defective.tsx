@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DefectDisposition from '@/components/DefectDisposition';
 import { Plus, X, ListPlus, Pencil, Check, Trash2, AlertCircle, Copy } from 'lucide-react';
+import { format, subMonths } from 'date-fns';
 import { getHeadTypeColorClass } from '@/lib/utils';
 
 export type Defect = {
@@ -104,8 +105,8 @@ export default function DefectivePage() {
   
   // Filters
   const [filterFormId, setFilterFormId] = useState('');
-  const [filterStartDate, setFilterStartDate] = useState('');
-  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState(() => format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [filterEndDate, setFilterEndDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [filterMaterialId, setFilterMaterialId] = useState('');
   const [filterMaterialName, setFilterMaterialName] = useState('');
   const [filterDiscoverer, setFilterDiscoverer] = useState('all');

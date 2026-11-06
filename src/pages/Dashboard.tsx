@@ -19,7 +19,10 @@ export default function Dashboard() {
   });
 
   const [controls, setControls] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [enrichedActiveControls, setEnrichedActiveControls] = useState<any[]>([]);
+  const [unclosedMatChartType, setUnclosedMatChartType] = useState<'bar' | 'line' | 'both'>('bar');
+  const [unclosedMatSort, setUnclosedMatSort] = useState<'qty_desc' | 'qty_asc' | 'name_asc'>('qty_desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [sortBy, setSortBy] = useState('requisition');
@@ -58,6 +61,70 @@ export default function Dashboard() {
     return controls.reduce((sum, c) => sum + (c.items?.filter((i: any) => i.missingQuantity === 0).length || 0), 0);
   }, [controls]);
 
+  // 統計目前未結案的所有管制單裡，所有未結案物料的總數
+  const unclosedMaterialStats = useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      materialId: string;
+      materialName: string;
+      partName: string;
+      category: string;
+      missingTotal: number;
+      requiredTotal: number;
+      controlCount: number;
+      requisitionIds: string[];
+    }>();
+
+    enrichedActiveControls.forEach((c: any) => {
+      const activeItems = (c.items || []).filter((i: any) => (i.missingQuantity ?? i.requiredQuantity ?? 0) > 0);
+      activeItems.forEach((i: any) => {
+        const key = i.materialName || i.materialId || '未知物料';
+        const matDoc = materials.find((m: any) => m.id === i.materialId || m.name === i.materialName || m.name === i.materialId);
+        const missingQty = Number(i.missingQuantity ?? i.requiredQuantity ?? 0) || 0;
+        const reqQty = Number(i.requiredQuantity ?? missingQty) || 0;
+
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            materialId: i.materialId || key,
+            materialName: matDoc?.name || i.materialName || i.materialId || key,
+            partName: matDoc?.partName || '',
+            category: matDoc?.category || '未分類',
+            missingTotal: 0,
+            requiredTotal: 0,
+            controlCount: 0,
+            requisitionIds: []
+          });
+        }
+        const entry = map.get(key)!;
+        entry.missingTotal += missingQty;
+        entry.requiredTotal += reqQty;
+        entry.controlCount += 1;
+        if (c.requisitionId && !entry.requisitionIds.includes(c.requisitionId)) {
+          entry.requisitionIds.push(c.requisitionId);
+        }
+      });
+    });
+
+    const list = Array.from(map.values());
+    if (unclosedMatSort === 'qty_desc') {
+      list.sort((a, b) => b.missingTotal - a.missingTotal || a.materialName.localeCompare(b.materialName));
+    } else if (unclosedMatSort === 'qty_asc') {
+      list.sort((a, b) => a.missingTotal - b.missingTotal || a.materialName.localeCompare(b.materialName));
+    } else {
+      list.sort((a, b) => a.materialName.localeCompare(b.materialName));
+    }
+    return list;
+  }, [enrichedActiveControls, materials, unclosedMatSort]);
+
+  const totalUnclosedMaterialQty = useMemo(() => {
+    return unclosedMaterialStats.reduce((sum, item) => sum + item.missingTotal, 0);
+  }, [unclosedMaterialStats]);
+
+  const totalUnclosedMaterialOccurrences = useMemo(() => {
+    return unclosedMaterialStats.reduce((sum, item) => sum + item.controlCount, 0);
+  }, [unclosedMaterialStats]);
+
   const calculateDays = (control: any, reqs: any[], hols: any[]) => {
     const req = reqs.find((r: any) => r.id === control.requisitionId || r.displayId === control.requisitionId);
     if (!req || !req.returnDate) return 0;
@@ -80,11 +147,13 @@ export default function Dashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [reqs, controlsData, holsData] = await Promise.all([
+        const [reqs, controlsData, holsData, matsData] = await Promise.all([
           getCollection('requisitions'),
           getCollection('controls'),
-          getCollection('holidays')
+          getCollection('holidays'),
+          getCollection('materials')
         ]);
+        setMaterials(matsData);
 
         const getYearFromDate = (dateVal: any, defaultYear: string) => {
           if (!dateVal) return defaultYear;
@@ -388,6 +457,153 @@ export default function Dashboard() {
                 下一頁
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-border p-6 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div>
+            <h2 className="text-xl font-bold">目前未結案的物料統計</h2>
+            <p className="text-sm text-muted-foreground mt-1">統計目前所有未結案管制單內，各項缺料物料的總數量與分佈</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <div className="text-sm bg-rose-100 text-rose-800 border border-rose-200 px-3 py-1.5 rounded-md font-bold shadow-sm">
+                未結案物料總數：{totalUnclosedMaterialQty} PCS
+              </div>
+              <div className="text-sm bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-md font-bold shadow-sm">
+                未結案物料種類：{unclosedMaterialStats.length} 種
+              </div>
+              <div className="text-sm bg-purple-100 text-purple-800 border border-purple-200 px-3 py-1.5 rounded-md font-bold shadow-sm">
+                未結案項目筆數：{totalUnclosedMaterialOccurrences} 項次
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">排序方式</span>
+              <Select value={unclosedMatSort} onValueChange={(val: 'qty_desc' | 'qty_asc' | 'name_asc') => setUnclosedMatSort(val)}>
+                <SelectTrigger className="w-[160px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="qty_desc">數量 (由大到小)</SelectItem>
+                  <SelectItem value="qty_asc">數量 (由小到大)</SelectItem>
+                  <SelectItem value="name_asc">物料品號 (A - Z)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">圖表類型</span>
+              <Select value={unclosedMatChartType} onValueChange={(val: 'bar' | 'line' | 'both') => setUnclosedMatChartType(val)}>
+                <SelectTrigger className="w-[120px] h-9">
+                  <SelectValue placeholder="切換圖表" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar">長條圖</SelectItem>
+                  <SelectItem value="line">折線圖</SelectItem>
+                  <SelectItem value="both">二者並存</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {unclosedMaterialStats.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-md">
+            目前沒有任何未結案的缺料物料。
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="h-[320px] w-full border rounded-lg p-4 bg-muted/10">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={unclosedMaterialStats.map(item => ({
+                    name: item.materialName,
+                    partName: item.partName,
+                    "未結案總數": item.missingTotal,
+                    "管制單數": item.controlCount
+                  }))}
+                  margin={{ top: 24, right: 24, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tickMargin={10}
+                    interval={0}
+                    angle={unclosedMaterialStats.length > 8 ? -25 : 0}
+                    textAnchor={unclosedMaterialStats.length > 8 ? 'end' : 'middle'}
+                    height={unclosedMaterialStats.length > 8 ? 60 : 30}
+                  />
+                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    formatter={(value: any, name: any, props: any) => {
+                      const pName = props?.payload?.partName;
+                      return [
+                        `${value} PCS${pName ? ` (品名: ${pName})` : ''}`,
+                        name
+                      ];
+                    }}
+                  />
+                  {(unclosedMatChartType === 'bar' || unclosedMatChartType === 'both') && (
+                    <Bar dataKey="未結案總數" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                      <LabelList dataKey="未結案總數" position="top" />
+                    </Bar>
+                  )}
+                  {(unclosedMatChartType === 'line' || unclosedMatChartType === 'both') && (
+                    <Line type="monotone" dataKey="未結案總數" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                      {unclosedMatChartType === 'line' && <LabelList dataKey="未結案總數" position="top" />}
+                    </Line>
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="border rounded-md overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-16">序號</TableHead>
+                    <TableHead>分類</TableHead>
+                    <TableHead>物料品號</TableHead>
+                    <TableHead>物料品名</TableHead>
+                    <TableHead className="text-center">未結案總數量</TableHead>
+                    <TableHead className="text-center">出現管制單數</TableHead>
+                    <TableHead>關聯領料單號</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {unclosedMaterialStats.map((item, idx) => (
+                    <TableRow key={item.key}>
+                      <TableCell className="font-bold">{idx + 1}</TableCell>
+                      <TableCell>
+                        <span className="text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 px-2 py-1 rounded">
+                          {item.category}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-bold text-primary">{item.materialName}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.partName || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-sm font-black bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-md shadow-sm">
+                          {item.missingTotal} PCS
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center font-bold">{item.controlCount} 筆</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {item.requisitionIds.map(reqId => (
+                            <span key={reqId} className="text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded">
+                              {reqId}
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
