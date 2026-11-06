@@ -515,52 +515,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="h-[320px] w-full border rounded-lg p-4 bg-muted/10">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={unclosedMaterialStats.map(item => ({
-                    name: item.materialName,
-                    partName: item.partName,
-                    "未結案總數": item.missingTotal,
-                    "管制單數": item.controlCount
-                  }))}
-                  margin={{ top: 24, right: 24, left: 0, bottom: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tickMargin={10}
-                    interval={0}
-                    angle={unclosedMaterialStats.length > 8 ? -25 : 0}
-                    textAnchor={unclosedMaterialStats.length > 8 ? 'end' : 'middle'}
-                    height={unclosedMaterialStats.length > 8 ? 60 : 30}
-                  />
-                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip
-                    formatter={(value: any, name: any, props: any) => {
-                      const pName = props?.payload?.partName;
-                      return [
-                        `${value} PCS${pName ? ` (品名: ${pName})` : ''}`,
-                        name
-                      ];
-                    }}
-                  />
-                  {(unclosedMatChartType === 'bar' || unclosedMatChartType === 'both') && (
-                    <Bar dataKey="未結案總數" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                      <LabelList dataKey="未結案總數" position="top" />
-                    </Bar>
-                  )}
-                  {(unclosedMatChartType === 'line' || unclosedMatChartType === 'both') && (
-                    <Line type="monotone" dataKey="未結案總數" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}>
-                      {unclosedMatChartType === 'line' && <LabelList dataKey="未結案總數" position="top" />}
-                    </Line>
-                  )}
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
             <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -584,7 +538,11 @@ export default function Dashboard() {
                         </span>
                       </TableCell>
                       <TableCell className="font-bold text-primary">{item.materialName}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.partName || '-'}</TableCell>
+                      <TableCell>
+                        <span className="font-black text-blue-900 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md shadow-sm">
+                          {item.partName || item.materialName || '-'}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className="text-sm font-black bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-md shadow-sm">
                           {item.missingTotal} PCS
@@ -604,6 +562,63 @@ export default function Dashboard() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+
+            <div className="h-[360px] w-full border rounded-lg p-4 bg-muted/10">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={unclosedMaterialStats.map(item => ({
+                    displayName: item.partName || item.materialName,
+                    materialName: item.materialName,
+                    partName: item.partName || item.materialName,
+                    "未結案總數": item.missingTotal,
+                    "管制單數": item.controlCount
+                  }))}
+                  margin={{ top: 28, right: 24, left: 0, bottom: 28 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="displayName"
+                    axisLine={{ stroke: '#334155', strokeWidth: 1.5 }}
+                    tickLine={false}
+                    tickMargin={12}
+                    interval={0}
+                    angle={unclosedMaterialStats.length > 6 ? -20 : 0}
+                    textAnchor={unclosedMaterialStats.length > 6 ? 'end' : 'middle'}
+                    height={unclosedMaterialStats.length > 6 ? 70 : 40}
+                    tick={{ fill: '#1e3a8a', fontWeight: 900, fontSize: 14 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    tick={{ fill: '#0f172a', fontWeight: 800, fontSize: 13 }}
+                  />
+                  <Tooltip
+                    contentStyle={{ fontWeight: 800, borderColor: '#1e3a8a', borderRadius: '8px' }}
+                    labelStyle={{ color: '#1e3a8a', fontWeight: 900, fontSize: '15px', marginBottom: '4px' }}
+                    formatter={(value: any, name: any, props: any) => {
+                      const mCode = props?.payload?.materialName;
+                      return [
+                        `${value} PCS (品號: ${mCode})`,
+                        name
+                      ];
+                    }}
+                  />
+                  {(unclosedMatChartType === 'bar' || unclosedMatChartType === 'both') && (
+                    <Bar dataKey="未結案總數" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                      <LabelList dataKey="未結案總數" position="top" style={{ fill: '#b91c1c', fontWeight: 900, fontSize: 14 }} />
+                    </Bar>
+                  )}
+                  {(unclosedMatChartType === 'line' || unclosedMatChartType === 'both') && (
+                    <Line type="monotone" dataKey="未結案總數" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }}>
+                      {unclosedMatChartType === 'line' && (
+                        <LabelList dataKey="未結案總數" position="top" style={{ fill: '#1e3a8a', fontWeight: 900, fontSize: 14 }} />
+                      )}
+                    </Line>
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
           </div>
         )}

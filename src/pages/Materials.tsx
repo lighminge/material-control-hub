@@ -630,7 +630,8 @@ export default function MaterialsPage() {
 
       {activeTab === 'history' && (
         <>
-          <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-md gap-4 flex-wrap">
+          <div className="flex flex-col bg-muted/50 p-4 rounded-md gap-3">
+            {/* 第一行：品號、品名、分類、頭型 */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Label>查詢品號:</Label>
@@ -679,61 +680,67 @@ export default function MaterialsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
-                <Label>日期(起):</Label>
-                <Input 
-                  type="date"
-                  value={histStartDate} 
-                  onChange={(e) => { setHistStartDate(e.target.value); setHistPage(1); }}
-                  className="w-32 h-8 text-xs"
-                  style={{ colorScheme: 'light dark' }}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label>日期(迄):</Label>
-                <Input 
-                  type="date"
-                  value={histEndDate} 
-                  onChange={(e) => { setHistEndDate(e.target.value); setHistPage(1); }}
-                  className="w-32 h-8 text-xs"
-                  style={{ colorScheme: 'light dark' }}
-                />
-              </div>
-              <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
-                <Label>日期排序:</Label>
-                <Select value={histSort} onValueChange={(val: 'asc'|'desc') => { setHistSort(val); setHistPage(1); }}>
-                  <SelectTrigger className="w-[120px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desc">由大到小 (新到舊)</SelectItem>
-                    <SelectItem value="asc">由小到大 (舊到新)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleExportExcel} className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white ml-2">匯出 Excel</Button>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="font-medium">總計: {histTotalItems} 筆資料</div>
-              <div className="flex items-center gap-2">
-                <Label>每頁顯示:</Label>
-                <Select value={histPageSize.toString()} onValueChange={(val) => { setHistPageSize(parseInt(val)); setHistPage(1); }}>
-                  <SelectTrigger className="w-[80px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 筆</SelectItem>
-                    <SelectItem value="20">20 筆</SelectItem>
-                    <SelectItem value="30">30 筆</SelectItem>
-                    <SelectItem value="50">50 筆</SelectItem>
-                  </SelectContent>
-                </Select>
+
+            {/* 第二行：最前方放置日期(起)、日期(迄)，接著排序、匯出與分頁控制 */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Label>日期(起):</Label>
+                  <Input 
+                    type="date"
+                    value={histStartDate} 
+                    onChange={(e) => { setHistStartDate(e.target.value); setHistPage(1); }}
+                    className="w-36 h-8 text-xs"
+                    style={{ colorScheme: 'light dark' }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label>日期(迄):</Label>
+                  <Input 
+                    type="date"
+                    value={histEndDate} 
+                    onChange={(e) => { setHistEndDate(e.target.value); setHistPage(1); }}
+                    className="w-36 h-8 text-xs"
+                    style={{ colorScheme: 'light dark' }}
+                  />
+                </div>
+                <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
+                  <Label>日期排序:</Label>
+                  <Select value={histSort} onValueChange={(val: 'asc'|'desc') => { setHistSort(val); setHistPage(1); }}>
+                    <SelectTrigger className="w-[120px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">由大到小 (新到舊)</SelectItem>
+                      <SelectItem value="asc">由小到大 (舊到新)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleExportExcel} className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white ml-2">匯出 Excel</Button>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setHistPage(p => Math.max(1, p - 1))} disabled={histPage === 1}>上一頁</Button>
-                <span className="text-sm">第 {histPage} / {histTotalPages} 頁</span>
-                <Button variant="outline" size="sm" onClick={() => setHistPage(p => Math.min(histTotalPages, p + 1))} disabled={histPage === histTotalPages}>下一頁</Button>
+
+              <div className="flex items-center gap-4">
+                <div className="font-medium">總計: {histTotalItems} 筆資料</div>
+                <div className="flex items-center gap-2">
+                  <Label>每頁顯示:</Label>
+                  <Select value={histPageSize.toString()} onValueChange={(val) => { setHistPageSize(parseInt(val)); setHistPage(1); }}>
+                    <SelectTrigger className="w-[80px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 筆</SelectItem>
+                      <SelectItem value="20">20 筆</SelectItem>
+                      <SelectItem value="30">30 筆</SelectItem>
+                      <SelectItem value="50">50 筆</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setHistPage(p => Math.max(1, p - 1))} disabled={histPage === 1}>上一頁</Button>
+                  <span className="text-sm">第 {histPage} / {histTotalPages} 頁</span>
+                  <Button variant="outline" size="sm" onClick={() => setHistPage(p => Math.min(histTotalPages, p + 1))} disabled={histPage === histTotalPages}>下一頁</Button>
+                </div>
               </div>
             </div>
           </div>
