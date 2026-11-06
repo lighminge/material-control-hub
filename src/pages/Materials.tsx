@@ -705,6 +705,18 @@ export default function MaterialsPage() {
                     style={{ colorScheme: 'light dark' }}
                   />
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    setHistStartDate('');
+                    setHistEndDate('');
+                    setHistPage(1);
+                  }}
+                >
+                  日期清空
+                </Button>
                 <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
                   <Label>日期排序:</Label>
                   <Select value={histSort} onValueChange={(val: 'asc'|'desc') => { setHistSort(val); setHistPage(1); }}>

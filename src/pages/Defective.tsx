@@ -774,7 +774,7 @@ export default function DefectivePage() {
       <Card>
         <CardContent className="p-0">
           <div className="flex flex-col gap-3 p-4 border-b bg-muted/10">
-            {/* 第一行：單號、品號、品名、不良情況、發現人員 */}
+            {/* 第一行：單號、品號、品名、不良情況 */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Label>單號:</Label>
@@ -792,6 +792,18 @@ export default function DefectivePage() {
                 <Label>不良情況:</Label>
                 <Input value={filterCondition} onChange={e => {setFilterCondition(e.target.value); setPage(1);}} className="w-32 h-8 text-xs" placeholder="關鍵字..." />
               </div>
+            </div>
+
+            {/* 第二行：最前方放置日期(起)、日期(迄)，後方接續發現人員與清除按鈕 */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label>日期(起):</Label>
+                <Input type="date" value={filterStartDate} onChange={e => {setFilterStartDate(e.target.value); setPage(1);}} className="w-36 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>日期(迄):</Label>
+                <Input type="date" value={filterEndDate} onChange={e => {setFilterEndDate(e.target.value); setPage(1);}} className="w-36 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
+              </div>
               <div className="flex items-center gap-2 border-l pl-4 border-muted-foreground/20">
                 <Label>發現人員:</Label>
                 <Select value={filterDiscoverer} onValueChange={val => {setFilterDiscoverer(val); setPage(1);}}>
@@ -805,18 +817,6 @@ export default function DefectivePage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            {/* 第二行：最前方放置日期(起)、日期(迄) */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Label>日期(起):</Label>
-                <Input type="date" value={filterStartDate} onChange={e => {setFilterStartDate(e.target.value); setPage(1);}} className="w-36 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label>日期(迄):</Label>
-                <Input type="date" value={filterEndDate} onChange={e => {setFilterEndDate(e.target.value); setPage(1);}} className="w-36 h-8 text-xs" onClick={(e: any) => e.target.showPicker?.()} />
               </div>
               <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => {
                 setFilterFormId(''); setFilterStartDate(''); setFilterEndDate(''); setFilterMaterialId(''); setFilterMaterialName(''); setFilterDiscoverer('all'); setFilterCondition(''); setPage(1);
